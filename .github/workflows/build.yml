@@ -35,13 +35,13 @@ jobs:
 
       - name: Build executable on Ubuntu
         run: |
-          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/gui.py"
+          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-linux
           path: |
-            ${{ github.workspace }}/dist/gui
+            ${{ github.workspace }}/dist/blocknet_aio_monitor
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -50,7 +50,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            ${{ github.workspace }}/dist/gui
+            ${{ github.workspace }}/dist/blocknet_aio_monitor
 
   build-windows:
     runs-on: windows-latest
@@ -70,13 +70,13 @@ jobs:
 
       - name: Build executable on Windows
         run: |
-          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/gui.py"
+          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-win
           path: |
-            ${{ github.workspace }}/dist/gui.exe
+            ${{ github.workspace }}/dist/blocknet_aio_monitor.exe
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -85,4 +85,4 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            ${{ github.workspace }}/dist/gui.exe
+            ${{ github.workspace }}/dist/blocknet_aio_monitor.exe
