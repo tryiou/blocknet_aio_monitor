@@ -17,6 +17,7 @@ blocknet_releases_urls = {
      "AMD64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-win64.zip"
 }
 
+blocknet_bin_name = "blocknet-qt"
 blocknet_default_paths = {
     "Windows": "%appdata%\\Blocknet",
     "Darwin": "~/Library/Application Support/Blocknet",

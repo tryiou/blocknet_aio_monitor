@@ -13,7 +13,7 @@ import psutil
 
 from blockdx import BlockdxUtility
 from blocknet_core import BlocknetUtility
-from conf_data import blockdx_selectedWallets_blocknet, aio_blocknet_data_path
+from conf_data import blockdx_selectedWallets_blocknet, aio_blocknet_data_path, blocknet_bin_name, blockdx_bin_name
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
@@ -319,11 +319,7 @@ class BlocknetGUI:
         self.blockdx_valid_config_checkbox.config(text=process_status_text, wraplength=wrap_length)
 
     async def check_processes(self):
-        blockdx_bin_name = {
-            "Windows": "BLOCK DX.exe",
-            "Linux": "block-dx",
-            "Darwin": "BLOCK DX"
-        }
+
         system = platform.system()
         blockdx_bin = blockdx_bin_name.get(system, None)
         if not blockdx_bin:
@@ -353,7 +349,7 @@ class BlocknetGUI:
             # Get all processes
             for proc in psutil.process_iter(['pid', 'name']):
                 # Check if any process matches the Blocknet process name
-                if 'blocknet' in proc.info['name']:
+                if blocknet_bin_name in proc.info['name']:
                     blocknet_processes.append(proc.info['pid'])
                 # Check if any process matches the Block DX process name
                 if blockdx_bin in proc.info['name']:
