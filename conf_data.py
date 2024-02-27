@@ -18,6 +18,12 @@ blocknet_releases_urls = {
 }
 
 blocknet_bin_name = "blocknet-qt"
+
+base_xbridge_conf = {
+    'ExchangeWallets': '',
+    'FullLog': 'true',
+    'ShowAllOrders': 'true'
+}
 blocknet_default_paths = {
     "Windows": "%appdata%\\Blocknet",
     "Darwin": "~/Library/Application Support/Blocknet",

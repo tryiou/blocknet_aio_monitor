@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import filedialog
 import json
 import psutil
+from threading import Thread
 
 from blockdx import BlockdxUtility
 from blocknet_core import BlocknetUtility
@@ -30,8 +31,24 @@ class BlocknetGUI:
         self.blocknet_utility = BlocknetUtility(custom_path=custom_path)
         self.blockdx_utility = BlockdxUtility()
         # blocknet_core
-        self.blockdx_process_running = None
-        self.blocknet_process_running = None
+
+        self.disable_start_blockdx_button = False
+        self.blockdx_valid_config_checkbox_string_var = None
+        self.blockdx_valid_config_checkbox_state = None
+        self.blockdx_start_close_button_string_var = None
+        self.blocknet_conf_status_checkbox_string_var = None
+        self.blocknet_conf_status_checkbox_state = None
+        self.blockdx_process_status_checkbox_string_var = None
+        self.blockdx_process_status_checkbox_state = None
+        self.blocknet_start_close_button_string_var = None
+        self.blocknet_process_status_checkbox_string_var = None
+        self.blocknet_process_status_checkbox_state = None
+        self.blocknet_data_path_status_checkbox_string_var = None
+        self.blocknet_data_path_status_checkbox_state = None
+        self.blocknet_rpc_connection_checkbox_state = None
+        self.blocknet_rpc_connection_checkbox_string_var = None
+        self.blockdx_process_running = False
+        self.blocknet_process_running = False
         self.blockdx_check_config_button = None
         self.blockdx_valid_config_checkbox = None
         self.blockdx_start_close_button = None
@@ -46,11 +63,11 @@ class BlocknetGUI:
         self.blocknet_data_path_entry = None
         self.blocknet_data_path_label = None
         self.blocknet_core_label = None
-        self.root = root
-        # block-dx
         self.block_dx_label = None
         self.data_path_frame = None
-        self.loop = asyncio.get_event_loop()
+
+        self.root = root
+
         self.root.title("Blocknet AIO monitor")
 
         # Create frames for Blocknet Core and Block-dx management
@@ -111,22 +128,37 @@ class BlocknetGUI:
         self.blocknet_data_path_entry.config(state='readonly')
 
         # Checkboxes
-        self.blocknet_data_path_status_checkbox = tk.Checkbutton(self.data_path_frame, text="Valid Data Path",
+        self.blocknet_data_path_status_checkbox_state = tk.BooleanVar()
+        self.blocknet_data_path_status_checkbox_string_var = tk.StringVar(value="Data Path")
+        self.blocknet_data_path_status_checkbox = tk.Checkbutton(self.data_path_frame,
+                                                                 textvariable=self.blocknet_data_path_status_checkbox_string_var,
+                                                                 variable=self.blocknet_data_path_status_checkbox_state,
                                                                  state='disabled', disabledforeground='black')
         self.blocknet_data_path_status_checkbox.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
+        self.blocknet_process_status_checkbox_state = tk.BooleanVar()
+        self.blocknet_process_status_checkbox_string_var = tk.StringVar(value="Blocknet Process is running")
         self.blocknet_process_status_checkbox = tk.Checkbutton(self.data_path_frame,
-                                                               text="Blocknet Process is running",
+                                                               textvariable=self.blocknet_process_status_checkbox_string_var,
+                                                               variable=self.blocknet_process_status_checkbox_state,
                                                                state='disabled', disabledforeground='black')
         self.blocknet_process_status_checkbox.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
+        self.blocknet_conf_status_checkbox_state = tk.BooleanVar()
+        self.blocknet_conf_status_checkbox_string_var = tk.StringVar(
+            value="blocknet.conf/xbridge.conf found and parsed")
         self.blocknet_conf_status_checkbox = tk.Checkbutton(self.data_path_frame,
-                                                            text="blocknet.conf/xbridge.conf found and parsed",
+                                                            textvariable=self.blocknet_conf_status_checkbox_string_var,
+                                                            variable=self.blocknet_conf_status_checkbox_state,
                                                             state='disabled',
                                                             disabledforeground='black')
         self.blocknet_conf_status_checkbox.grid(row=3, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.blocknet_rpc_connection_checkbox = tk.Checkbutton(self.data_path_frame, text="RPC Connection",
+        self.blocknet_rpc_connection_checkbox_state = tk.BooleanVar()
+        self.blocknet_rpc_connection_checkbox_string_var = tk.StringVar(value="RPC Connection")
+        self.blocknet_rpc_connection_checkbox = tk.Checkbutton(self.data_path_frame,
+                                                               textvariable=self.blocknet_rpc_connection_checkbox_string_var,
+                                                               variable=self.blocknet_rpc_connection_checkbox_state,
                                                                state='disabled',
                                                                disabledforeground='black')
         self.blocknet_rpc_connection_checkbox.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
@@ -137,8 +169,9 @@ class BlocknetGUI:
         self.blocknet_custom_path_button.grid(row=0, column=3, padx=10, pady=5, sticky="e")
 
         # Button for starting or closing Blocknet
+        self.blocknet_start_close_button_string_var = tk.StringVar(value="Start")
         self.blocknet_start_close_button = tk.Button(self.data_path_frame,
-                                                     text="Close" if self.blocknet_process_running else "Start",
+                                                     textvariable=self.blocknet_start_close_button_string_var,
                                                      command=self.start_or_close_blocknet, width=15)
         self.blocknet_start_close_button.grid(row=1, column=3, padx=10, pady=5, sticky="e")
 
@@ -160,17 +193,27 @@ class BlocknetGUI:
         self.block_dx_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Checkboxes
-        self.blockdx_process_status_checkbox = tk.Checkbutton(self.block_dx_frame, text="Blockdx Process is running",
+        self.blockdx_process_status_checkbox_state = tk.BooleanVar()
+        self.blockdx_process_status_checkbox_string_var = tk.StringVar(value="Blockdx Process is running")
+        self.blockdx_process_status_checkbox = tk.Checkbutton(self.block_dx_frame,
+                                                              textvariable=self.blockdx_process_status_checkbox_string_var,
+                                                              variable=self.blockdx_process_status_checkbox_state,
                                                               state='disabled', disabledforeground='black')
+        self.blockdx_process_status_checkbox.config(wraplength=400)
         self.blockdx_process_status_checkbox.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.blockdx_valid_config_checkbox = tk.Checkbutton(self.block_dx_frame, text="Blockdx config is synchronized",
-                                                            state='disabled', disabledforeground='black')
+        self.blockdx_valid_config_checkbox_state = tk.BooleanVar()
+        self.blockdx_valid_config_checkbox_string_var = tk.StringVar(value="Blockdx config is synchronized")
+        self.blockdx_valid_config_checkbox = tk.Checkbutton(self.block_dx_frame,
+                                                            textvariable=self.blockdx_valid_config_checkbox_string_var,
+                                                            variable=self.blockdx_valid_config_checkbox_state,
+                                                            disabledforeground='black', state='disabled')
         self.blockdx_valid_config_checkbox.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Button for starting or closing Block-dx
+        self.blockdx_start_close_button_string_var = tk.StringVar(value="Start")
         self.blockdx_start_close_button = tk.Button(self.block_dx_frame,
-                                                    text="Close" if self.blockdx_process_running else "Start",
+                                                    textvariable=self.blockdx_start_close_button_string_var,
                                                     command=self.start_or_close_blockdx, width=15)
         self.blockdx_start_close_button.grid(row=0, column=1, padx=10, pady=5, sticky="e")
 
@@ -216,83 +259,62 @@ class BlocknetGUI:
         if self.blocknet_process_running:
             self.blocknet_utility.close_blocknet()
         else:
-            self.blocknet_utility.start_blocknet(gui_button=self.blocknet_start_close_button)
-        # Schedule re-enabling the button after 2000 milliseconds (2 seconds)
+            my_thread = Thread(target=self.blocknet_utility.start_blocknet,
+                               kwargs={'gui_button': self.blocknet_start_close_button})
+            my_thread.start()
         self.root.after(2000, lambda: enable_button(self.blocknet_start_close_button))
+
+    def enable_button(self):
+        self.disable_start_blockdx_button = False
 
     def start_or_close_blockdx(self):
         disable_button(self.blockdx_start_close_button)
+        self.disable_start_blockdx_button = True
         if self.blockdx_process_running:
             self.blockdx_utility.close_blockdx()
         else:
-            self.blockdx_utility.start_blockdx(gui_button=self.blockdx_start_close_button)
-        # Schedule re-enabling the button after 2000 milliseconds (2 seconds)
-        self.root.after(2000, lambda: enable_button(self.blockdx_start_close_button))
+            my_thread = Thread(target=self.blockdx_utility.start_blockdx,
+                               kwargs={'gui_button': self.blockdx_start_close_button})
+            my_thread.start()
+        self.root.after(2000, self.enable_button)
 
     async def update_status_blocknet_core(self):
-        if self.blocknet_process_running:
-            process_status_text = f"Blocknet Process is running, PIDs: {self.blocknet_utility.blocknet_pids}"
-            self.blocknet_process_status_checkbox.select()
-            self.blocknet_start_close_button.config(text="Close")
-        else:
-            process_status_text = "Blocknet Process is not running"
-            self.blocknet_process_status_checkbox.deselect()
-            self.blocknet_start_close_button.config(text="Start")
-
-        if self.blocknet_utility.blocknet_conf_local and self.blocknet_utility.xbridge_conf_local:
-            self.blocknet_conf_status_checkbox.select()
-            conf_status_text = f"blocknet.conf/xbridge.conf found and parsed"
-        else:
-            self.blocknet_conf_status_checkbox.deselect()
-            conf_status_text = "blocknet.conf/xbridge.conf not found or not parsed"
-
-        if self.blocknet_utility.check_data_folder_existence():
-            self.blocknet_data_path_status_checkbox.select()
-            data_path_text = f"Valid Data Path"
-        else:
-            self.blocknet_data_path_status_checkbox.deselect()
-            data_path_text = "No valid data path set"
-
-        if self.blocknet_utility.valid_rpc:
-            self.blocknet_rpc_connection_checkbox.select()
-            rpc_connection_text = "RPC Connection is valid"
-        else:
-            self.blocknet_rpc_connection_checkbox.deselect()
-            rpc_connection_text = "RPC Connection is not valid"
-
-        wrap_length = None
-        self.blocknet_data_path_status_checkbox.config(text=data_path_text, wraplength=wrap_length)
-        self.blocknet_process_status_checkbox.config(text=process_status_text, wraplength=wrap_length)
-        self.blocknet_conf_status_checkbox.config(text=conf_status_text, wraplength=wrap_length)
-        self.blocknet_rpc_connection_checkbox.config(text=rpc_connection_text, wraplength=wrap_length)
+        self.blocknet_start_close_button_string_var.set("Downloading..." if self.blocknet_utility.downloading_bin else (
+            "Close" if self.blocknet_process_running else "Start"))
+        self.blocknet_process_status_checkbox_string_var.set(
+            f"Blocknet Process is running, PIDs: {self.blocknet_utility.blocknet_pids}" if self.blocknet_process_running else "Blocknet Process is not running")
+        self.blocknet_process_status_checkbox_state.set(self.blocknet_process_running)
+        self.blocknet_custom_path_button.config(state='normal' if not self.blocknet_process_running else 'disabled')
+        conf_exist_and_parsed = bool(
+            self.blocknet_utility.blocknet_conf_local and self.blocknet_utility.xbridge_conf_local)
+        self.blocknet_conf_status_checkbox_state.set(conf_exist_and_parsed)
+        self.blocknet_conf_status_checkbox_string_var.set(
+            "blocknet.conf/xbridge.conf found and parsed" if conf_exist_and_parsed else "blocknet.conf/xbridge.conf not found or not parsed")
+        exist = self.blocknet_utility.check_data_folder_existence()
+        self.blocknet_data_path_status_checkbox_state.set(exist)
+        self.blocknet_data_path_status_checkbox_string_var.set("Valid Data Path" if exist else "No valid data path set")
+        self.blocknet_rpc_connection_checkbox_state.set(self.blocknet_utility.valid_rpc)
+        self.blocknet_rpc_connection_checkbox_string_var.set(
+            "RPC Connection active" if self.blocknet_utility.valid_rpc else "RPC Connection inactive")
 
     async def update_status_blockdx(self):
-        # self.blockdx_process_status_checkbox, self.blockdx_start_close_button
-        # print("self.blockdx_utility.downloading_bin:", self.blockdx_utility.downloading_bin)
-        if self.blockdx_process_running:
-            process_status_text = f"Blockdx Process is running, PIDs: {self.blockdx_utility.blockdx_pids}"
-            self.blockdx_process_status_checkbox.select()
-            self.blockdx_start_close_button.config(text="Close")
-        else:
-            if not self.blockdx_utility.downloading_bin:
-                self.blockdx_start_close_button.config(text="Start")
-            process_status_text = "Blockdx Process is not running"
-            self.blockdx_process_status_checkbox.deselect()
-        wrap_length = 400
-        self.blockdx_process_status_checkbox.config(text=process_status_text, wraplength=wrap_length)
+        self.blockdx_process_status_checkbox_state.set(self.blockdx_process_running)
+        self.blockdx_process_status_checkbox_string_var.set(
+            f"Blockdx Process is running, PIDs: {self.blockdx_utility.blockdx_pids}" if self.blockdx_process_running else "Blockdx Process is not running")
+        self.blockdx_start_close_button_string_var.set("Downloading..." if self.blockdx_utility.downloading_bin else (
+            "Close" if self.blockdx_process_running else "Start"))
+        self.blockdx_start_close_button.config(
+            state='normal' if not self.blockdx_utility.downloading_bin and self.blocknet_utility.valid_rpc and not self.disable_start_blockdx_button else 'disabled')
 
-        # self.blocknet_check_config_button
         # Check if data folder and blocknet conf are present
-        if bool(self.blocknet_utility.data_folder) and bool(self.blocknet_utility.blocknet_conf_local):
+        valid_core_setup = bool(self.blocknet_utility.data_folder) and bool(self.blocknet_utility.blocknet_conf_local)
+        if valid_core_setup:
             xbridgeconfpath = os.path.join(self.blocknet_utility.data_folder, "xbridge.conf")
             rpc_user = self.blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcuser')
             rpc_password = self.blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcpassword')
-
             # Enable or disable the check config button based on the presence of xbridge.conf and rpc credentials
-            check_config_state = 'normal' if os.path.exists(
-                xbridgeconfpath) and rpc_password and rpc_user else 'disabled'
-            self.blockdx_check_config_button.config(state=check_config_state)
-
+            self.blockdx_check_config_button.config(
+                state='normal' if (os.path.exists(xbridgeconfpath) and rpc_password and rpc_user) else 'disabled')
             # Check if blockdx config is synchronized
             blockdx_conf = self.blockdx_utility.blockdx_conf_local
             is_blockdx_config_sync = (
@@ -303,20 +325,16 @@ class BlocknetGUI:
                     isinstance(blockdx_conf.get('selectedWallets'), list) and
                     blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets')
             )
-
             # Update the validity checkbox and process status text
-            process_status_text = "Blockdx config is synchronized" if is_blockdx_config_sync else "Blockdx config is not synchronized, click on Check button"
-            self.blockdx_valid_config_checkbox.select() if is_blockdx_config_sync else self.blockdx_valid_config_checkbox.deselect()
-
+            self.blockdx_valid_config_checkbox_state.set(is_blockdx_config_sync)
+            self.blockdx_valid_config_checkbox_string_var.set(
+                "Blockdx config is synchronized" if is_blockdx_config_sync else "Blockdx config is not synchronized, click on Check button")
         else:
+            self.blockdx_valid_config_checkbox_state.set(False)
             # If data folder or blocknet conf is missing, disable the check config button
             self.blockdx_check_config_button.config(state='disabled')
-            self.blockdx_valid_config_checkbox.deselect()
-            process_status_text = "Blockdx config is not synchronized, configure blocknet core first"
-
-        # Update the process status text and wrap length
-        wrap_length = None
-        self.blockdx_valid_config_checkbox.config(text=process_status_text, wraplength=wrap_length)
+            self.blockdx_valid_config_checkbox_string_var.set(
+                "Blockdx config is not synchronized, configure blocknet core first")
 
     async def check_processes(self):
 
@@ -364,11 +382,9 @@ class BlocknetGUI:
         # Update Block DX process status and store the PIDs
         self.blockdx_process_running = bool(blockdx_processes)
         self.blockdx_utility.blockdx_pids = blockdx_processes
-
         # Calculate execution time
-        end_time = time.time()
-        execution_time = end_time - start_time
-
+        # end_time = time.time()
+        # execution_time = end_time - start_time
         # Log execution time
         # logging.debug(f"Execution time of check_processes: {execution_time} seconds")
 
@@ -384,7 +400,7 @@ class BlocknetGUI:
         asyncio.run(update_status_async())
 
         # Schedule the next update
-        self.root.after(500, self.update_status)
+        self.root.after(1000, self.update_status)
 
     def update_processes(self):
         # Define an async function to run the coroutines concurrently
