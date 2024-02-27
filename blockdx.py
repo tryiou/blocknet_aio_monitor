@@ -109,11 +109,13 @@ class BlockdxUtility:
             blockdx_exe = os.path.join(local_path, blockdx_bin_path[system], blockdx_bin_name[system])
 
         if not os.path.exists(blockdx_exe):
-            if gui_button:
-                gui_button.config(text="Downloading...")
-                gui_button.update_idletasks()  # Force GUI update
+            self.downloading_bin = True
+            # if gui_button:
+            #     gui_button.config(text="Downloading...")
+            #     gui_button.update_idletasks()  # Force GUI update
             logging.info(f"Blockdx executable not found at {blockdx_exe}. Downloading...")
             download_blockdx_bin()
+            self.downloading_bin = False
 
         try:
             # Start the Blocknet process using subprocess

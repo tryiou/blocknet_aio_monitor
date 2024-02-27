@@ -14,7 +14,7 @@ import zipfile
 import tarfile
 from subprocess import check_output
 
-from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths
+from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -90,6 +90,7 @@ def download_blocknet_bin():
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
+        self.downloading_bin = None
         self.data_folder = get_blocknet_data_folder(custom_path)
         self.process_running = None
         self.blocknet_conf_local = None
@@ -164,11 +165,13 @@ class BlocknetUtility:
             blocknet_exe = os.path.join(local_path, "blocknet-4.4.1", "bin", "blocknet-qt")
 
         if not os.path.exists(blocknet_exe):
-            if gui_button:
-                gui_button.config(text="Downloading...")
-                gui_button.update_idletasks()  # Force GUI update
+            self.downloading_bin = True
+            # if gui_button:
+            #     gui_button.config(text="Downloading...")
+            #     gui_button.update_idletasks()  # Force GUI update
             logging.info(f"Blocknet executable not found at {blocknet_exe}. Downloading...")
             download_blocknet_bin()
+            self.downloading_bin = False
         try:
             # Start the Blocknet process using subprocess with custom data folder argument
             self.blocknet_process = subprocess.Popen([blocknet_exe, "-datadir=" + self.data_folder],
@@ -331,11 +334,8 @@ class BlocknetUtility:
 
         if 'Main' not in self.xbridge_conf_local:
             # We want this on 'top' of file, add it if missing
-            self.xbridge_conf_local['Main'] = {
-                'ExchangeWallets': '',
-                'FullLog': 'true',
-                'ShowAllOrders': 'false'
-            }
+
+            self.xbridge_conf_local['Main'] = base_xbridge_conf
 
         if self.xbridge_conf_remote is None:
             logging.error("Remote xbridge.conf not available.")
@@ -367,8 +367,8 @@ class BlocknetUtility:
         else:
             self.xbridge_conf_local['Main'] = {
                 'ExchangeWallets': sections_string,
-                'FullLog': 'true',
-                'ShowAllOrders': 'false'
+                'FullLog': base_xbridge_conf['FullLog'],
+                'ShowAllOrders': base_xbridge_conf['ShowAllOrders'],
             }
 
         logging.info("Local xbridge.conf updated successfully.")
