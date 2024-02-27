@@ -289,7 +289,7 @@ class BlocknetGUI:
             self.blocknet_utility.blocknet_conf_local and self.blocknet_utility.xbridge_conf_local)
         self.blocknet_conf_status_checkbox_state.set(conf_exist_and_parsed)
         self.blocknet_conf_status_checkbox_string_var.set(
-            "blocknet.conf/xbridge.conf found and parsed" if conf_exist_and_parsed else "blocknet.conf/xbridge.conf not found or not parsed")
+            "blocknet.conf/xbridge.conf valid" if conf_exist_and_parsed else "missing or invalid blocknet.conf/xbridge.conf, click on Check Config button")
         exist = self.blocknet_utility.check_data_folder_existence()
         self.blocknet_data_path_status_checkbox_state.set(exist)
         self.blocknet_data_path_status_checkbox_string_var.set("Valid Data Path" if exist else "No valid data path set")
@@ -328,7 +328,7 @@ class BlocknetGUI:
             # Update the validity checkbox and process status text
             self.blockdx_valid_config_checkbox_state.set(is_blockdx_config_sync)
             self.blockdx_valid_config_checkbox_string_var.set(
-                "Blockdx config is synchronized" if is_blockdx_config_sync else "Blockdx config is not synchronized, click on Check button")
+                "Blockdx config is synchronized" if is_blockdx_config_sync else "Blockdx config is not synchronized with core, click on Check Config button")
         else:
             self.blockdx_valid_config_checkbox_state.set(False)
             # If data folder or blocknet conf is missing, disable the check config button
