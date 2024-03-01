@@ -80,7 +80,7 @@ class BlocknetGUI:
         # Call functions to setup management sections
         self.setup_blocknet_core()
         self.setup_block_dx()
-        self.setup_xlite()
+        # self.setup_xlite()
 
         # Update status for both Blocknet Core and Block-dx
         self.update_status()
