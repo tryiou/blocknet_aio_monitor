@@ -152,7 +152,7 @@ class BlocknetUtility:
             logging.error("RPC user, password, or port not found in the configuration.")
             self.blocknet_rpc = None
 
-    def start_blocknet(self, retry_limit=3, retry_count=0, gui_button=None):
+    def start_blocknet(self, retry_limit=3, retry_count=0):
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blocknet.")
             return
@@ -166,9 +166,6 @@ class BlocknetUtility:
 
         if not os.path.exists(blocknet_exe):
             self.downloading_bin = True
-            # if gui_button:
-            #     gui_button.config(text="Downloading...")
-            #     gui_button.update_idletasks()  # Force GUI update
             logging.info(f"Blocknet executable not found at {blocknet_exe}. Downloading...")
             download_blocknet_bin()
             self.downloading_bin = False

@@ -70,7 +70,7 @@ class BlocknetGUI:
 
         self.root.title("Blocknet AIO monitor")
 
-        # Create frames for Blocknet Core and Block-dx management
+        # Create frames for Blocknet Core/Block-dx/Xlite management
         self.blocknet_core_frame = tk.Frame(root, borderwidth=2, relief="groove")
         self.blocknet_core_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
 
@@ -80,6 +80,7 @@ class BlocknetGUI:
         # Call functions to setup management sections
         self.setup_blocknet_core()
         self.setup_block_dx()
+        self.setup_xlite()
 
         # Update status for both Blocknet Core and Block-dx
         self.update_status()
@@ -259,8 +260,7 @@ class BlocknetGUI:
         if self.blocknet_process_running:
             self.blocknet_utility.close_blocknet()
         else:
-            my_thread = Thread(target=self.blocknet_utility.start_blocknet,
-                               kwargs={'gui_button': self.blocknet_start_close_button})
+            my_thread = Thread(target=self.blocknet_utility.start_blocknet)
             my_thread.start()
         self.root.after(2000, lambda: enable_button(self.blocknet_start_close_button))
 
@@ -273,8 +273,7 @@ class BlocknetGUI:
         if self.blockdx_process_running:
             self.blockdx_utility.close_blockdx()
         else:
-            my_thread = Thread(target=self.blockdx_utility.start_blockdx,
-                               kwargs={'gui_button': self.blockdx_start_close_button})
+            my_thread = Thread(target=self.blockdx_utility.start_blockdx)
             my_thread.start()
         self.root.after(2000, self.enable_button)
 

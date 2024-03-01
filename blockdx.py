@@ -90,7 +90,7 @@ class BlockdxUtility:
         else:
             logging.info("No changes detected in Blockdx config.")
 
-    def start_blockdx(self, retry_limit=3, retry_count=0, gui_button=None):
+    def start_blockdx(self, retry_limit=3, retry_count=0):
         from conf_data import blockdx_bin_name, blockdx_bin_path, aio_blocknet_data_path
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blockdx.")
@@ -110,16 +110,12 @@ class BlockdxUtility:
 
         if not os.path.exists(blockdx_exe):
             self.downloading_bin = True
-            # if gui_button:
-            #     gui_button.config(text="Downloading...")
-            #     gui_button.update_idletasks()  # Force GUI update
             logging.info(f"Blockdx executable not found at {blockdx_exe}. Downloading...")
             download_blockdx_bin()
             self.downloading_bin = False
 
         try:
             # Start the Blocknet process using subprocess
-
             self.blockdx_process = subprocess.Popen([blockdx_exe],
                                                     stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE,
