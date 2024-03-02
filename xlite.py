@@ -36,9 +36,9 @@ class XliteUtility:
         # self.start_async_tasks()
 
     def parse_xlite_conf(self):
-        data_folder = xlite_default_paths.get(system, None)
+        data_folder = os.path.expanduser(xlite_default_paths.get(system, None))
         file = "app-settings.json"
-        file_path = os.path.expanduser(os.path.join(data_folder, file))
+        file_path = os.path.join(data_folder, file)
         meta_data = {}
 
         if os.path.exists(file_path):
