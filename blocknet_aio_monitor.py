@@ -495,7 +495,7 @@ class BlocknetGUI:
             my_thread.start()
         self.root.after(self.time_disable_button, self.enable_xlite_start_button)
 
-    async def update_status_blocknet_core(self):
+    def update_blocknet_start_close_button(self):
         # blocknet_start_close_button_string_var
         var = "Downloading..." if self.blocknet_utility.downloading_bin else (
             "Close" if self.blocknet_process_running else "Start")
@@ -512,6 +512,7 @@ class BlocknetGUI:
         # (self.blocknet_utility.downloading_bin or self.disable_start_blocknet_button)
         self.blocknet_start_close_button.config(state='normal' if enabled else 'disabled')
 
+    def update_blocknet_process_status_checkbox(self):
         # blocknet_process_status_checkbox_string_var
         var = f"Blocknet Process is running, PIDs: {self.blocknet_utility.blocknet_pids}" if self.blocknet_process_running else "Blocknet Process is not running"
         self.blocknet_process_status_checkbox_string_var.set(var)
@@ -519,9 +520,11 @@ class BlocknetGUI:
         # blocknet_process_status_checkbox_state
         self.blocknet_process_status_checkbox_state.set(self.blocknet_process_running)
 
+    def update_blocknet_custom_path_button(self):
         # blocknet_custom_path_button
         self.blocknet_custom_path_button.config(state='normal' if not self.blocknet_process_running else 'disabled')
 
+    def update_blocknet_conf_status_checkbox(self):
         # blocknet_conf_status_checkbox_state
         conf_exist_and_parsed = bool(
             self.blocknet_utility.blocknet_conf_local and self.blocknet_utility.xbridge_conf_local)
@@ -531,6 +534,7 @@ class BlocknetGUI:
         var = "blocknet.conf/xbridge.conf valid" if conf_exist_and_parsed else "missing or invalid blocknet.conf/xbridge.conf, click on Check Config button"
         self.blocknet_conf_status_checkbox_string_var.set(var)
 
+    def update_blocknet_data_path_status_checkbox(self):
         # blocknet_data_path_status_checkbox_state
         exist = self.blocknet_utility.check_data_folder_existence()
         self.blocknet_data_path_status_checkbox_state.set(exist)
@@ -539,6 +543,7 @@ class BlocknetGUI:
         var = "Valid Data Path" if exist else "No valid data path set"
         self.blocknet_data_path_status_checkbox_string_var.set(var)
 
+    def update_blocknet_rpc_connection_checkbox(self):
         # blocknet_rpc_connection_checkbox_state
         self.blocknet_rpc_connection_checkbox_state.set(self.blocknet_utility.valid_rpc)
 
@@ -546,7 +551,7 @@ class BlocknetGUI:
         var = "RPC Connection active" if self.blocknet_utility.valid_rpc else "RPC Connection inactive"
         self.blocknet_rpc_connection_checkbox_string_var.set(var)
 
-    async def update_status_blockdx(self):
+    def update_blockdx_process_status_checkbox(self):
         # blockdx_process_status_checkbox_state
         self.blockdx_process_status_checkbox_state.set(self.blockdx_process_running)
 
@@ -554,6 +559,7 @@ class BlocknetGUI:
         var = f"Blockdx Process is running, PIDs: {self.blockdx_utility.blockdx_pids}" if self.blockdx_process_running else "Blockdx Process is not running"
         self.blockdx_process_status_checkbox_string_var.set(var)
 
+    def update_blockdx_start_close_button(self):
         # blockdx_start_close_button_string_var
         var = "Downloading..." if self.blockdx_utility.downloading_bin else (
             "Close" if self.blockdx_process_running else "Start")
@@ -564,6 +570,7 @@ class BlocknetGUI:
                 not self.blockdx_utility.downloading_bin and self.blocknet_utility.valid_rpc and not self.disable_start_blockdx_button)
         self.blockdx_start_close_button.config(state='normal' if enabled else 'disabled')
 
+    def update_blockdx_config_button_checkbox(self):
         # blockdx_valid_config_checkbox_state
         valid_core_setup = bool(self.blocknet_utility.data_folder) and bool(self.blocknet_utility.blocknet_conf_local)
         if valid_core_setup:
@@ -599,7 +606,7 @@ class BlocknetGUI:
             var = "Blockdx config is not synchronized, configure blocknet core first"
             self.blockdx_valid_config_checkbox_string_var.set(var)
 
-    async def update_status_xlite(self):
+    def update_xlite_process_status_checkbox(self):
         # xlite_process_status_checkbox_state
         self.xlite_process_status_checkbox_state.set(self.xlite_process_running)
 
@@ -608,6 +615,7 @@ class BlocknetGUI:
             "Xlite Process is not running")
         self.xlite_process_status_checkbox_string_var.set(var)
 
+    def update_xlite_start_close_button(self):
         # xlite_start_close_button_string_var
         var = "Downloading..." if self.xlite_utility.downloading_bin else (
             "Close" if self.xlite_process_running else "Start")
@@ -617,9 +625,11 @@ class BlocknetGUI:
         disable_start_close_button = self.xlite_utility.downloading_bin or self.disable_start_xlite_button
         self.xlite_start_close_button.config(state='normal' if not disable_start_close_button else 'disabled')
 
+    def update_xlite_store_password_button(self):
         # xlite_store_password_button
         self.xlite_store_password_button.config(relief='raised' if not self.xlite_password else 'sunken')
 
+    def update_xlite_daemon_process_status(self):
         # xlite_daemon_process_status_checkbox_state
         self.xlite_daemon_process_status_checkbox_state.set(self.xlite_daemon_process_running)
 
@@ -628,6 +638,7 @@ class BlocknetGUI:
             "Xlite-daemon Process is not running")
         self.xlite_daemon_process_status_checkbox_string_var.set(var)
 
+    def update_xlite_valid_config_checkbox(self):
         # xlite_valid_config_checkbox_state
         valid_config = True if self.xlite_utility.xlite_conf_local else False
         self.xlite_valid_config_checkbox_state.set(valid_config)
@@ -635,6 +646,7 @@ class BlocknetGUI:
         var = f"Xlite config is valid" if valid_config else "Xlite config is not valid"
         self.xlite_valid_config_checkbox_string_var.set(var)
 
+    def update_xlite_daemon_valid_config_checkbox(self):
         # xlite_daemon_valid_config_checkbox_state
         valid_config = True if (self.xlite_utility.xlite_daemon_confs_local and
                                 'master' in self.xlite_utility.xlite_daemon_confs_local) else False
@@ -642,6 +654,42 @@ class BlocknetGUI:
         # self.xlite_daemon_valid_config_checkbox_string_var
         var = f"Xlite-daemon config is valid" if valid_config else "Xlite-daemon config is not valid"
         self.xlite_daemon_valid_config_checkbox_string_var.set(var)
+
+    async def update_status_blocknet_core(self):
+        self.update_blocknet_start_close_button()
+        self.update_blocknet_process_status_checkbox()
+        self.update_blocknet_custom_path_button()
+        self.update_blocknet_conf_status_checkbox()
+        self.update_blocknet_data_path_status_checkbox()
+        self.update_blocknet_rpc_connection_checkbox()
+
+    async def update_status_blockdx(self):
+        self.update_blockdx_process_status_checkbox()
+        self.update_blockdx_start_close_button()
+        self.update_blockdx_config_button_checkbox()
+
+    async def update_status_xlite(self):
+        self.update_xlite_process_status_checkbox()
+        self.update_xlite_start_close_button()
+        self.update_xlite_store_password_button()
+        self.update_xlite_daemon_process_status()
+        self.update_xlite_valid_config_checkbox()
+        self.update_xlite_daemon_valid_config_checkbox()
+
+    def update_status(self):
+        # Define an async function to run the coroutines concurrently
+        async def update_status_async():
+            await asyncio.gather(
+                self.update_status_blocknet_core(),
+                self.update_status_blockdx(),
+                self.update_status_xlite()
+            )
+
+        # Run the async function using asyncio.run() to execute the coroutines
+        asyncio.run(update_status_async())
+
+        # Schedule the next update
+        self.root.after(1000, self.update_status)
 
     async def check_processes(self):
 
@@ -713,27 +761,6 @@ class BlocknetGUI:
         # Update Xlite-daemon process status and store the PIDs
         self.xlite_daemon_process_running = bool(xlite_daemon_processes)
         self.xlite_utility.xlite_daemon_pids = xlite_daemon_processes
-
-        # Calculate execution time
-        # end_time = time.time()
-        # execution_time = end_time - start_time
-        # Log execution time
-        # logging.debug(f"Execution time of check_processes: {execution_time} seconds")
-
-    def update_status(self):
-        # Define an async function to run the coroutines concurrently
-        async def update_status_async():
-            await asyncio.gather(
-                self.update_status_blocknet_core(),
-                self.update_status_blockdx(),
-                self.update_status_xlite()
-            )
-
-        # Run the async function using asyncio.run() to execute the coroutines
-        asyncio.run(update_status_async())
-
-        # Schedule the next update
-        self.root.after(1000, self.update_status)
 
     def update_processes(self):
         # Define an async function to run the coroutines concurrently
