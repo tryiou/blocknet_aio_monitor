@@ -2,7 +2,6 @@ import io
 import platform
 import tarfile
 import zipfile
-import asyncio
 import psutil
 import requests
 import logging
@@ -10,7 +9,6 @@ import os
 import subprocess
 import time
 import json
-import copy
 from conf_data import (xlite_releases_urls, xlite_bin_path, xlite_bin_name, aio_blocknet_data_path,
                        xlite_default_paths, xlite_daemon_default_paths)
 
