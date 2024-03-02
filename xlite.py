@@ -36,7 +36,7 @@ class XliteUtility:
         # self.start_async_tasks()
 
     def parse_xlite_conf(self):
-        data_folder = os.path.expanduser(xlite_default_paths.get(system, None))
+        data_folder = os.path.expandvars(os.path.expanduser(xlite_default_paths.get(system, None)))
         file = "app-settings.json"
         file_path = os.path.join(data_folder, file)
         meta_data = {}
@@ -54,7 +54,7 @@ class XliteUtility:
 
     def parse_xlite_daemon_conf(self):
         # Assuming daemon_data_path and confs_folder are defined earlier in your code
-        daemon_data_path = os.path.expanduser(xlite_daemon_default_paths.get(system, None))
+        daemon_data_path = os.path.expandvars(os.path.expanduser(xlite_daemon_default_paths.get(system, None)))
         confs_folder = os.path.join(daemon_data_path, "settings")
 
         # List all files in the confs_folder
