@@ -67,7 +67,7 @@ blockdx_base_conf = {
 }
 
 xlite_bin_name = {
-    "Windows": "Xlite.exe",
+    "Windows": "XLite.exe",
     "Linux": "xlite",
     "Darwin": "xlite"  # ["BLOCK-DX-1.9.5-mac", "BLOCK DX.app", "Contents", "MacOS"]  # List of folders for Darwin
 }
