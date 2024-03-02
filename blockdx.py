@@ -12,7 +12,8 @@ import time
 import json
 import copy
 
-from conf_data import blockdx_releases_urls, aio_blocknet_data_path, blockdx_bin_path, blockdx_default_paths
+from conf_data import blockdx_releases_urls, aio_blocknet_data_path, blockdx_bin_path, blockdx_default_paths, \
+    blockdx_selectedWallets_blocknet, blockdx_base_conf, blockdx_bin_name
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -29,14 +30,15 @@ class BlockdxUtility:
 
     def parse_blockdx_conf(self):
         data_folder = get_blockdx_data_folder()
-        file_path = os.path.join(data_folder, "app-meta.json")
+        file = "app-meta.json"
+        file_path = os.path.join(data_folder, file)
         meta_data = {}
 
         if os.path.exists(file_path):
             try:
                 with open(file_path, 'r') as file:
                     meta_data = json.load(file)
-                    logging.debug(f"Loaded JSON data: {meta_data}")
+                    logging.info(f"BLOCK-DX: Loaded JSON data from {file_path}: {meta_data}")
             except Exception as e:
                 logging.error(f"Error parsing {file_path}: {e}, repairing file")
         else:
@@ -47,7 +49,6 @@ class BlockdxUtility:
         self.blockdx_conf_local = meta_data
 
     def compare_and_update_local_conf(self, xbridgeconfpath, rpc_user, rpc_password):
-        from conf_data import blockdx_selectedWallets_blocknet, blockdx_base_conf
         xbridgeconfpath = r"{}".format(xbridgeconfpath)
         data_folder = get_blockdx_data_folder()
         file_path = os.path.join(data_folder, "app-meta.json")
@@ -91,7 +92,6 @@ class BlockdxUtility:
             logging.info("No changes detected in Blockdx config.")
 
     def start_blockdx(self, retry_limit=3, retry_count=0):
-        from conf_data import blockdx_bin_name, blockdx_bin_path, aio_blocknet_data_path
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blockdx.")
             return

@@ -90,7 +90,7 @@ def download_blocknet_bin():
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
-        self.downloading_bin = None
+        self.downloading_bin = False
         self.data_folder = get_blocknet_data_folder(custom_path)
         self.process_running = None
         self.blocknet_conf_local = None
@@ -246,10 +246,11 @@ class BlocknetUtility:
         self.init_blocknet_rpc()
 
     def parse_blocknet_conf(self):
-        conf_file_path = os.path.join(self.data_folder, "blocknet.conf")
+        file = "blocknet.conf"
+        conf_file_path = os.path.join(self.data_folder, file)
         if os.path.exists(conf_file_path):
             self.blocknet_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.debug(f"Parsed {conf_file_path} file successfully: {self.blocknet_conf_local}")
+            logging.info(f"BLOCKNET: Parsed {conf_file_path} file successfully: {self.blocknet_conf_local}")
         else:
             self.blocknet_conf_local = {}
             logging.warning(f"{conf_file_path} file does not exist.")
@@ -258,7 +259,7 @@ class BlocknetUtility:
         conf_file_path = os.path.join(self.data_folder, "xbridge.conf")
         if os.path.exists(conf_file_path):
             self.xbridge_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.debug(f"Parsed {conf_file_path} file successfully: {self.xbridge_conf_local}")
+            logging.info(f"BLOCKNET: Parsed {conf_file_path} file successfully: {self.xbridge_conf_local}")
         else:
             self.xbridge_conf_local = {}
             logging.warning(f"{conf_file_path} file does not exist.")
@@ -400,11 +401,10 @@ def get_blocknet_data_folder(custom_path=None):
         path = blocknet_default_paths.get(system)
     if path:
         expanded_path = os.path.expandvars(os.path.expanduser(path))
-        norm_path = os.path.normpath(expanded_path)
-        logging.info(f"\n path {norm_path} \n")
+        # logging.info(f"\n path {norm_path} \n")
         return os.path.normpath(expanded_path)  # Normalize path separators
     else:
-        logging.error(f"{path} doesn't exist")
+        logging.error(f"invalid blocknet data folder path: {path}")
 
 
 def generate_random_string(length):
@@ -442,7 +442,7 @@ def retrieve_remote_blocknet_conf():
                 conf_data = f.read()
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
-                logging.info(f"found and parsed successfully: {local_conf_file}")
+                logging.info(f"REMOTE: found and parsed successfully: {local_conf_file}")
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse: {local_conf_file}")
@@ -489,7 +489,7 @@ def retrieve_remote_xbridge_conf():
                 conf_data = f.read()
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
-                logging.info(f"Found and parsed successfully: {local_conf_file} ")
+                logging.info(f"REMOTE: Found and parsed successfully: {local_conf_file} ")
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse {local_conf_file} ")
@@ -508,7 +508,7 @@ def retrieve_remote_xbridge_conf():
             if parsed_conf:
                 # Save the remote configuration to a local file
                 save_conf_to_file(parsed_conf, local_conf_file)
-                logging.info(f"retrieved and parsed successfully: {local_conf_file} ")
+                logging.info(f"REMOTE: retrieved and parsed successfully: {local_conf_file} ")
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse remote file: {local_conf_file}")
