@@ -578,12 +578,12 @@ class BlocknetGUI:
             # blockdx_valid_config_checkbox_state
             blockdx_conf = self.blockdx_utility.blockdx_conf_local
             is_blockdx_config_sync = (
-                    blockdx_conf and
+                    bool(blockdx_conf) and
                     blockdx_conf.get('user') == rpc_user and
                     blockdx_conf.get('password') == rpc_password and
                     blockdx_conf.get('xbridgeConfPath') == xbridgeconfpath and
                     isinstance(blockdx_conf.get('selectedWallets'), list) and
-                    blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets')
+                    blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets', [])
             )
 
             # blockdx_valid_config_checkbox_string_var
