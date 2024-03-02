@@ -23,6 +23,9 @@ logging.basicConfig(level=logging.DEBUG)
 urllib3_logger = logging.getLogger('urllib3')
 urllib3_logger.setLevel(logging.WARNING)
 
+system = platform.system()
+machine = platform.machine()
+
 
 class BlocknetRPCClient:
     def __init__(self, rpc_user, rpc_password, rpc_port):
@@ -65,11 +68,9 @@ class BlocknetRPCClient:
 
 def download_blocknet_bin():
     from conf_data import blocknet_releases_urls
-    system = platform.system()
-    machine = platform.machine()
     url = blocknet_releases_urls.get((system, machine))
     if url is None:
-        raise ValueError("Unsupported OS or architecture")
+        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
     local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
@@ -156,8 +157,6 @@ class BlocknetUtility:
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blocknet.")
             return
-
-        system = platform.system()
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
         if system == "Windows":
             blocknet_exe = os.path.join(local_path, "blocknet-4.4.1", "bin", "blocknet-qt.exe")
@@ -397,7 +396,6 @@ def get_blocknet_data_folder(custom_path=None):
     if custom_path:
         path = custom_path
     else:
-        system = platform.system()
         path = blocknet_default_paths.get(system)
     if path:
         expanded_path = os.path.expandvars(os.path.expanduser(path))
@@ -431,7 +429,6 @@ def save_conf_to_file(conf_data, file_path):
 
 def retrieve_remote_blocknet_conf():
     filename = "remote_blocknet.conf"
-    system = platform.system()
     local_conf_path = aio_blocknet_data_path.get(system)
     local_conf_file = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), filename)
     # Check if the local configuration file exists
@@ -478,7 +475,6 @@ def retrieve_remote_blocknet_conf():
 def retrieve_remote_xbridge_conf():
     from conf_data import remote_xbridge_conf_url
     filename = "remote_xbridge.conf"
-    system = platform.system()
     local_conf_path = aio_blocknet_data_path.get(system)
     local_conf_file = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), filename)
     # Check if the local configuration file exists

@@ -17,6 +17,9 @@ from conf_data import blockdx_releases_urls, aio_blocknet_data_path, blockdx_bin
 
 logging.basicConfig(level=logging.DEBUG)
 
+system = platform.system()
+machine = platform.machine()
+
 
 class BlockdxUtility:
     def __init__(self):
@@ -96,8 +99,6 @@ class BlockdxUtility:
             logging.error("Retry limit exceeded. Unable to start Blockdx.")
             return
 
-        # Get the current system
-        system = platform.system()
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
         # Construct the path to the Blockdx executable based on the current system
@@ -185,7 +186,6 @@ class BlockdxUtility:
 
 
 def get_blockdx_data_folder():
-    system = platform.system()
     path = blockdx_default_paths.get(system)
     if path:
         return os.path.expandvars(os.path.expanduser(path))
@@ -194,12 +194,10 @@ def get_blockdx_data_folder():
 
 
 def download_blockdx_bin():
-    system = platform.system()
-    machine = platform.machine()
     url = blockdx_releases_urls.get((system, machine))
     local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
     if url is None:
-        raise ValueError("Unsupported OS or architecture")
+        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
     response = requests.get(url)
     if response.status_code == 200:

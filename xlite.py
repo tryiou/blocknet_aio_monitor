@@ -177,7 +177,7 @@ def download_xlite_bin():
     url = xlite_releases_urls.get((system, machine))
     local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
     if url is None:
-        raise ValueError("Unsupported OS or architecture")
+        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
     response = requests.get(url)
     if response.status_code == 200:
