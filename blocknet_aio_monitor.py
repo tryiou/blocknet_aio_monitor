@@ -450,6 +450,12 @@ class BlocknetGUI:
     def enable_blocknet_start_button(self):
         self.disable_start_blocknet_button = False
 
+    def enable_blockdx_start_button(self):
+        self.disable_start_blockdx_button = False
+
+    def enable_xlite_start_button(self):
+        self.disable_start_xlite_button = False
+
     def start_or_close_blocknet(self):
         disable_button(self.blocknet_start_close_button)
         self.disable_start_blocknet_button = True
@@ -461,9 +467,6 @@ class BlocknetGUI:
             my_thread.start()
         self.root.after(self.time_disable_button, self.enable_blocknet_start_button)
 
-    def enable_blockdx_start_button(self):
-        self.disable_start_blockdx_button = False
-
     def start_or_close_blockdx(self):
         disable_button(self.blockdx_start_close_button)
         self.disable_start_blockdx_button = True
@@ -474,9 +477,6 @@ class BlocknetGUI:
             my_thread = Thread(target=self.blockdx_utility.start_blockdx)
             my_thread.start()
         self.root.after(self.time_disable_button, self.enable_blockdx_start_button)
-
-    def enable_xlite_start_button(self):
-        self.disable_start_xlite_button = False
 
     def start_or_close_xlite(self):
         disable_button(self.xlite_start_close_button)
