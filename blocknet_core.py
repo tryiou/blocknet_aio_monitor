@@ -14,7 +14,8 @@ import zipfile
 import tarfile
 from subprocess import check_output
 
-from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf
+from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf, \
+    blocknet_bin_name, blocknet_bin_path
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -25,6 +26,7 @@ urllib3_logger.setLevel(logging.WARNING)
 
 system = platform.system()
 machine = platform.machine()
+blocknet_bin = blocknet_bin_name.get(system, None)
 
 
 class BlocknetRPCClient:
@@ -66,37 +68,14 @@ class BlocknetRPCClient:
             return None
 
 
-def download_blocknet_bin():
-    from conf_data import blocknet_releases_urls
-    url = blocknet_releases_urls.get((system, machine))
-    if url is None:
-        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
-
-    local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-
-    response = requests.get(url)
-    if response.status_code == 200:
-        # Extract the archive from memory
-        if url.endswith(".zip"):
-            with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                zip_ref.extractall(local_path)
-        elif url.endswith(".tar.gz"):
-            with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
-                tar.extractall(local_path)
-        else:
-            print("Unsupported archive format.")
-    else:
-        print("Failed to download the Blocknet binary.")
-
-
 class BlocknetUtility:
     def __init__(self, custom_path=None):
         self.downloading_bin = False
         self.data_folder = get_blocknet_data_folder(custom_path)
         self.process_running = None
         self.blocknet_conf_local = None
-        self.blocknet_conf_remote = retrieve_remote_blocknet_conf()
         self.xbridge_conf_local = None
+        self.blocknet_conf_remote = retrieve_remote_blocknet_conf()
         self.xbridge_conf_remote = retrieve_remote_xbridge_conf()
         self.blocknet_pids = []
         self.blocknet_process = None
@@ -158,10 +137,7 @@ class BlocknetUtility:
             logging.error("Retry limit exceeded. Unable to start Blocknet.")
             return
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-        if system == "Windows":
-            blocknet_exe = os.path.join(local_path, "blocknet-4.4.1", "bin", "blocknet-qt.exe")
-        else:
-            blocknet_exe = os.path.join(local_path, "blocknet-4.4.1", "bin", "blocknet-qt")
+        blocknet_exe = os.path.join(local_path, *blocknet_bin_path, blocknet_bin)
 
         if not os.path.exists(blocknet_exe):
             self.downloading_bin = True
@@ -386,6 +362,29 @@ class BlocknetUtility:
     def compare_and_update_local_conf(self):
         self.check_blocknet_conf()
         self.check_xbridge_conf()
+
+
+def download_blocknet_bin():
+    from conf_data import blocknet_releases_urls
+    url = blocknet_releases_urls.get((system, machine))
+    if url is None:
+        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+
+    local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
+
+    response = requests.get(url)
+    if response.status_code == 200:
+        # Extract the archive from memory
+        if url.endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
+                zip_ref.extractall(local_path)
+        elif url.endswith(".tar.gz"):
+            with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
+                tar.extractall(local_path)
+        else:
+            print("Unsupported archive format.")
+    else:
+        print("Failed to download the Blocknet binary.")
 
 
 def get_pid(name):

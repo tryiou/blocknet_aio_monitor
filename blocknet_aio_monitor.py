@@ -25,6 +25,7 @@ asyncio_logger.setLevel(logging.WARNING)
 
 system = platform.system()
 machine = platform.machine()
+blocknet_bin = blocknet_bin_name.get(system, None)
 xlite_daemon_bin = xlite_daemon_bin_name.get((system, machine))
 blockdx_bin = blockdx_bin_name.get(system, None)
 xlite_bin = xlite_bin_name.get(system, None)
@@ -732,7 +733,7 @@ class BlocknetGUI:
             # Get all processes
             for proc in psutil.process_iter(['pid', 'name']):
                 # Check if any process matches the Blocknet process name
-                if blocknet_bin_name in proc.info['name']:
+                if blocknet_bin in proc.info['name']:
                     blocknet_processes.append(proc.info['pid'])
                 # Check if any process matches the Block DX process name
                 if blockdx_bin in proc.info['name']:
