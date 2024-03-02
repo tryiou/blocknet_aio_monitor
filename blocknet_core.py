@@ -14,7 +14,8 @@ import zipfile
 import tarfile
 from subprocess import check_output
 
-from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf
+from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf, \
+    blocknet_bin_name, blocknet_bin_path
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -22,6 +23,10 @@ logging.basicConfig(level=logging.DEBUG)
 # Disable log entries from the urllib3 module (used by requests)
 urllib3_logger = logging.getLogger('urllib3')
 urllib3_logger.setLevel(logging.WARNING)
+
+system = platform.system()
+machine = platform.machine()
+blocknet_bin = blocknet_bin_name.get(system, None)
 
 
 class BlocknetRPCClient:
@@ -63,39 +68,14 @@ class BlocknetRPCClient:
             return None
 
 
-def download_blocknet_bin():
-    from conf_data import blocknet_releases_urls
-    system = platform.system()
-    machine = platform.machine()
-    url = blocknet_releases_urls.get((system, machine))
-    if url is None:
-        raise ValueError("Unsupported OS or architecture")
-
-    local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-
-    response = requests.get(url)
-    if response.status_code == 200:
-        # Extract the archive from memory
-        if url.endswith(".zip"):
-            with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                zip_ref.extractall(local_path)
-        elif url.endswith(".tar.gz"):
-            with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
-                tar.extractall(local_path)
-        else:
-            print("Unsupported archive format.")
-    else:
-        print("Failed to download the Blocknet binary.")
-
-
 class BlocknetUtility:
     def __init__(self, custom_path=None):
-        self.downloading_bin = None
+        self.downloading_bin = False
         self.data_folder = get_blocknet_data_folder(custom_path)
         self.process_running = None
         self.blocknet_conf_local = None
-        self.blocknet_conf_remote = retrieve_remote_blocknet_conf()
         self.xbridge_conf_local = None
+        self.blocknet_conf_remote = retrieve_remote_blocknet_conf()
         self.xbridge_conf_remote = retrieve_remote_xbridge_conf()
         self.blocknet_pids = []
         self.blocknet_process = None
@@ -152,23 +132,15 @@ class BlocknetUtility:
             logging.error("RPC user, password, or port not found in the configuration.")
             self.blocknet_rpc = None
 
-    def start_blocknet(self, retry_limit=3, retry_count=0, gui_button=None):
+    def start_blocknet(self, retry_limit=3, retry_count=0):
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blocknet.")
             return
-
-        system = platform.system()
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-        if system == "Windows":
-            blocknet_exe = os.path.join(local_path, "blocknet-4.4.1", "bin", "blocknet-qt.exe")
-        else:
-            blocknet_exe = os.path.join(local_path, "blocknet-4.4.1", "bin", "blocknet-qt")
+        blocknet_exe = os.path.join(local_path, *blocknet_bin_path, blocknet_bin)
 
         if not os.path.exists(blocknet_exe):
             self.downloading_bin = True
-            # if gui_button:
-            #     gui_button.config(text="Downloading...")
-            #     gui_button.update_idletasks()  # Force GUI update
             logging.info(f"Blocknet executable not found at {blocknet_exe}. Downloading...")
             download_blocknet_bin()
             self.downloading_bin = False
@@ -249,10 +221,11 @@ class BlocknetUtility:
         self.init_blocknet_rpc()
 
     def parse_blocknet_conf(self):
-        conf_file_path = os.path.join(self.data_folder, "blocknet.conf")
+        file = "blocknet.conf"
+        conf_file_path = os.path.join(self.data_folder, file)
         if os.path.exists(conf_file_path):
             self.blocknet_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.debug(f"Parsed {conf_file_path} file successfully: {self.blocknet_conf_local}")
+            logging.info(f"BLOCKNET: Parsed {conf_file_path} file successfully: {self.blocknet_conf_local}")
         else:
             self.blocknet_conf_local = {}
             logging.warning(f"{conf_file_path} file does not exist.")
@@ -261,7 +234,7 @@ class BlocknetUtility:
         conf_file_path = os.path.join(self.data_folder, "xbridge.conf")
         if os.path.exists(conf_file_path):
             self.xbridge_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.debug(f"Parsed {conf_file_path} file successfully: {self.xbridge_conf_local}")
+            logging.info(f"BLOCKNET: Parsed {conf_file_path} file successfully: {self.xbridge_conf_local}")
         else:
             self.xbridge_conf_local = {}
             logging.warning(f"{conf_file_path} file does not exist.")
@@ -391,6 +364,29 @@ class BlocknetUtility:
         self.check_xbridge_conf()
 
 
+def download_blocknet_bin():
+    from conf_data import blocknet_releases_urls
+    url = blocknet_releases_urls.get((system, machine))
+    if url is None:
+        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+
+    local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
+
+    response = requests.get(url)
+    if response.status_code == 200:
+        # Extract the archive from memory
+        if url.endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
+                zip_ref.extractall(local_path)
+        elif url.endswith(".tar.gz"):
+            with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
+                tar.extractall(local_path)
+        else:
+            print("Unsupported archive format.")
+    else:
+        print("Failed to download the Blocknet binary.")
+
+
 def get_pid(name):
     return map(int, check_output(["pidof", name]).split())
 
@@ -399,15 +395,13 @@ def get_blocknet_data_folder(custom_path=None):
     if custom_path:
         path = custom_path
     else:
-        system = platform.system()
         path = blocknet_default_paths.get(system)
     if path:
         expanded_path = os.path.expandvars(os.path.expanduser(path))
-        norm_path = os.path.normpath(expanded_path)
-        logging.info(f"\n path {norm_path} \n")
+        # logging.info(f"\n path {norm_path} \n")
         return os.path.normpath(expanded_path)  # Normalize path separators
     else:
-        logging.error(f"{path} doesn't exist")
+        logging.error(f"invalid blocknet data folder path: {path}")
 
 
 def generate_random_string(length):
@@ -434,7 +428,6 @@ def save_conf_to_file(conf_data, file_path):
 
 def retrieve_remote_blocknet_conf():
     filename = "remote_blocknet.conf"
-    system = platform.system()
     local_conf_path = aio_blocknet_data_path.get(system)
     local_conf_file = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), filename)
     # Check if the local configuration file exists
@@ -445,7 +438,7 @@ def retrieve_remote_blocknet_conf():
                 conf_data = f.read()
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
-                logging.info(f"found and parsed successfully: {local_conf_file}")
+                logging.info(f"REMOTE: found and parsed successfully: {local_conf_file}")
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse: {local_conf_file}")
@@ -481,7 +474,6 @@ def retrieve_remote_blocknet_conf():
 def retrieve_remote_xbridge_conf():
     from conf_data import remote_xbridge_conf_url
     filename = "remote_xbridge.conf"
-    system = platform.system()
     local_conf_path = aio_blocknet_data_path.get(system)
     local_conf_file = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), filename)
     # Check if the local configuration file exists
@@ -492,7 +484,7 @@ def retrieve_remote_xbridge_conf():
                 conf_data = f.read()
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
-                logging.info(f"Found and parsed successfully: {local_conf_file} ")
+                logging.info(f"REMOTE: Found and parsed successfully: {local_conf_file} ")
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse {local_conf_file} ")
@@ -511,7 +503,7 @@ def retrieve_remote_xbridge_conf():
             if parsed_conf:
                 # Save the remote configuration to a local file
                 save_conf_to_file(parsed_conf, local_conf_file)
-                logging.info(f"retrieved and parsed successfully: {local_conf_file} ")
+                logging.info(f"REMOTE: retrieved and parsed successfully: {local_conf_file} ")
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse remote file: {local_conf_file}")
