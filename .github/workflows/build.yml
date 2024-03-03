@@ -90,8 +90,11 @@ jobs:
 
       - name: Create and activate virtual environment
         run: |
-          python -m venv ~/.venv
+          if [ ! -d "$HOME/.pyenv/versions/3.7.8/envs/venv" ]; then
+            pyenv virtualenv 3.7.8 venv
+          fi
           source ~/.venv/bin/activate
+          pyenv activate venv
 
       - name: Install dependencies
         run: |
