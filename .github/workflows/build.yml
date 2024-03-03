@@ -70,7 +70,6 @@ jobs:
         run: |
           export PYENV_ROOT="$HOME/.pyenv"
           export PATH="$PYENV_ROOT/bin:$PATH"
-          export CC=/opt/homebrew/bin/gcc-11
           echo "PATH: $PATH"
           echo "PYENV_ROOT: $PYENV_ROOT"
           eval "$(pyenv init --path)"
