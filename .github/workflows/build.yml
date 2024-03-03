@@ -62,9 +62,8 @@ jobs:
         if: github.event.pull_request.draft == false
 
       - name: Set up pyenv
-        uses: actions/setup-python@v2
-        with:
-          python-version: "3.7"
+        run: |
+          curl https://pyenv.run | bash
 
       - name: Install Python using pyenv
         run: |
