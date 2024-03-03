@@ -64,13 +64,11 @@ jobs:
 
       - name: Set up pyenv
         run: |
-          curl https://pyenv.run | bash
+          brew install pyenv
 
       - name: Set pyenv vars
         run: |
-          export PYENV_ROOT="$HOME/.pyenv"
-          export PATH="$PYENV_ROOT/bin:$PATH"
-          eval "$(pyenv init --path)"
+          pyenv versions
 
       - name: Cache Python 3.7.8
         uses: actions/cache@v2
