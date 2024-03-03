@@ -79,7 +79,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: artifacts-macos
+          name: artifacts-macos-12
           path: |
             dist/blocknet_aio_monitor_macos-12
 
@@ -116,7 +116,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: artifacts-macos
+          name: artifacts-macos-11
           path: |
             dist/blocknet_aio_monitor_macos-11
 
