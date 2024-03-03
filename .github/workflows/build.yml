@@ -76,7 +76,11 @@ jobs:
           echo "Initialized pyenv"
           pyenv install 3.7.8
           pyenv global 3.7.8
-          python --version
+
+      - name: Create and activate virtual environment
+        run: |
+          python -m venv ~/.venv
+          source ~/.venv/bin/activate
 
       - name: Install dependencies
         run: |
