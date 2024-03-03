@@ -92,8 +92,8 @@ jobs:
           if [ ! -d "$HOME/.pyenv/versions/3.7.8/envs/venv" ]; then
             pyenv virtualenv 3.7.8 venv
           fi
-          source ~/.venv/bin/activate
-          pyenv activate venv
+          source $HOME/.pyenv/versions/3.7.8/envs/venv/bin/activate
+#          pyenv activate venv
 
       - name: Install dependencies
         run: |
