@@ -86,7 +86,8 @@ jobs:
 
       - name: Build executable on macOS
         run: |
-          "${{ PYENV_ROOT }}/versions/3.7.8/bin/python" -m pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          echo "PYENV_ROOT: ${PYENV_ROOT}"
+          "${PYENV_ROOT}/versions/3.7.8/bin/python" -m pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
 
       - uses: actions/upload-artifact@v3
