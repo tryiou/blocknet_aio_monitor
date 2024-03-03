@@ -55,55 +55,56 @@ jobs:
           files: |
             dist/blocknet_aio_monitor_linux
 
-  build-macos-12:
-    runs-on: macos-12
-    steps:
-      - uses: actions/checkout@v3
-        if: github.event.pull_request.draft == false
+build-macos-12:
+  runs-on: macos-12
+  steps:
+    - uses: actions/checkout@v3
+      if: github.event.pull_request.draft == false
 
-      - name: install gcc
-        run: brew install gcc
+    - name: install gcc
+      run: brew install gcc
 
-      - name: Set up pyenv
-        run: |
-          curl https://pyenv.run | bash
+    - name: Set up pyenv
+      run: |
+        curl https://pyenv.run | bash
 
-      - name: Install Python using pyenv
-        run: |
-          export PYENV_ROOT="$HOME/.pyenv"
-          export PATH="$PYENV_ROOT/bin:$PATH"
-          echo "PATH: $PATH"
-          echo "PYENV_ROOT: $PYENV_ROOT"
-          eval "$(pyenv init --path)"
-          echo "Initialized pyenv"
-          pyenv install 3.7.6
-          pyenv global 3.7.6
+    - name: Install Python using pyenv
+      run: |
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        export CC=/opt/homebrew/bin/gcc-11
+        echo "PATH: $PATH"
+        echo "PYENV_ROOT: $PYENV_ROOT"
+        eval "$(pyenv init --path)"
+        echo "Initialized pyenv"
+        pyenv install 3.7.6
+        pyenv global 3.7.6
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
 
-      - name: Build executable on macOS
-        run: |
-          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
+    - name: Build executable on macOS
+      run: |
+        pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+        mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: artifacts-macos-12
-          path: |
-            dist/blocknet_aio_monitor_macos-12
+    - uses: actions/upload-artifact@v3
+      with:
+        name: artifacts-macos-12
+        path: |
+          dist/blocknet_aio_monitor_macos-12
 
-      - uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          name: blocknet_aio_monitor ${{ github.ref_name}}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: true
-          files: |
-            dist/blocknet_aio_monitor_macos-12
+    - uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/v')
+      with:
+        name: blocknet_aio_monitor ${{ github.ref_name}}
+        prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        generate_release_notes: true
+        files: |
+          dist/blocknet_aio_monitor_macos-12
 
 
   build-windows:
