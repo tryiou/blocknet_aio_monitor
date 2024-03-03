@@ -76,6 +76,7 @@ jobs:
           echo "Initialized pyenv"
           pyenv install 3.7.8
           pyenv global 3.7.8
+          python --version
 
       - name: Install dependencies
         run: |
