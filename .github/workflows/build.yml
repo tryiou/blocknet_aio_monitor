@@ -55,75 +55,33 @@ jobs:
           files: |
             dist/blocknet_aio_monitor_linux
 
-  #  build-macos-12:
-  #    runs-on: macos-12
-  #    steps:
-  #      - uses: actions/checkout@v3
-  #        if: github.event.pull_request.draft == false
-  #
-  #      - name: Set up Python 3.10
-  #        uses: actions/setup-python@v3
-  #        with:
-  #          python-version: "3.10"
-  #
-  #      - name: Install dependencies
-  #        run: |
-  #          python -m pip install --upgrade pip
-  #          pip install -r requirements.txt
-  #          pip install pyinstaller
-  #
-  #      - name: Build executable on macOS
-  #        run: |
-  #          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-  #          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
-  #
-  #      - uses: actions/upload-artifact@v3
-  #        with:
-  #          name: artifacts-macos-12
-  #          path: |
-  #            dist/blocknet_aio_monitor_macos-12
-  #
-  #      - uses: softprops/action-gh-release@v1
-  #        if: startsWith(github.ref, 'refs/tags/v')
-  #        with:
-  #          name: blocknet_aio_monitor ${{ github.ref_name}}
-  #          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-  #          generate_release_notes: true
-  #          files: |
-  #            dist/blocknet_aio_monitor_macos-12
-
   build-macos-12:
     runs-on: macos-12
     steps:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.7.6
         uses: actions/setup-python@v3
         with:
-          python-version: "3.10"
+          python-version: "3.7.6"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install cx_Freeze
+          pip install pyinstaller
 
       - name: Build executable on macOS
         run: |
-          cxfreeze --target-dir dist "${{ github.workspace }}/blocknet_aio_monitor.py"
-#          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
-
-      - name: Zip executable files
-        run: |
-          cd dist
-          zip -r blocknet_aio_monitor_macos-12.zip .
+          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-macos-12
           path: |
-            dist/blocknet_aio_monitor_macos-12.zip
+            dist/blocknet_aio_monitor_macos-12
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -132,44 +90,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor_macos-12.zip
-#
-#  build-macos-11:
-#    runs-on: macos-11
-#    steps:
-#      - uses: actions/checkout@v3
-#        if: github.event.pull_request.draft == false
-#
-#      - name: Set up Python 3.7.6
-#        uses: actions/setup-python@v3
-#        with:
-#          python-version: "3.7.6"
-#
-#      - name: Install dependencies
-#        run: |
-#          python -m pip install --upgrade pip
-#          pip install -r requirements.txt
-#          pip install pyinstaller
-#
-#      - name: Build executable on macOS
-#        run: |
-#          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-#          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-11
-#
-#      - uses: actions/upload-artifact@v3
-#        with:
-#          name: artifacts-macos-11
-#          path: |
-#            dist/blocknet_aio_monitor_macos-11
-#
-#      - uses: softprops/action-gh-release@v1
-#        if: startsWith(github.ref, 'refs/tags/v')
-#        with:
-#          name: blocknet_aio_monitor ${{ github.ref_name}}
-#          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-#          generate_release_notes: true
-#          files: |
-#            dist/blocknet_aio_monitor_macos-11
+            dist/blocknet_aio_monitor_macos-12
 
 
   build-windows:
