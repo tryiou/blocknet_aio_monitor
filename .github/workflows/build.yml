@@ -76,7 +76,7 @@ jobs:
 
       - name: Build executable on macOS
         run: |
-          pyinstaller --noconfirm --onefile --windowed --clean --hidden-import=FileDialog,Tkinter,simpledialog "${{ github.workspace }}/blocknet_aio_monitor.py"
+          pyinstaller --noconfirm --onefile --windowed --clean --hidden-import=tkinter --hidden-import=tkinter.filedialog --hidden-import=tkinter.simpledialog "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
 
       - uses: actions/upload-artifact@v3
