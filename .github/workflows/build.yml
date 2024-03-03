@@ -62,12 +62,13 @@ jobs:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
 
-      - name: Cache pyenv installation
+      - name: Cache pyenv folder
         uses: actions/cache@v2
         with:
           path: ~/.pyenv
-          key: pyenv-${{ runner.os }}-${{ hashFiles('**/.python-version') }}-3.7.8
-
+          key: pyenv-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            pyenv-${{ runner.os }}-
       - name: Set up pyenv
         run: |
           curl https://pyenv.run | bash
