@@ -69,6 +69,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          brew install python-tk@3.10
           brew install pyinstaller
           python -m pip install --upgrade pip
           pip install -r requirements.txt
