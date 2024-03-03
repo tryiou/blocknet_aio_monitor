@@ -112,7 +112,7 @@ jobs:
       - name: Build executable on macOS
         run: |
           cxfreeze --target-dir dist "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
+#          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
 
       - name: Zip executable files
         run: |
