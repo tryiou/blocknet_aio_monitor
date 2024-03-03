@@ -69,9 +69,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          brew install pyinstaller
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
 
       - name: Build executable on macOS
         run: |
