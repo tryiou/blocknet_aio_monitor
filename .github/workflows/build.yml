@@ -62,39 +62,14 @@ jobs:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
 
-      - name: Set up pyenv
-        run: |
-          brew install pyenv
-
-      - name: Set pyenv vars
-        run: |
-          pyenv versions
-
-      - name: Cache Python 3.7.8
-        uses: actions/cache@v2
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
         with:
-          path: ~/.pyenv/versions/3.7.8
-          key: python-3.7.8-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            python-3.7.8-${{ runner.os }}-
-
-      - name: Install Python using pyenv
-        run: |
-          if [ ! -d "$HOME/.pyenv/versions/3.7.8" ]; then
-            pyenv install 3.7.8
-          fi
-          pyenv global 3.7.8
-
-      - name: Create and activate virtual environment
-        run: |
-          if [ ! -d "$HOME/.pyenv/versions/3.7.8/envs/venv" ]; then
-            pyenv virtualenv 3.7.8 venv
-          fi
-          source $HOME/.pyenv/versions/3.7.8/envs/venv/bin/activate
-#          pyenv activate venv
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
+          brew install tcl-tk
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
