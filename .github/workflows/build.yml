@@ -85,7 +85,7 @@ jobs:
           echo "PYENV_ROOT: $PYENV_ROOT"
           eval "$(pyenv init --path)"
           echo "Initialized pyenv"
-          pyenv install 3.7.8
+          pyenv install 3.7.8 || true
           pyenv global 3.7.8
 
       - name: Create and activate virtual environment
