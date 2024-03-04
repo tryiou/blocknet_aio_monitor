@@ -56,43 +56,45 @@ jobs:
             dist/blocknet_aio_monitor_linux
 
 
-  build-macos-12:
-    runs-on: macos-12
-    steps:
-      - uses: actions/checkout@v3
-        if: github.event.pull_request.draft == false
+build-macos-12:
+  runs-on: macos-12
+  steps:
+    - uses: actions/checkout@v3
+      if: github.event.pull_request.draft == false
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.10"
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
 
-      - name: Install dependencies
-        run: |
-          brew install python-tk@3.10
-          brew install pyinstaller
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Install dependencies
+      run: |
+        brew install python-tk@3.10
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      - name: Build executable on macOS
-        run: |
-          pyinstaller --noconfirm --onefile --windowed --clean --hidden-import=_tkinter --hidden-import=tkinter --hidden-import=tkinter.filedialog --hidden-import=tkinter.simpledialog "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
+    - name: Build macOS application bundle with Py2App
+      run: |
+        py2applet --make-setup "${{ github.workspace }}/blocknet_aio_monitor.py"
+        python setup.py py2app
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: artifacts-macos-12
-          path: |
-            dist/blocknet_aio_monitor_macos-12
+    - name: Rename and move application bundle
+      run: |
+        mv dist/blocknet_aio_monitor.app dist/blocknet_aio_monitor_macos-12.app
 
-      - uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          name: blocknet_aio_monitor ${{ github.ref_name}}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: true
-          files: |
-            dist/blocknet_aio_monitor_macos-12
+    - uses: actions/upload-artifact@v3
+      with:
+        name: artifacts-macos-12
+        path: dist/blocknet_aio_monitor_macos-12.app
+
+    - uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/v')
+      with:
+        name: blocknet_aio_monitor ${{ github.ref_name}}
+        prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        generate_release_notes: true
+        files: |
+          dist/blocknet_aio_monitor_macos-12.app
 
   build-windows:
     runs-on: windows-latest
