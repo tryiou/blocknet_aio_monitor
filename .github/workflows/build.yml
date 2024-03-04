@@ -72,6 +72,7 @@ jobs:
           brew install python-tk@3.10
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install py2app
 
       - name: Build macOS application bundle with Py2App
         run: |
