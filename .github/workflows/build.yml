@@ -83,10 +83,15 @@ jobs:
         run: |
           mv dist/blocknet_aio_monitor.app dist/blocknet_aio_monitor_macos-12.app
 
+      - name: Zip application bundle
+        run: |
+          cd dist
+          zip -r blocknet_aio_monitor_macos-12.zip blocknet_aio_monitor_macos-12.app
+
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-macos-12
-          path: dist/blocknet_aio_monitor_macos-12.app
+          path: dist/blocknet_aio_monitor_macos-12.zip
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -95,7 +100,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor_macos-12.app
+            dist/blocknet_aio_monitor_macos-12.zip
 
   build-windows:
     runs-on: windows-latest
