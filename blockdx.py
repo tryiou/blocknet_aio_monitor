@@ -224,9 +224,9 @@ def download_blockdx_bin():
             with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
                 # Assuming blockdx_bin_path is a dictionary
                 # if isinstance(blockdx_bin_path[system], list):
-                local_path = os.path.join(local_path, blockdx_bin_path[system][0])
+                # local_path = os.path.join(local_path, blockdx_bin_path[system][0])
                 # else:
-                #     local_path = os.path.join(local_path, blockdx_bin_path[system])
+                local_path = os.path.join(local_path, blockdx_bin_path[system])
                 zip_ref.extractall(local_path)
         elif url.endswith(".tar.gz"):
             with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
