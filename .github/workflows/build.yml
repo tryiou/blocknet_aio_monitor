@@ -63,7 +63,7 @@ jobs:
 
       - name: Set up Python using Homebrew
         run: |
-          brew install python@3.7.6
+          brew install python@3.7
           python3.7 -m pip install --upgrade pip
 
       - name: Install dependencies / Build executable on macOS
