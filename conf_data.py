@@ -54,7 +54,7 @@ blocknet_bin_name = {
 blockdx_bin_name = {
     "Windows": "BLOCK DX.exe",
     "Linux": "block-dx",
-    "Darwin": "BLOCK DX"
+    "Darwin": "BLOCK DX.app"
 }
 xlite_bin_name = {
     "Windows": "XLite.exe",
@@ -72,8 +72,11 @@ blocknet_bin_path = ["blocknet-4.4.1", "bin"]
 blockdx_bin_path = {
     "Windows": "BLOCK-DX-1.9.5-win-x64",
     "Linux": "BLOCK-DX-1.9.5-linux-x64",
-    "Darwin": ["BLOCK-DX-1.9.5-mac", "BLOCK DX.app", "Contents", "MacOS"]  # List of folders for Darwin
+    "Darwin": ["BLOCK-DX-1.9.5-mac"]
+
 }
+# , "BLOCK DX.app"]
+# , "Contents", "MacOS"]  # List of folders for Darwin
 xlite_bin_path = {
     "Windows": "XLite-1.0.7-win-x64",
     "Linux": "XLite-1.0.7-linux",
