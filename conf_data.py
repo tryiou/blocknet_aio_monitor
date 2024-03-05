@@ -72,7 +72,7 @@ blocknet_bin_path = ["blocknet-4.4.1", "bin"]
 blockdx_bin_path = {
     "Windows": "BLOCK-DX-1.9.5-win-x64",
     "Linux": "BLOCK-DX-1.9.5-linux-x64",
-    "Darwin": ["BLOCK-DX-1.9.5-mac"]
+    "Darwin": "BLOCK-DX-1.9.5-mac"
 
 }
 # , "BLOCK DX.app"]
