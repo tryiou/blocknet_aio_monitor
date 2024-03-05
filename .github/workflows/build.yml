@@ -61,22 +61,31 @@ jobs:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
 
-      - name: Install Python 3.10 using Homebrew
+      - name: Set up Python 3.10 using Homebrew
         run: |
           brew install python@3.10
           python3.10 -m pip install --upgrade pip
 
-      - name: Install dependencies
-        run: |
-          /usr/local/opt/python@3.10/bin/python3.10 -m pip install -r requirements.txt
+      - name: Create venv
+        run: python3.10 -m venv venv
 
-      - name: Install pyinstaller
+      - name: Activate venv and install dependencies
         run: |
-          /usr/local/opt/python@3.10/bin/python3.10 -m pip install pyinstaller
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Install PyInstaller
+        run: |
+          pip install pyinstaller
+
+      - name: Check Python version and path
+        run: |
+          python --version
+          which python
 
       - name: Build executable on macOS
         run: |
-          /usr/local/opt/python@3.10/bin/python3.10 -m pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
 
       - uses: actions/upload-artifact@v3
@@ -93,6 +102,7 @@ jobs:
           generate_release_notes: true
           files: |
             dist/blocknet_aio_monitor_macos-12
+
 
 
   build-windows:
