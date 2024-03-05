@@ -104,7 +104,7 @@ class BlockdxUtility:
         # Construct the path to the Blockdx executable based on the current system
         if system == "Darwin":
             darwin_folders = blockdx_bin_path[system]
-            blockdx_exe = os.path.join(local_path, *darwin_folders, blockdx_bin_name[system])
+            blockdx_exe = os.path.join(local_path, darwin_folders, blockdx_bin_name[system])
             if os.path.exists(blockdx_exe):
                 current_permissions = os.stat(blockdx_exe).st_mode
                 logging.info(f"{blockdx_bin_name[system]} binary current_permissions: {current_permissions}")
