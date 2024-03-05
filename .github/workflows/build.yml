@@ -68,15 +68,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python3.10 -m pip install -r requirements.txt
+          /usr/local/opt/python@3.10/bin/python3.10 -m pip install -r requirements.txt
 
       - name: Install pyinstaller
         run: |
-          python3.10 -m pip install pyinstaller
+          /usr/local/opt/python@3.10/bin/python3.10 -m pip install pyinstaller
 
       - name: Build executable on macOS
         run: |
-          python3.10 -m pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          /usr/local/opt/python@3.10/bin/python3.10 -m pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
 
       - uses: actions/upload-artifact@v3
@@ -93,6 +93,7 @@ jobs:
           generate_release_notes: true
           files: |
             dist/blocknet_aio_monitor_macos-12
+
 
   build-windows:
     runs-on: windows-latest
