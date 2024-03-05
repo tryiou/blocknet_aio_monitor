@@ -109,11 +109,16 @@ class BlockdxUtility:
                 current_permissions = os.stat(blockdx_exe).st_mode
                 logging.info(f"{blockdx_bin_name[system]} binary current_permissions: {current_permissions}")
                 # Check if the execute permission is already set
+
+                binfolder = ["BLOCK-DX-1.9.5-mac", "BLOCK DX.app", "Contents", "MacOS"]
+                subexe = "BLOCK DX"
+                fp = os.path.join(local_path, *binfolder, subexe)
+                current_permissions = os.stat(fp).st_mode
                 if not current_permissions & 0o111:
                     # Execute permission is not set, add it
                     new_permissions = current_permissions | 0o111  # OR with octal value 111 to add execute permission
                     # Set the new permissions for the file
-                    os.chmod(blockdx_exe, new_permissions)
+                    os.chmod(fp, new_permissions)
                     print("Execute permission added.")
                 else:
                     # Execute permission is already set
