@@ -69,22 +69,13 @@ jobs:
       - name: Create venv
         run: python3.10 -m venv venv
 
-      - name: Activate venv and install dependencies
+      - name: Activate venv / install dependencies / Build executable on macOS
         run: |
           source venv/bin/activate
           pip install -r requirements.txt
-
-      - name: Install PyInstaller
-        run: |
           pip install pyinstaller
-
-      - name: Check Python version and path
-        run: |
           python --version
           which python
-
-      - name: Build executable on macOS
-        run: |
           pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
 
