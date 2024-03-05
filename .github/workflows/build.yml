@@ -56,8 +56,8 @@ jobs:
             dist/blocknet_aio_monitor_linux
 
 
-  build-macos-12:
-    runs-on: macos-12
+  build-macos-13:
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
@@ -76,13 +76,13 @@ jobs:
       - name: Build executable on macOS
         run: |
           pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-12
+          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos-13
 
       - uses: actions/upload-artifact@v3
         with:
-          name: artifacts-macos-12
+          name: artifacts-macos-13
           path: |
-            dist/blocknet_aio_monitor_macos-12
+            dist/blocknet_aio_monitor_macos-13
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -91,7 +91,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor_macos-12
+            dist/blocknet_aio_monitor_macos-13
 
   build-windows:
     runs-on: windows-latest

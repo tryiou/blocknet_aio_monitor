@@ -5,7 +5,6 @@ import platform
 import signal
 import sys
 import time
-import tkinter
 import tkinter as tk
 from tkinter import filedialog, simpledialog
 import json
