@@ -105,6 +105,18 @@ class BlockdxUtility:
         if system == "Darwin":
             darwin_folders = blockdx_bin_path[system]
             blockdx_exe = os.path.join(local_path, *darwin_folders, blockdx_bin_name[system])
+            current_permissions = os.stat(blockdx_exe).st_mode
+            logging.info(f"{blockdx_bin_name[system]} binary current_permissions: {current_permissions}")
+            # Check if the execute permission is already set
+            if not current_permissions & 0o111:
+                # Execute permission is not set, add it
+                new_permissions = current_permissions | 0o111  # OR with octal value 111 to add execute permission
+                # Set the new permissions for the file
+                os.chmod(blockdx_exe, new_permissions)
+                print("Execute permission added.")
+            else:
+                # Execute permission is already set
+                print("Execute permission already exists.")
         else:
             # For Windows and Linux
             blockdx_exe = os.path.join(local_path, blockdx_bin_path[system], blockdx_bin_name[system])
@@ -204,7 +216,11 @@ def download_blockdx_bin():
         # Extract the archive from memory
         if url.endswith(".zip"):
             with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                local_path = os.path.join(local_path, blockdx_bin_path[system])
+                # Assuming blockdx_bin_path is a dictionary
+                if isinstance(blockdx_bin_path[system], list):
+                    local_path = os.path.join(local_path, blockdx_bin_path[system][0])
+                else:
+                    local_path = os.path.join(local_path, blockdx_bin_path[system])
                 zip_ref.extractall(local_path)
         elif url.endswith(".tar.gz"):
             with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
