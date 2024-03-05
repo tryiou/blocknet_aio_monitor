@@ -11,6 +11,7 @@ import subprocess
 import time
 import json
 import copy
+from contextlib import contextmanager
 
 from conf_data import blockdx_releases_urls, aio_blocknet_data_path, blockdx_bin_path, blockdx_default_paths, \
     blockdx_selectedWallets_blocknet, blockdx_base_conf, blockdx_bin_name
@@ -101,31 +102,7 @@ class BlockdxUtility:
 
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
-        # Construct the path to the Blockdx executable based on the current system
-        if system == "Darwin":
-            darwin_folders = blockdx_bin_path[system]
-            blockdx_exe = os.path.join(local_path, darwin_folders, blockdx_bin_name[system])
-            if os.path.exists(blockdx_exe):
-                current_permissions = os.stat(blockdx_exe).st_mode
-                logging.info(f"{blockdx_bin_name[system]} binary current_permissions: {current_permissions}")
-                # Check if the execute permission is already set
-
-                binfolder = ["BLOCK-DX-1.9.5-mac", "BLOCK DX.app", "Contents", "MacOS"]
-                subexe = "BLOCK DX"
-                fp = os.path.join(local_path, *binfolder, subexe)
-                current_permissions = os.stat(fp).st_mode
-                if not current_permissions & 0o111:
-                    # Execute permission is not set, add it
-                    new_permissions = current_permissions | 0o111  # OR with octal value 111 to add execute permission
-                    # Set the new permissions for the file
-                    os.chmod(fp, new_permissions)
-                    print("Execute permission added.")
-                else:
-                    # Execute permission is already set
-                    print("Execute permission already exists.")
-        else:
-            # For Windows and Linux
-            blockdx_exe = os.path.join(local_path, blockdx_bin_path[system], blockdx_bin_name[system])
+        blockdx_exe = os.path.join(local_path, blockdx_bin_path[system], blockdx_bin_name[system])
 
         if not os.path.exists(blockdx_exe):
             self.downloading_bin = True
@@ -135,11 +112,21 @@ class BlockdxUtility:
 
         try:
             # Start the Blocknet process using subprocess
-            self.blockdx_process = subprocess.Popen([blockdx_exe],
-                                                    stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE,
-                                                    stdin=subprocess.PIPE,
-                                                    start_new_session=True)
+            if system == "Darwin":
+                blockdx_exe = os.path.abspath(blockdx_exe)
+                with change_directory(os.path.join(local_path, blockdx_bin_path[system])):
+                    logging.info(f"DARWIN BIN: {['open', '-a', blockdx_bin_name[system]]} ")
+                    self.blockdx_process = subprocess.Popen(['open', '-a', blockdx_bin_name[system]],
+                                                            stdout=subprocess.PIPE,
+                                                            stderr=subprocess.PIPE,
+                                                            stdin=subprocess.PIPE,
+                                                            start_new_session=True)
+            else:
+                self.blockdx_process = subprocess.Popen([blockdx_exe],
+                                                        stdout=subprocess.PIPE,
+                                                        stderr=subprocess.PIPE,
+                                                        stdin=subprocess.PIPE,
+                                                        start_new_session=True)
             # Check if the process has started
             while self.blockdx_process.pid is None:
                 time.sleep(1)  # Wait for 1 second before checking again
@@ -201,6 +188,19 @@ class BlockdxUtility:
                     logging.info(f"blockdx process with PID {pid} has been force terminated.")
             except Exception as e:
                 logging.error(f"Error: {e}")
+
+
+@contextmanager
+def change_directory(directory):
+    # Save the current working directory
+    saved_directory = os.getcwd()
+    try:
+        # Change the directory
+        os.chdir(directory)
+        yield
+    finally:
+        # Restore the original working directory
+        os.chdir(saved_directory)
 
 
 def get_blockdx_data_folder():

@@ -9,6 +9,7 @@ import os
 import subprocess
 import time
 import json
+from contextlib import contextmanager
 from conf_data import (xlite_releases_urls, xlite_bin_path, xlite_bin_name, aio_blocknet_data_path,
                        xlite_default_paths, xlite_daemon_default_paths)
 
@@ -87,13 +88,7 @@ class XliteUtility:
 
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
-        # Construct the path to the Xlite executable based on the current system
-        if system == "Darwin":
-            darwin_folders = xlite_bin_path[system]
-            xlite_exe = os.path.join(local_path, *darwin_folders, xlite_bin_name[system])
-        else:
-            # For Windows and Linux
-            xlite_exe = os.path.join(local_path, xlite_bin_path[system], xlite_bin_name[system])
+        xlite_exe = os.path.join(local_path, xlite_bin_path[system], xlite_bin_name[system])
 
         if not os.path.exists(xlite_exe):
             self.downloading_bin = True
@@ -102,12 +97,22 @@ class XliteUtility:
             self.downloading_bin = False
 
         try:
-            # Start the Blocknet process using subprocess
-            self.xlite_process = subprocess.Popen([xlite_exe],
-                                                  stdout=subprocess.PIPE,
-                                                  stderr=subprocess.PIPE,
-                                                  stdin=subprocess.PIPE,
-                                                  start_new_session=True)
+            if system == "Darwin":
+                # mac mod
+                with change_directory(os.path.join(local_path, xlite_bin_path[system])):
+                    logging.info(f"DARWIN BIN: {['open', '-a', xlite_bin_name[system]]} ")
+                    self.xlite_process = subprocess.Popen(['open', '-a', xlite_bin_name[system]],
+                                                          stdout=subprocess.PIPE,
+                                                          stderr=subprocess.PIPE,
+                                                          stdin=subprocess.PIPE,
+                                                          start_new_session=True)
+            else:
+                # Start the Blocknet process using subprocess
+                self.xlite_process = subprocess.Popen([xlite_exe],
+                                                      stdout=subprocess.PIPE,
+                                                      stderr=subprocess.PIPE,
+                                                      stdin=subprocess.PIPE,
+                                                      start_new_session=True)
             # Check if the process has started
             while self.xlite_process.pid is None:
                 time.sleep(1)  # Wait for 1 second before checking again
@@ -169,6 +174,19 @@ class XliteUtility:
                     logging.info(f"Xlite process with PID {pid} has been force terminated.")
             except Exception as e:
                 logging.error(f"Error: {e}")
+
+
+@contextmanager
+def change_directory(directory):
+    # Save the current working directory
+    saved_directory = os.getcwd()
+    try:
+        # Change the directory
+        os.chdir(directory)
+        yield
+    finally:
+        # Restore the original working directory
+        os.chdir(saved_directory)
 
 
 def download_xlite_bin():
