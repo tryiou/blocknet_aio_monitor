@@ -111,7 +111,7 @@ class BlockdxUtility:
             self.downloading_bin = False
 
         try:
-            # Start the Blocknet process using subprocess
+            # Start the BLOCK-DX process using subprocess
             if system == "Darwin":
                 blockdx_exe = os.path.abspath(blockdx_exe)
                 with change_directory(os.path.join(local_path, blockdx_bin_path[system])):
