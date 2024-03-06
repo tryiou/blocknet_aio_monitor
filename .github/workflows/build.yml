@@ -90,7 +90,7 @@ jobs:
         with:
           name: artifacts-macos-12
           path: |
-            dmg/dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
+            dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -99,7 +99,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dmg/dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
+            dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
 
   build-windows:
     runs-on: windows-latest
