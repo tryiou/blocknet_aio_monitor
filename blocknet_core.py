@@ -146,7 +146,7 @@ class BlocknetUtility:
             self.downloading_bin = False
         try:
             # Start the Blocknet process using subprocess with custom data folder argument
-            self.blocknet_process = subprocess.Popen([blocknet_exe, "-datadir=" + self.data_folder],
+            self.blocknet_process = subprocess.Popen([blocknet_exe, f"-datadir={self.data_folder}"],
                                                      stdout=subprocess.PIPE,
                                                      stderr=subprocess.PIPE,
                                                      stdin=subprocess.PIPE,

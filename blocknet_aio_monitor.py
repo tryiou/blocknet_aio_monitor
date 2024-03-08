@@ -733,16 +733,16 @@ class BlocknetGUI:
             # Get all processes
             for proc in psutil.process_iter(['pid', 'name']):
                 # Check if any process matches the Blocknet process name
-                if blocknet_bin in proc.info['name']:
+                if blocknet_bin == proc.info['name']:
                     blocknet_processes.append(proc.info['pid'])
                 # Check if any process matches the Block DX process name
-                if blockdx_bin in proc.info['name']:
+                if (blockdx_bin[-1] if system == "Darwin" else blockdx_bin) == proc.info['name']:
                     blockdx_processes.append(proc.info['pid'])
                 # Check if any process matches the Xlite process name
-                if xlite_bin in proc.info['name']:
+                if (xlite_bin[-1] if system == "Darwin" else xlite_bin) == proc.info['name']:
                     xlite_processes.append(proc.info['pid'])
                 # Check if any process matches the Xlite-daemon process name
-                if xlite_daemon_bin in proc.info['name']:
+                if xlite_daemon_bin == proc.info['name']:
                     xlite_daemon_processes.append(proc.info['pid'])
         except psutil.Error as e:
             logging.warning(f"Error while checking processes: {e}")

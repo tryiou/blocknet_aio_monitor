@@ -55,33 +55,42 @@ jobs:
           files: |
             dist/blocknet_aio_monitor_linux
 
-  build-macos:
-    runs-on: macos-latest
+  build-macos-12:
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.10"
-
-      - name: Install dependencies
+      - name: Set up Python using Homebrew
         run: |
-          python -m pip install --upgrade pip
+          brew install python@3.10
+          brew install python-tk@3.10
+          python3.10 -m pip install --upgrade pip
+
+      - name: Install dependencies / Build executable on macOS
+        run: |
+          python3.10 -m venv venv
+          source venv/bin/activate
           pip install -r requirements.txt
           pip install pyinstaller
-
-      - name: Build executable on macOS
-        run: |
+          python --version
+          which python
           pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_macos
+          mkdir -p my_bin
+          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor_macos-12
+
+      - name: Create DMG file
+        run: |
+          mkdir -p dmg
+          hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/Blocknet_AIO_Monitor-macos-12.dmg
+          hdiutil convert dmg/Blocknet_AIO_Monitor-macos-12.dmg -format UDZO -o dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
+
 
       - uses: actions/upload-artifact@v3
         with:
-          name: artifacts-macos
+          name: artifacts-macos-12
           path: |
-            dist/blocknet_aio_monitor_macos
+            dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -90,7 +99,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor_macos
+            dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
 
   build-windows:
     runs-on: windows-latest
