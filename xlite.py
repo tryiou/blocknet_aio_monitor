@@ -88,7 +88,12 @@ class XliteUtility:
 
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
-        xlite_exe = os.path.join(local_path, *xlite_bin_path[system])
+        if system == "Darwin":
+            url = xlite_releases_urls.get((system, machine))
+            xlite_dmg_name = os.path.basename(url)
+            xlite_exe = os.path.join(local_path, xlite_dmg_name)
+        else:
+            xlite_exe = os.path.join(local_path, xlite_bin_path[system], xlite_bin_name[system])
 
         if not os.path.exists(xlite_exe):
             self.downloading_bin = True
@@ -99,11 +104,8 @@ class XliteUtility:
         try:
             if system == "Darwin":
                 # mac mod
-                url = xlite_releases_urls.get((system, machine))
-                xlite_dmg_name = os.path.basename(url)
-                dmg_path = os.join(local_path, xlite_dmg_name)
                 # Mount the DMG file
-                os.system(f'hdiutil attach "{dmg_path}"')
+                os.system(f'hdiutil attach "{xlite_exe}"')
                 # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
                 volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
                 app_name = volume_name + '.app'
