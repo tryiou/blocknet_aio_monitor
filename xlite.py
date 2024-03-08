@@ -110,7 +110,7 @@ class XliteUtility:
                 volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
                 app_name = volume_name + '.app'
                 # Path to the application inside the DMG file
-                mount_path = f"/Volumes/{volume_name}/{app_name}"
+                mount_path = f"/Volumes/{volume_name}/{xlite_bin_name[system][0]}"
                 full_path = os.path.join(mount_path, *xlite_bin_name[system])
                 logging.info(
                     f"volume_name: {volume_name}, app_name: {app_name}, mount_path: {mount_path}, full_path: {full_path}")
