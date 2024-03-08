@@ -226,6 +226,11 @@ def download_xlite_bin():
         elif url.endswith(".tar.gz"):
             with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
                 tar.extractall(local_path)
+        elif url.endswith(".dmg"):
+            local_file_path = os.path.join(local_path, os.path.basename(url))
+            with open(local_file_path, "wb") as f:
+                f.write(response.content)
+            print("DMG file saved successfully.")
         else:
             print("Unsupported archive format.")
     else:
