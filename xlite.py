@@ -104,16 +104,19 @@ class XliteUtility:
         try:
             if system == "Darwin":
                 # mac mod
-                # Mount the DMG file
-                os.system(f'hdiutil attach "{xlite_exe}"')
                 # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
                 volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
-                app_name = volume_name + '.app'
                 # Path to the application inside the DMG file
                 mount_path = f"/Volumes/{volume_name}"
+                # Check if the volume is already mounted
+                if not os.path.ismount(mount_path):
+                    # Mount the DMG file
+                    os.system(f'hdiutil attach "{xlite_exe}"')
+                else:
+                    print("Volume is already mounted.")
                 full_path = os.path.join(mount_path, *xlite_bin_name[system])
                 logging.info(
-                    f"volume_name: {volume_name}, app_name: {app_name}, mount_path: {mount_path}, full_path: {full_path}")
+                    f"volume_name: {volume_name}, mount_path: {mount_path}, full_path: {full_path}")
                 self.xlite_process = subprocess.Popen([full_path],
                                                       stdout=subprocess.PIPE,
                                                       stderr=subprocess.PIPE,
