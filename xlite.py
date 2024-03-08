@@ -113,7 +113,7 @@ class XliteUtility:
                     # Mount the DMG file
                     os.system(f'hdiutil attach "{xlite_exe}"')
                 else:
-                    print("Volume is already mounted.")
+                    logging.info("Volume is already mounted.")
                 full_path = os.path.join(mount_path, *xlite_bin_name[system])
                 logging.info(
                     f"volume_name: {volume_name}, mount_path: {mount_path}, full_path: {full_path}")
@@ -122,14 +122,6 @@ class XliteUtility:
                                                       stderr=subprocess.PIPE,
                                                       stdin=subprocess.PIPE,
                                                       start_new_session=True)
-            # first run not working
-            # with change_directory(os.path.join(local_path, xlite_bin_path[system])):
-            #     logging.info(f"DARWIN BIN: {['open', '-a', xlite_bin_name[system]]} ")
-            #     self.xlite_process = subprocess.Popen(['open', '-a', xlite_bin_name[system]],
-            #                                           stdout=subprocess.PIPE,
-            #                                           stderr=subprocess.PIPE,
-            #                                           stdin=subprocess.PIPE,
-            #                                           start_new_session=True)
             else:
                 # Start the Blocknet process using subprocess
                 self.xlite_process = subprocess.Popen([xlite_exe],

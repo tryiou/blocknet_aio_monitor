@@ -54,7 +54,7 @@ blocknet_bin_name = {
 blockdx_bin_name = {
     "Windows": "BLOCK DX.exe",
     "Linux": "block-dx",
-    "Darwin": "BLOCK DX.app"
+    "Darwin": ["BLOCK DX.app", "Contents", "MacOS"]
 }
 xlite_bin_name = {
     "Windows": "XLite.exe",

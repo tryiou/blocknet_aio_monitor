@@ -736,7 +736,7 @@ class BlocknetGUI:
                 if blocknet_bin == proc.info['name']:
                     blocknet_processes.append(proc.info['pid'])
                 # Check if any process matches the Block DX process name
-                if (blockdx_bin.split(".")[0] if system == "Darwin" else blockdx_bin) == proc.info['name']:
+                if (blockdx_bin[-1] if system == "Darwin" else blockdx_bin) == proc.info['name']:
                     blockdx_processes.append(proc.info['pid'])
                 # Check if any process matches the Xlite process name
                 if (xlite_bin[-1] if system == "Darwin" else xlite_bin) == proc.info['name']:

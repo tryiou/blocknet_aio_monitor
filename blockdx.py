@@ -12,6 +12,7 @@ import time
 import json
 import copy
 from contextlib import contextmanager
+import shutil
 
 from conf_data import blockdx_releases_urls, aio_blocknet_data_path, blockdx_bin_path, blockdx_default_paths, \
     blockdx_selectedWallets_blocknet, blockdx_base_conf, blockdx_bin_name
@@ -102,7 +103,12 @@ class BlockdxUtility:
 
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
-        blockdx_exe = os.path.join(local_path, blockdx_bin_path[system], blockdx_bin_name[system])
+        if system == "Darwin":
+            url = blockdx_releases_urls.get((system, machine))
+            blockdx_dmg_name = os.path.basename(url)
+            blockdx_exe = os.path.join(local_path, blockdx_dmg_name)
+        else:
+            blockdx_exe = os.path.join(local_path, blockdx_bin_path[system], blockdx_bin_name[system])
 
         if not os.path.exists(blockdx_exe):
             self.downloading_bin = True
@@ -113,14 +119,27 @@ class BlockdxUtility:
         try:
             # Start the BLOCK-DX process using subprocess
             if system == "Darwin":
-                blockdx_exe = os.path.abspath(blockdx_exe)
-                with change_directory(os.path.join(local_path, blockdx_bin_path[system])):
-                    logging.info(f"DARWIN BIN: {['open', '-a', blockdx_bin_name[system]]} ")
-                    self.blockdx_process = subprocess.Popen(['open', '-a', blockdx_bin_name[system]],
-                                                            stdout=subprocess.PIPE,
-                                                            stderr=subprocess.PIPE,
-                                                            stdin=subprocess.PIPE,
-                                                            start_new_session=True)
+                # mac mod
+                # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
+                # volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
+                # https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg
+                volume_name = url.split('/')[-2].replace('-', ' ')
+                # Path to the application inside the DMG file
+                mount_path = f"/Volumes/{volume_name}"
+                # Check if the volume is already mounted
+                if not os.path.ismount(mount_path):
+                    # Mount the DMG file
+                    os.system(f'hdiutil attach "{blockdx_exe}"')
+                else:
+                    logging.info("Volume is already mounted.")
+                full_path = os.path.join(mount_path, *blockdx_bin_name[system])
+                logging.info(
+                    f"volume_name: {volume_name}, mount_path: {mount_path}, full_path: {full_path}")
+                self.blockdx_process = subprocess.Popen([full_path],
+                                                      stdout=subprocess.PIPE,
+                                                      stderr=subprocess.PIPE,
+                                                      stdin=subprocess.PIPE,
+                                                      start_new_session=True)
             else:
                 self.blockdx_process = subprocess.Popen([blockdx_exe],
                                                         stdout=subprocess.PIPE,
@@ -231,6 +250,11 @@ def download_blockdx_bin():
         elif url.endswith(".tar.gz"):
             with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
                 tar.extractall(local_path)
+        elif url.endswith(".dmg"):
+            local_file_path = os.path.join(local_path, os.path.basename(url))
+            with open(local_file_path, "wb") as f:
+                f.write(response.content)
+            print("DMG file saved successfully.")
         else:
             print("Unsupported archive format.")
     else:
