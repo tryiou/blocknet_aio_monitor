@@ -21,7 +21,7 @@ For more information about Blocknet projects, visit:
  Similar functionality will be added for Blocknet Core, enabling automatic wallet unlocking at startup.
 
 
-## Installation 
+## How to use 
 1. Clone the repository:
 
    ```bash
