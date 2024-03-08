@@ -121,9 +121,9 @@ class BlockdxUtility:
             if system == "Darwin":
                 # mac mod
                 # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
-                # volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
+                volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
                 # https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg
-                volume_name = url.split('/')[-2].replace('-', ' ')
+                # volume_name = url.split('/')[-2].replace('-', ' ')
                 # Path to the application inside the DMG file
                 mount_path = f"/Volumes/{volume_name}"
                 # Check if the volume is already mounted
