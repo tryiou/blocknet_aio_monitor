@@ -99,13 +99,32 @@ class XliteUtility:
         try:
             if system == "Darwin":
                 # mac mod
-                with change_directory(os.path.join(local_path, xlite_bin_path[system])):
-                    logging.info(f"DARWIN BIN: {['open', '-a', xlite_bin_name[system]]} ")
-                    self.xlite_process = subprocess.Popen(['open', '-a', xlite_bin_name[system]],
-                                                          stdout=subprocess.PIPE,
-                                                          stderr=subprocess.PIPE,
-                                                          stdin=subprocess.PIPE,
-                                                          start_new_session=True)
+                url = xlite_releases_urls.get((system, machine))
+                xlite_dmg_name = os.path.basename(url)
+                dmg_path = os.join(local_path, xlite_dmg_name)
+                # Mount the DMG file
+                os.system(f'hdiutil attach "{dmg_path}"')
+                # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
+                volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
+                app_name = volume_name + '.app'
+                # Path to the application inside the DMG file
+                mount_path = f"/Volumes/{volume_name}/{app_name}"
+                full_path = os.path.join(mount_path, *xlite_bin_name[system])
+                logging.info(
+                    f"volume_name: {volume_name}, app_name: {app_name}, mount_path: {mount_path}, full_path: {full_path}")
+                self.xlite_process = subprocess.Popen([full_path],
+                                                      stdout=subprocess.PIPE,
+                                                      stderr=subprocess.PIPE,
+                                                      stdin=subprocess.PIPE,
+                                                      start_new_session=True)
+            # first run not working
+            # with change_directory(os.path.join(local_path, xlite_bin_path[system])):
+            #     logging.info(f"DARWIN BIN: {['open', '-a', xlite_bin_name[system]]} ")
+            #     self.xlite_process = subprocess.Popen(['open', '-a', xlite_bin_name[system]],
+            #                                           stdout=subprocess.PIPE,
+            #                                           stderr=subprocess.PIPE,
+            #                                           stdin=subprocess.PIPE,
+            #                                           start_new_session=True)
             else:
                 # Start the Blocknet process using subprocess
                 self.xlite_process = subprocess.Popen([xlite_exe],

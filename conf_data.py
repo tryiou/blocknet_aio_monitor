@@ -15,12 +15,12 @@ blocknet_releases_urls = {
 blockdx_releases_urls = {
     ("Windows", "AMD64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-win-x64.zip",
     ("Linux", "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-linux-x64.tar.gz",
-    ("Darwin", "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.zip"
+    ("Darwin", "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg"
 }
 xlite_releases_urls = {
     ("Windows", "AMD64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip",
     ("Linux", "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz",
-    ("Darwin", "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.zip"
+    ("Darwin", "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg"
 }
 
 # apps default data path
@@ -59,7 +59,8 @@ blockdx_bin_name = {
 xlite_bin_name = {
     "Windows": "XLite.exe",
     "Linux": "xlite",
-    "Darwin": "XLite.app"  # ["BLOCK-DX-1.9.5-mac", "BLOCK DX.app", "Contents", "MacOS"]  # List of folders for Darwin
+    "Darwin": ["XLite.app", "Contents", "MacOS", "XLite"]
+    # ["BLOCK-DX-1.9.5-mac", "BLOCK DX.app", "Contents", "MacOS"]  # List of folders for Darwin
 }
 xlite_daemon_bin_name = {
     ("Linux", "x86_64"): "xlite-daemon-linux64",
