@@ -1,7 +1,7 @@
 
 # Blocknet AIO Monitor
 
-Blocknet AIO Monitor is a Python application built with Python 3.10, designed to provide a comprehensive monitoring and management solution for Blocknet Core, Block-DX, and XLite wallets.
+Blocknet AIO Monitor is a Python GUI application built with Python 3.10 and tkinter, designed to provide a comprehensive monitoring and management solution for Blocknet Core, Block-DX, and XLite wallets.
 
 For more information about Blocknet projects, visit:
 - [Blocknet Core](https://github.com/blocknetdx/blocknet)
