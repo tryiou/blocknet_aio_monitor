@@ -88,7 +88,7 @@ class XliteUtility:
 
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
-        xlite_exe = os.path.join(local_path, xlite_bin_path[system], xlite_bin_name[system])
+        xlite_exe = os.path.join(local_path, *xlite_bin_path[system])
 
         if not os.path.exists(xlite_exe):
             self.downloading_bin = True
