@@ -38,13 +38,13 @@ jobs:
       - name: Build executable on Ubuntu
         run: |
           pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor_linux
+          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-linux
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-linux
           path: |
-            dist/blocknet_aio_monitor_linux
+            dist/blocknet_aio_monitor-linux
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -53,7 +53,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor_linux
+            dist/blocknet_aio_monitor-linux
 
   build-macos-12:
     runs-on: macos-12
@@ -77,13 +77,13 @@ jobs:
           which python
           pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mkdir -p my_bin
-          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor_macos-12
+          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor-macos
 
       - name: Create DMG file
         run: |
           mkdir -p dmg
-          hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/blocknet_aio_monitor-macos-12-base.dmg
-          hdiutil convert dmg/blocknet_aio_monitor-macos-12-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-macos.dmg
+          hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/blocknet_aio_monitor-macos-base.dmg
+          hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-macos.dmg
 
 
       - uses: actions/upload-artifact@v3
@@ -121,13 +121,13 @@ jobs:
       - name: Build executable on Windows
         run: |
           pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName "${{ github.workspace }}/dist/blocknet_aio_monitor_windows.exe"
+          Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName "${{ github.workspace }}/dist/blocknet_aio_monitor-windows.exe"
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-win
           path: |
-            dist/blocknet_aio_monitor_windows.exe
+            dist/blocknet_aio_monitor-windows.exe
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -136,4 +136,4 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor_windows.exe
+            dist/blocknet_aio_monitor-windows.exe
