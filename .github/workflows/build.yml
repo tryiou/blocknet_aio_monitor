@@ -82,15 +82,15 @@ jobs:
       - name: Create DMG file
         run: |
           mkdir -p dmg
-          hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/Blocknet_AIO_Monitor-macos-12.dmg
-          hdiutil convert dmg/Blocknet_AIO_Monitor-macos-12.dmg -format UDZO -o dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
+          hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/blocknet_aio_monitor-macos-12-base.dmg
+          hdiutil convert dmg/blocknet_aio_monitor-macos-12-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-macos.dmg
 
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-macos-12
           path: |
-            dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
+            dmg/blocknet_aio_monitor-macos.dmg
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -99,7 +99,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dmg/Blocknet_AIO_Monitor-macos-12-RO.dmg
+            dmg/blocknet_aio_monitor-macos.dmg
 
   build-windows:
     runs-on: windows-latest
