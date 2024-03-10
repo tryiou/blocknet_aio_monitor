@@ -37,7 +37,7 @@ close_string = "Close"
 check_config_string = "Check Config"
 store_password_string = "Store Password"
 set_custom_path_string = "Set Custom Path"
-button_width = 110
+button_width = 120
 gui_width = 450
 
 
