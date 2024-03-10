@@ -31,13 +31,36 @@ xlite_daemon_bin = xlite_daemon_bin_name.get((system, machine))
 blockdx_bin = blockdx_bin_name.get(system, None)
 xlite_bin = xlite_bin_name.get(system, None)
 
-# Define the strings
+# Define the gui strings
+app_title_string = "Blocknet AIO monitor"
+blocknet_frame_title_string = "Blocknet Core Management:"
+blockdx_frame_title_string = "Block-dx Management:"
+xlite_frame_title_string = "XLite Management:"
 start_string = "Start"
 close_string = "Close"
 check_config_string = "Check Config"
 store_password_string = "Store Password"
 set_custom_path_string = "Set Custom Path"
-button_width = 110
+blocknet_valid_config_string = "Blocknet Config valid"
+blocknet_not_valid_config_string = "Blocknet Config not valid, Click on Check Config button"
+active_rpc_string = "RPC Connection active"
+inactive_rpc_string = "RPC Connection inactive"
+blocknet_running_string = "Blocknet Process running"
+blocknet_not_running_string = "Blocknet Process not running"
+blockdx_running_string = "Block-DX Process running"
+blockdx_not_running_string = "Block-DX Process not running"
+blockdx_valid_config_string = "Block-DX Config valid"
+blockdx_not_valid_config_string = "Block-DX Config not valid, click Check Config."
+xlite_running_string = "XLite Process running"
+xlite_not_running_string = "XLite Process not running"
+xlite_valid_config_string = "XLite Config valid"
+xlite_not_valid_config_string = "XLite Config not valid"
+xlite_daemon_running_string = "XLite-daemon Process running"
+xlite_daemon_not_running_string = "XLite-daemon Process not running"
+xlite_daemon_valid_config_string = "XLite-daemon Config valid"
+xlite_daemon_not_valid_config_string = "XLite-daemon Config not valid"
+xlite_reverse_proxy_not_running_string = "XLite-reverse-proxy Process not running"
+button_width = 120
 gui_width = 450
 
 
@@ -56,7 +79,7 @@ class BlocknetGUI(ctk.CTk):
                 try:
                     self.xlite_password = decrypt_password(self.cfg['xl_pass'], self.cfg['salt'].encode())
                 except Exception as e:
-                    logging.error(f"Error decrypting xlite password: {e}")
+                    logging.error(f"Error decrypting XLite password: {e}")
                     self.xlite_password = None
 
         self.blocknet_utility = BlocknetUtility(custom_path=custom_path)
@@ -133,7 +156,8 @@ class BlocknetGUI(ctk.CTk):
         self.time_disable_button = 3000
 
         # self.root = ctk.CTk()
-        self.title("Blocknet AIO monitor")
+
+        self.title(app_title_string)
         # self.geometry("570x600")
         # Create frames for Blocknet Core/Block-dx/Xlite management
         self.blocknet_core_frame = ctk.CTkFrame(master=self)  # , borderwidth=2, relief="groove")
@@ -174,7 +198,7 @@ class BlocknetGUI(ctk.CTk):
     def setup_blocknet_core(self):
         # Add widgets for Blocknet Core management inside the blocknet_core_frame
         # Label for Blocknet Core frame
-        self.blocknet_core_label = ctk.CTkLabel(self.blocknet_core_frame, text="Blocknet Core Management:",
+        self.blocknet_core_label = ctk.CTkLabel(self.blocknet_core_frame, text=blocknet_frame_title_string,
                                                 width=gui_width, anchor="w")
         self.blocknet_core_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
@@ -208,7 +232,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_data_path_status_checkbox.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         self.blocknet_process_status_checkbox_state = ctk.BooleanVar()
-        self.blocknet_process_status_checkbox_string_var = ctk.StringVar(value="Blocknet Process is running")
+        self.blocknet_process_status_checkbox_string_var = ctk.StringVar(value=blocknet_running_string)
         self.blocknet_process_status_checkbox = ctk.CTkCheckBox(self.blocknet_core_frame,
                                                                 textvariable=self.blocknet_process_status_checkbox_string_var,
                                                                 variable=self.blocknet_process_status_checkbox_state,
@@ -216,8 +240,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_process_status_checkbox.grid(row=3, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         self.blocknet_conf_status_checkbox_state = ctk.BooleanVar()
-        self.blocknet_conf_status_checkbox_string_var = ctk.StringVar(
-            value="blocknet.conf/xbridge.conf found and parsed")
+        self.blocknet_conf_status_checkbox_string_var = ctk.StringVar(value=blocknet_valid_config_string)
         self.blocknet_conf_status_checkbox = ctk.CTkCheckBox(self.blocknet_core_frame,
                                                              textvariable=self.blocknet_conf_status_checkbox_string_var,
                                                              variable=self.blocknet_conf_status_checkbox_state,
@@ -225,7 +248,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_conf_status_checkbox.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         self.blocknet_rpc_connection_checkbox_state = ctk.BooleanVar()
-        self.blocknet_rpc_connection_checkbox_string_var = ctk.StringVar(value="RPC Connection")
+        self.blocknet_rpc_connection_checkbox_string_var = ctk.StringVar(value=inactive_rpc_string)
         self.blocknet_rpc_connection_checkbox = ctk.CTkCheckBox(self.blocknet_core_frame,
                                                                 textvariable=self.blocknet_rpc_connection_checkbox_string_var,
                                                                 variable=self.blocknet_rpc_connection_checkbox_state,
@@ -257,12 +280,12 @@ class BlocknetGUI(ctk.CTk):
     def setup_block_dx(self):
         # Add widgets for Block-dx management inside the block_dx_frame
         # Label for Block-dx frame
-        self.block_dx_label = ctk.CTkLabel(self.block_dx_frame, text="Block-dx Management:")
+        self.block_dx_label = ctk.CTkLabel(self.block_dx_frame, text=blockdx_frame_title_string)
         self.block_dx_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Checkboxes
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
-        self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value="Blockdx Process is running")
+        self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value=blockdx_running_string)
         self.blockdx_process_status_checkbox = ctk.CTkCheckBox(self.block_dx_frame,
                                                                textvariable=self.blockdx_process_status_checkbox_string_var,
                                                                variable=self.blockdx_process_status_checkbox_state,
@@ -271,7 +294,7 @@ class BlocknetGUI(ctk.CTk):
         self.blockdx_process_status_checkbox.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         self.blockdx_valid_config_checkbox_state = ctk.BooleanVar()
-        self.blockdx_valid_config_checkbox_string_var = ctk.StringVar(value="Blockdx config is synchronized")
+        self.blockdx_valid_config_checkbox_string_var = ctk.StringVar(value=blockdx_valid_config_string)
         self.blockdx_valid_config_checkbox = ctk.CTkCheckBox(self.block_dx_frame,
                                                              textvariable=self.blockdx_valid_config_checkbox_string_var,
                                                              variable=self.blockdx_valid_config_checkbox_state,
@@ -295,12 +318,12 @@ class BlocknetGUI(ctk.CTk):
         self.block_dx_frame.grid_columnconfigure(1, weight=1)
 
     def setup_xlite(self):
-        self.xlite_label = ctk.CTkLabel(self.xlite_frame, text="Xlite Management:")
+        self.xlite_label = ctk.CTkLabel(self.xlite_frame, text=xlite_frame_title_string)
         self.xlite_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Checkboxes
         self.xlite_process_status_checkbox_state = ctk.BooleanVar()
-        self.xlite_process_status_checkbox_string_var = ctk.StringVar(value="Xlite Process is running")
+        self.xlite_process_status_checkbox_string_var = ctk.StringVar(value=xlite_not_running_string)
         self.xlite_process_status_checkbox = ctk.CTkCheckBox(self.xlite_frame,
                                                              textvariable=self.xlite_process_status_checkbox_string_var,
                                                              variable=self.xlite_process_status_checkbox_state,
@@ -309,7 +332,7 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_process_status_checkbox.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         self.xlite_daemon_process_status_checkbox_state = ctk.BooleanVar()
-        self.xlite_daemon_process_status_checkbox_string_var = ctk.StringVar(value="Xlite-daemon Process is running")
+        self.xlite_daemon_process_status_checkbox_string_var = ctk.StringVar(value=xlite_daemon_not_running_string)
         self.xlite_daemon_process_status_checkbox = ctk.CTkCheckBox(self.xlite_frame,
                                                                     textvariable=self.xlite_daemon_process_status_checkbox_string_var,
                                                                     variable=self.xlite_daemon_process_status_checkbox_state,
@@ -319,7 +342,7 @@ class BlocknetGUI(ctk.CTk):
 
         self.xlite_reverse_proxy_process_status_checkbox_state = ctk.BooleanVar()
         self.xlite_reverse_proxy_process_status_checkbox_string_var = ctk.StringVar(
-            value="Xlite-reverse-proxy Process is not running")
+            value=xlite_reverse_proxy_not_running_string)
         self.xlite_reverse_proxy_process_status_checkbox = ctk.CTkCheckBox(self.xlite_frame,
                                                                            textvariable=self.xlite_reverse_proxy_process_status_checkbox_string_var,
                                                                            variable=self.xlite_reverse_proxy_process_status_checkbox_state,
@@ -329,8 +352,7 @@ class BlocknetGUI(ctk.CTk):
                                                               sticky="w")
 
         self.xlite_valid_config_checkbox_state = ctk.BooleanVar()
-        self.xlite_valid_config_checkbox_string_var = ctk.StringVar(
-            value="Xlite config is not valid")
+        self.xlite_valid_config_checkbox_string_var = ctk.StringVar(value=xlite_not_valid_config_string)
         self.xlite_valid_config_checkbox = ctk.CTkCheckBox(self.xlite_frame,
                                                            textvariable=self.xlite_valid_config_checkbox_string_var,
                                                            variable=self.xlite_valid_config_checkbox_state,
@@ -339,7 +361,7 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_valid_config_checkbox.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         self.xlite_daemon_valid_config_checkbox_state = ctk.BooleanVar()
-        self.xlite_daemon_valid_config_checkbox_string_var = ctk.StringVar(value="Xlite-daemon config is not valid")
+        self.xlite_daemon_valid_config_checkbox_string_var = ctk.StringVar(value=xlite_daemon_not_valid_config_string)
         self.xlite_daemon_valid_config_checkbox = ctk.CTkCheckBox(self.xlite_frame,
                                                                   textvariable=self.xlite_daemon_valid_config_checkbox_string_var,
                                                                   variable=self.xlite_daemon_valid_config_checkbox_state,
@@ -410,7 +432,7 @@ class BlocknetGUI(ctk.CTk):
             # ask_user_pass
             # store_salted_pass
             logging.info("Left click detected")
-            password = simpledialog.askstring("Store Xlite Password", "Please enter Xlite your password:", show='*')
+            password = simpledialog.askstring("Store XLite Password", "Please enter XLite your password:", show='*')
             if password:
                 encryption_key = generate_key()
                 salted_pass = encrypt_password(password, encryption_key)
@@ -531,7 +553,7 @@ class BlocknetGUI(ctk.CTk):
 
     def update_blocknet_process_status_checkbox(self):
         # blocknet_process_status_checkbox_string_var
-        var = f"Blocknet Process is running" if self.blocknet_process_running else "Blocknet Process is not running"
+        var = blocknet_running_string if self.blocknet_process_running else blocknet_not_running_string
         # , PIDs: {self.blocknet_utility.blocknet_pids}
         self.blocknet_process_status_checkbox_string_var.set(var)
         # blocknet_process_status_checkbox_state
@@ -548,9 +570,8 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_conf_status_checkbox_state.set(conf_exist_and_parsed)
 
         # blocknet_conf_status_checkbox_string_var
-        string_valid = "blocknet.conf/xbridge.conf OK"
-        string_invalid = "blocknet.conf/xbridge.conf not OK, click on Check Config button"
-        var = string_valid if conf_exist_and_parsed else string_invalid
+
+        var = blocknet_valid_config_string if conf_exist_and_parsed else blocknet_not_valid_config_string
         self.blocknet_conf_status_checkbox_string_var.set(var)
 
     def update_blocknet_data_path_status_checkbox(self):
@@ -567,7 +588,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_rpc_connection_checkbox_state.set(self.blocknet_utility.valid_rpc)
 
         # blocknet_rpc_connection_checkbox_string_var
-        var = "RPC Connection active" if self.blocknet_utility.valid_rpc else "RPC Connection inactive"
+        var = active_rpc_string if self.blocknet_utility.valid_rpc else inactive_rpc_string
         self.blocknet_rpc_connection_checkbox_string_var.set(var)
 
     def update_blockdx_process_status_checkbox(self):
@@ -575,7 +596,7 @@ class BlocknetGUI(ctk.CTk):
         self.blockdx_process_status_checkbox_state.set(self.blockdx_process_running)
 
         # blockdx_process_status_checkbox_string_var
-        var = f"Blockdx Process is running" if self.blockdx_process_running else "Blockdx Process is not running"
+        var = blockdx_running_string if self.blockdx_process_running else blockdx_not_running_string
         # , PIDs: {self.blockdx_utility.blockdx_pids}
         self.blockdx_process_status_checkbox_string_var.set(var)
 
@@ -615,16 +636,14 @@ class BlocknetGUI(ctk.CTk):
 
             # blockdx_valid_config_checkbox_string_var
             self.blockdx_valid_config_checkbox_state.set(is_blockdx_config_sync)
-            string_sync = "Blockdx config is valid"
-            string_notsync = "Blockdx config is not valid, click Check Config."
-            var = string_sync if is_blockdx_config_sync else string_notsync
+            var = blockdx_valid_config_string if is_blockdx_config_sync else blockdx_not_valid_config_string
             self.blockdx_valid_config_checkbox_string_var.set(var)
         else:
             # blockdx_check_config_button
             self.blockdx_valid_config_checkbox_state.set(False)
 
             # blockdx_valid_config_checkbox_string_var
-            var = "Blockdx config is not valid, configure blocknet core first"
+            var = "Block-DX config not valid, Configure blocknet core first"
             self.blockdx_valid_config_checkbox_string_var.set(var)
 
     def update_xlite_process_status_checkbox(self):
@@ -632,7 +651,8 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_process_status_checkbox_state.set(self.xlite_process_running)
 
         # xlite_process_status_checkbox_string_var
-        var = f"Xlite Process is running" if self.xlite_process_running else "Xlite Process is not running"
+
+        var = xlite_running_string if self.xlite_process_running else xlite_not_running_string
         # , PIDs: {self.xlite_utility.xlite_pids}
         self.xlite_process_status_checkbox_string_var.set(var)
 
@@ -657,8 +677,7 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_daemon_process_status_checkbox_state.set(self.xlite_daemon_process_running)
 
         # xlite_daemon_process_status_checkbox_string_var
-        var = f"Xlite-daemon Process is running" if self.xlite_daemon_process_running else (
-            "Xlite-daemon Process is not running")
+        var = xlite_daemon_running_string if self.xlite_daemon_process_running else xlite_daemon_not_running_string
         # , PIDs: {self.xlite_utility.xlite_daemon_pids}
         self.xlite_daemon_process_status_checkbox_string_var.set(var)
 
@@ -667,7 +686,7 @@ class BlocknetGUI(ctk.CTk):
         valid_config = True if self.xlite_utility.xlite_conf_local else False
         self.xlite_valid_config_checkbox_state.set(valid_config)
         # self.xlite_valid_config_checkbox_string_var
-        var = f"Xlite config is valid" if valid_config else "Xlite config is not valid"
+        var = xlite_valid_config_string if valid_config else xlite_not_valid_config_string
         self.xlite_valid_config_checkbox_string_var.set(var)
 
     def update_xlite_daemon_valid_config_checkbox(self):
@@ -676,7 +695,8 @@ class BlocknetGUI(ctk.CTk):
                                 'master' in self.xlite_utility.xlite_daemon_confs_local) else False
         self.xlite_daemon_valid_config_checkbox_state.set(valid_config)
         # self.xlite_daemon_valid_config_checkbox_string_var
-        var = f"Xlite-daemon config is valid" if valid_config else "Xlite-daemon config is not valid"
+
+        var = xlite_daemon_valid_config_string if valid_config else xlite_daemon_not_valid_config_string
         self.xlite_daemon_valid_config_checkbox_string_var.set(var)
 
     async def update_status_blocknet_core(self):
@@ -730,21 +750,21 @@ class BlocknetGUI(ctk.CTk):
         if self.blockdx_utility.blockdx_process is not None:
             process_status = self.blockdx_utility.blockdx_process.poll()
             if process_status is not None:
-                logging.info(f"blockdx process has terminated with return code {process_status}")
+                logging.info(f"Block-DX process has terminated with return code {process_status}")
                 self.blockdx_utility.blockdx_process = None
 
         # Check Xlite process
         if self.xlite_utility.xlite_process is not None:
             process_status = self.xlite_utility.xlite_process.poll()
             if process_status is not None:
-                logging.info(f"Xlite process has terminated with return code {process_status}")
+                logging.info(f"XLite process has terminated with return code {process_status}")
                 self.xlite_utility.xlite_process = None
 
         # Check Xlite process
         if self.xlite_utility.xlite_daemon_process is not None:
             process_status = self.xlite_utility.xlite_daemon_process.poll()
             if process_status is not None:
-                logging.info(f"Xlite-daemon process has terminated with return code {process_status}")
+                logging.info(f"XLite-daemon process has terminated with return code {process_status}")
                 self.xlite_utility.xlite_daemon_process = None
 
         blocknet_processes = []
