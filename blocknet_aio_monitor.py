@@ -548,8 +548,8 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_conf_status_checkbox_state.set(conf_exist_and_parsed)
 
         # blocknet_conf_status_checkbox_string_var
-        string_valid = "blocknet.conf/xbridge.conf OK"
-        string_invalid = "blocknet.conf/xbridge.conf not OK, click on Check Config button"
+        string_valid = "blocknet.conf/xbridge.conf is valid"
+        string_invalid = "blocknet.conf/xbridge.conf not valid, click on Check Config button"
         var = string_valid if conf_exist_and_parsed else string_invalid
         self.blocknet_conf_status_checkbox_string_var.set(var)
 
