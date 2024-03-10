@@ -7,7 +7,7 @@ import signal
 import sys
 import time
 import tkinter as tk
-from tkinter import filedialog, simpledialog
+import customtkinter as ctk
 import json
 import psutil
 from threading import Thread
@@ -124,13 +124,13 @@ class BlocknetGUI:
         self.root.title("Blocknet AIO monitor")
 
         # Create frames for Blocknet Core/Block-dx/Xlite management
-        self.blocknet_core_frame = tk.Frame(root, borderwidth=2, relief="groove")
+        self.blocknet_core_frame = ctk.CTkFrame(root)  # , borderwidth=2, relief="groove")
         self.blocknet_core_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
 
-        self.block_dx_frame = tk.Frame(root, borderwidth=2, relief="groove")
+        self.block_dx_frame = ctk.CTkFrame(root)
         self.block_dx_frame.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
 
-        self.xlite_frame = tk.Frame(root, borderwidth=2, relief="groove")
+        self.xlite_frame = ctk.CTkFrame(root)
         self.xlite_frame.grid(row=2, column=0, padx=10, pady=5, sticky="nsew")
 
         # Call functions to setup management sections
@@ -162,194 +162,195 @@ class BlocknetGUI:
     def setup_blocknet_core(self):
         # Add widgets for Blocknet Core management inside the blocknet_core_frame
         # Label for Blocknet Core frame
-        self.blocknet_core_label = tk.Label(self.blocknet_core_frame, text="Blocknet Core Management:")
+        self.blocknet_core_label = ctk.CTkLabel(self.blocknet_core_frame, text="Blocknet Core Management:")
         self.blocknet_core_label.grid(row=0, column=0, columnspan=3, padx=10, pady=5, sticky="w")
 
-        # Frame for Data Path label and entry
-        self.blocknet_data_path_frame = tk.Frame(self.blocknet_core_frame)
-        self.blocknet_data_path_frame.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="w")
+        # # Frame for Data Path label and entry
+        # self.blocknet_data_path_frame = ctk.CTkFrame(self.blocknet_core_frame)
+        # self.blocknet_data_path_frame.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="w")
 
         # Label for Data Path
-        self.blocknet_data_path_label = tk.Label(self.blocknet_data_path_frame, text="Data Path: ")
-        self.blocknet_data_path_label.grid(row=0, column=0, padx=(0, 10), pady=5, sticky="w")
+        self.blocknet_data_path_label = ctk.CTkLabel(self.blocknet_core_frame, text="Data Path: ")
+        self.blocknet_data_path_label.grid(row=1, column=0, padx=(0, 10), pady=5, sticky="w")
 
         # Entry for Data Path
-        self.blocknet_data_path_entry = tk.Entry(self.blocknet_data_path_frame, width=40, state='normal')
-        self.blocknet_data_path_entry.grid(row=0, column=1, padx=(0, 10), pady=5, sticky="ew")
+        self.blocknet_data_path_entry = ctk.CTkEntry(self.blocknet_core_frame, width=40, state='normal')
+        self.blocknet_data_path_entry.grid(row=1, column=1, padx=(0, 10), pady=5, sticky="ew")
 
         # Configure column to resize automatically
-        self.blocknet_data_path_frame.columnconfigure(1, weight=1)
+        self.blocknet_core_frame.columnconfigure(1, weight=1)
 
         # Insert data and configure the Entry widget
         self.blocknet_data_path_entry.insert(0, self.blocknet_utility.data_folder)
-        self.blocknet_data_path_entry.config(state='readonly')
+        self.blocknet_data_path_entry.configure(state='readonly')
 
         # Checkboxes
-        self.blocknet_data_path_status_checkbox_state = tk.BooleanVar()
-        self.blocknet_data_path_status_checkbox_string_var = tk.StringVar(value="Data Path")
-        self.blocknet_data_path_status_checkbox = tk.Checkbutton(self.blocknet_data_path_frame,
-                                                                 textvariable=self.blocknet_data_path_status_checkbox_string_var,
-                                                                 variable=self.blocknet_data_path_status_checkbox_state,
-                                                                 state='disabled', disabledforeground='black')
-        self.blocknet_data_path_status_checkbox.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.blocknet_data_path_status_checkbox_state = ctk.BooleanVar()
+        self.blocknet_data_path_status_checkbox_string_var = ctk.StringVar(value="Data Path")
+        # ctk.CTkCheckBox
+        self.blocknet_data_path_status_checkbox = ctk.CTkCheckBox(self.blocknet_core_frame,
+                                                                  textvariable=self.blocknet_data_path_status_checkbox_string_var,
+                                                                  variable=self.blocknet_data_path_status_checkbox_state,
+                                                                  state='disabled')  # , disabledforeground='black')
+        self.blocknet_data_path_status_checkbox.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.blocknet_process_status_checkbox_state = tk.BooleanVar()
-        self.blocknet_process_status_checkbox_string_var = tk.StringVar(value="Blocknet Process is running")
-        self.blocknet_process_status_checkbox = tk.Checkbutton(self.blocknet_data_path_frame,
-                                                               textvariable=self.blocknet_process_status_checkbox_string_var,
-                                                               variable=self.blocknet_process_status_checkbox_state,
-                                                               state='disabled', disabledforeground='black')
-        self.blocknet_process_status_checkbox.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.blocknet_process_status_checkbox_state = ctk.BooleanVar()
+        self.blocknet_process_status_checkbox_string_var = ctk.StringVar(value="Blocknet Process is running")
+        self.blocknet_process_status_checkbox = ctk.CTkCheckBox(self.blocknet_core_frame,
+                                                                textvariable=self.blocknet_process_status_checkbox_string_var,
+                                                                variable=self.blocknet_process_status_checkbox_state,
+                                                                state='disabled')  # , disabledforeground='black')
+        self.blocknet_process_status_checkbox.grid(row=3, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.blocknet_conf_status_checkbox_state = tk.BooleanVar()
-        self.blocknet_conf_status_checkbox_string_var = tk.StringVar(
+        self.blocknet_conf_status_checkbox_state = ctk.BooleanVar()
+        self.blocknet_conf_status_checkbox_string_var = ctk.StringVar(
             value="blocknet.conf/xbridge.conf found and parsed")
-        self.blocknet_conf_status_checkbox = tk.Checkbutton(self.blocknet_data_path_frame,
-                                                            textvariable=self.blocknet_conf_status_checkbox_string_var,
-                                                            variable=self.blocknet_conf_status_checkbox_state,
-                                                            state='disabled',
-                                                            disabledforeground='black')
-        self.blocknet_conf_status_checkbox.grid(row=3, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.blocknet_conf_status_checkbox = ctk.CTkCheckBox(self.blocknet_core_frame,
+                                                             textvariable=self.blocknet_conf_status_checkbox_string_var,
+                                                             variable=self.blocknet_conf_status_checkbox_state,
+                                                             state='disabled')  # , disabledforeground='black')
+        self.blocknet_conf_status_checkbox.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.blocknet_rpc_connection_checkbox_state = tk.BooleanVar()
-        self.blocknet_rpc_connection_checkbox_string_var = tk.StringVar(value="RPC Connection")
-        self.blocknet_rpc_connection_checkbox = tk.Checkbutton(self.blocknet_data_path_frame,
-                                                               textvariable=self.blocknet_rpc_connection_checkbox_string_var,
-                                                               variable=self.blocknet_rpc_connection_checkbox_state,
-                                                               state='disabled',
-                                                               disabledforeground='black')
-        self.blocknet_rpc_connection_checkbox.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.blocknet_rpc_connection_checkbox_state = ctk.BooleanVar()
+        self.blocknet_rpc_connection_checkbox_string_var = ctk.StringVar(value="RPC Connection")
+        self.blocknet_rpc_connection_checkbox = ctk.CTkCheckBox(self.blocknet_core_frame,
+                                                                textvariable=self.blocknet_rpc_connection_checkbox_string_var,
+                                                                variable=self.blocknet_rpc_connection_checkbox_state,
+                                                                state='disabled')  # , disabledforeground='black')
+        self.blocknet_rpc_connection_checkbox.grid(row=5, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Button for setting custom path
-        self.blocknet_custom_path_button = tk.Button(self.blocknet_data_path_frame, text="Set Custom Path",
-                                                     command=self.open_custom_path_dialog, width=15)
-        self.blocknet_custom_path_button.grid(row=0, column=3, padx=10, pady=5, sticky="e")
+        self.blocknet_custom_path_button = ctk.CTkButton(self.blocknet_core_frame, text="Set Custom Path",
+                                                         command=self.open_custom_path_dialog, width=15)
+        self.blocknet_custom_path_button.grid(row=1, column=3, padx=10, pady=5, sticky="e")
 
         # Button for starting or closing Blocknet
-        self.blocknet_start_close_button_string_var = tk.StringVar(value="Start")
-        self.blocknet_start_close_button = tk.Button(self.blocknet_data_path_frame,
-                                                     textvariable=self.blocknet_start_close_button_string_var,
-                                                     command=self.start_or_close_blocknet, width=15)
-        self.blocknet_start_close_button.grid(row=1, column=3, padx=10, pady=5, sticky="e")
+        self.blocknet_start_close_button_string_var = ctk.StringVar(value="Start")
+        self.blocknet_start_close_button = ctk.CTkButton(self.blocknet_core_frame,
+                                                         textvariable=self.blocknet_start_close_button_string_var,
+                                                         command=self.start_or_close_blocknet, width=15)
+        self.blocknet_start_close_button.grid(row=2, column=3, padx=10, pady=5, sticky="e")
 
         # Button for checking config
-        self.blocknet_check_config_button = tk.Button(self.blocknet_data_path_frame, text="Check Config",
-                                                      command=self.blocknet_check_config,
-                                                      width=15)
-        self.blocknet_check_config_button.grid(row=2, column=3, padx=10, pady=5, sticky="e")
+        self.blocknet_check_config_button = ctk.CTkButton(self.blocknet_core_frame, text="Check Config",
+                                                          command=self.blocknet_check_config,
+                                                          width=15)
+        self.blocknet_check_config_button.grid(row=3, column=3, padx=10, pady=5, sticky="e")
 
     def setup_block_dx(self):
         # Add widgets for Block-dx management inside the block_dx_frame
         # Label for Block-dx frame
-        self.block_dx_label = tk.Label(self.block_dx_frame, text="Block-dx Management:")
+        self.block_dx_label = ctk.CTkLabel(self.block_dx_frame, text="Block-dx Management:")
+        # self.block_dx_label = tk.Label(self.block_dx_frame, text="Block-dx Management:")
         self.block_dx_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Checkboxes
-        self.blockdx_process_status_checkbox_state = tk.BooleanVar()
-        self.blockdx_process_status_checkbox_string_var = tk.StringVar(value="Blockdx Process is running")
-        self.blockdx_process_status_checkbox = tk.Checkbutton(self.block_dx_frame,
-                                                              textvariable=self.blockdx_process_status_checkbox_string_var,
-                                                              variable=self.blockdx_process_status_checkbox_state,
-                                                              state='disabled', disabledforeground='black')
-        self.blockdx_process_status_checkbox.config(wraplength=400)
+        self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
+        self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value="Blockdx Process is running")
+        self.blockdx_process_status_checkbox = ctk.CTkCheckBox(self.block_dx_frame,
+                                                               textvariable=self.blockdx_process_status_checkbox_string_var,
+                                                               variable=self.blockdx_process_status_checkbox_state,
+                                                               state='disabled')  # , disabledforeground='black')
+        # self.blockdx_process_status_checkbox.configure(wraplength=400)
         self.blockdx_process_status_checkbox.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.blockdx_valid_config_checkbox_state = tk.BooleanVar()
-        self.blockdx_valid_config_checkbox_string_var = tk.StringVar(value="Blockdx config is synchronized")
-        self.blockdx_valid_config_checkbox = tk.Checkbutton(self.block_dx_frame,
-                                                            textvariable=self.blockdx_valid_config_checkbox_string_var,
-                                                            variable=self.blockdx_valid_config_checkbox_state,
-                                                            disabledforeground='black', state='disabled')
+        self.blockdx_valid_config_checkbox_state = ctk.BooleanVar()
+        self.blockdx_valid_config_checkbox_string_var = ctk.StringVar(value="Blockdx config is synchronized")
+        self.blockdx_valid_config_checkbox = ctk.CTkCheckBox(self.block_dx_frame,
+                                                             textvariable=self.blockdx_valid_config_checkbox_string_var,
+                                                             variable=self.blockdx_valid_config_checkbox_state,
+                                                             state='disabled')  # , disabledforeground='black')
         self.blockdx_valid_config_checkbox.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Button for starting or closing Block-dx
-        self.blockdx_start_close_button_string_var = tk.StringVar(value="Start")
-        self.blockdx_start_close_button = tk.Button(self.block_dx_frame,
-                                                    textvariable=self.blockdx_start_close_button_string_var,
-                                                    command=self.start_or_close_blockdx, width=15)
+        self.blockdx_start_close_button_string_var = ctk.StringVar(value="Start")
+        self.blockdx_start_close_button = ctk.CTkButton(self.block_dx_frame,
+                                                        textvariable=self.blockdx_start_close_button_string_var,
+                                                        command=self.start_or_close_blockdx, width=15)
         self.blockdx_start_close_button.grid(row=0, column=1, padx=10, pady=5, sticky="e")
 
         # Button for checking config
-        self.blockdx_check_config_button = tk.Button(self.block_dx_frame, text="Check Config",
-                                                     command=self.blockdx_check_config,
-                                                     width=15, state='disabled')
+        self.blockdx_check_config_button = ctk.CTkButton(self.block_dx_frame, text="Check Config",
+                                                         command=self.blockdx_check_config,
+                                                         width=15, state='disabled')
         self.blockdx_check_config_button.grid(row=1, column=1, padx=10, pady=5, sticky="e")
 
         # Configure column 1 to expand
         self.block_dx_frame.grid_columnconfigure(1, weight=1)
 
     def setup_xlite(self):
-        self.xlite_label = tk.Label(self.xlite_frame, text="Xlite Management:")
+        self.xlite_label = ctk.CTkLabel(self.xlite_frame, text="Xlite Management:")
+        # self.xlite_label = tk.Label(self.xlite_frame, text="Xlite Management:")
         self.xlite_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Checkboxes
-        self.xlite_process_status_checkbox_state = tk.BooleanVar()
-        self.xlite_process_status_checkbox_string_var = tk.StringVar(value="Xlite Process is running")
-        self.xlite_process_status_checkbox = tk.Checkbutton(self.xlite_frame,
-                                                            textvariable=self.xlite_process_status_checkbox_string_var,
-                                                            variable=self.xlite_process_status_checkbox_state,
-                                                            state='disabled', disabledforeground='black')
-        self.xlite_process_status_checkbox.config(wraplength=400)
+        self.xlite_process_status_checkbox_state = ctk.BooleanVar()
+        self.xlite_process_status_checkbox_string_var = ctk.StringVar(value="Xlite Process is running")
+        self.xlite_process_status_checkbox = ctk.CTkCheckBox(self.xlite_frame,
+                                                             textvariable=self.xlite_process_status_checkbox_string_var,
+                                                             variable=self.xlite_process_status_checkbox_state,
+                                                             state='disabled')  # , disabledforeground='black')
+        # self.xlite_process_status_checkbox.configure(wraplength=400)
         self.xlite_process_status_checkbox.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.xlite_daemon_process_status_checkbox_state = tk.BooleanVar()
-        self.xlite_daemon_process_status_checkbox_string_var = tk.StringVar(value="Xlite-daemon Process is running")
-        self.xlite_daemon_process_status_checkbox = tk.Checkbutton(self.xlite_frame,
-                                                                   textvariable=self.xlite_daemon_process_status_checkbox_string_var,
-                                                                   variable=self.xlite_daemon_process_status_checkbox_state,
-                                                                   state='disabled', disabledforeground='black')
-        self.xlite_daemon_process_status_checkbox.config(wraplength=400)
+        self.xlite_daemon_process_status_checkbox_state = ctk.BooleanVar()
+        self.xlite_daemon_process_status_checkbox_string_var = ctk.StringVar(value="Xlite-daemon Process is running")
+        self.xlite_daemon_process_status_checkbox = ctk.CTkCheckBox(self.xlite_frame,
+                                                                    textvariable=self.xlite_daemon_process_status_checkbox_string_var,
+                                                                    variable=self.xlite_daemon_process_status_checkbox_state,
+                                                                    state='disabled')  # , disabledforeground='black')
+        # self.xlite_daemon_process_status_checkbox.configure(wraplength=400)
         self.xlite_daemon_process_status_checkbox.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.xlite_reverse_proxy_process_status_checkbox_state = tk.BooleanVar()
-        self.xlite_reverse_proxy_process_status_checkbox_string_var = tk.StringVar(
+        self.xlite_reverse_proxy_process_status_checkbox_state = ctk.BooleanVar()
+        self.xlite_reverse_proxy_process_status_checkbox_string_var = ctk.StringVar(
             value="Xlite-reverse-proxy Process is not running")
-        self.xlite_reverse_proxy_process_status_checkbox = tk.Checkbutton(self.xlite_frame,
-                                                                          textvariable=self.xlite_reverse_proxy_process_status_checkbox_string_var,
-                                                                          variable=self.xlite_reverse_proxy_process_status_checkbox_state,
-                                                                          state='disabled', disabledforeground='black')
-        self.xlite_reverse_proxy_process_status_checkbox.config(wraplength=400)
+        self.xlite_reverse_proxy_process_status_checkbox = ctk.CTkCheckBox(self.xlite_frame,
+                                                                           textvariable=self.xlite_reverse_proxy_process_status_checkbox_string_var,
+                                                                           variable=self.xlite_reverse_proxy_process_status_checkbox_state,
+                                                                           state='disabled')  # , disabledforeground='black')
+        # self.xlite_reverse_proxy_process_status_checkbox.configure(wraplength=400)
         self.xlite_reverse_proxy_process_status_checkbox.grid(row=3, column=0, columnspan=2, padx=10, pady=5,
                                                               sticky="w")
 
-        self.xlite_valid_config_checkbox_state = tk.BooleanVar()
-        self.xlite_valid_config_checkbox_string_var = tk.StringVar(
+        self.xlite_valid_config_checkbox_state = ctk.BooleanVar()
+        self.xlite_valid_config_checkbox_string_var = ctk.StringVar(
             value="Xlite config is not valid")
-        self.xlite_valid_config_checkbox = tk.Checkbutton(self.xlite_frame,
-                                                          textvariable=self.xlite_valid_config_checkbox_string_var,
-                                                          variable=self.xlite_valid_config_checkbox_state,
-                                                          state='disabled', disabledforeground='black')
-        self.xlite_valid_config_checkbox.config(wraplength=400)
+        self.xlite_valid_config_checkbox = ctk.CTkCheckBox(self.xlite_frame,
+                                                           textvariable=self.xlite_valid_config_checkbox_string_var,
+                                                           variable=self.xlite_valid_config_checkbox_state,
+                                                           state='disabled')  # , disabledforeground='black')
+        # self.xlite_valid_config_checkbox.configure(wraplength=400)
         self.xlite_valid_config_checkbox.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
-        self.xlite_daemon_valid_config_checkbox_state = tk.BooleanVar()
-        self.xlite_daemon_valid_config_checkbox_string_var = tk.StringVar(value="Xlite-daemon config is not valid")
-        self.xlite_daemon_valid_config_checkbox = tk.Checkbutton(self.xlite_frame,
-                                                                 textvariable=self.xlite_daemon_valid_config_checkbox_string_var,
-                                                                 variable=self.xlite_daemon_valid_config_checkbox_state,
-                                                                 state='disabled', disabledforeground='black')
-        self.xlite_daemon_valid_config_checkbox.config(wraplength=400)
+        self.xlite_daemon_valid_config_checkbox_state = ctk.BooleanVar()
+        self.xlite_daemon_valid_config_checkbox_string_var = ctk.StringVar(value="Xlite-daemon config is not valid")
+        self.xlite_daemon_valid_config_checkbox = ctk.CTkCheckBox(self.xlite_frame,
+                                                                  textvariable=self.xlite_daemon_valid_config_checkbox_string_var,
+                                                                  variable=self.xlite_daemon_valid_config_checkbox_state,
+                                                                  state='disabled')  # , disabledforeground='black')
+        # self.xlite_daemon_valid_config_checkbox.configure(wraplength=400)
         self.xlite_daemon_valid_config_checkbox.grid(row=5, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Button for starting or closing Xlite
-        self.xlite_start_close_button_string_var = tk.StringVar(value="Start")
-        self.xlite_start_close_button = tk.Button(self.xlite_frame,
-                                                  textvariable=self.xlite_start_close_button_string_var,
-                                                  command=self.start_or_close_xlite, width=15)
+        self.xlite_start_close_button_string_var = ctk.StringVar(value="Start")
+        self.xlite_start_close_button = ctk.CTkButton(self.xlite_frame,
+                                                      textvariable=self.xlite_start_close_button_string_var,
+                                                      command=self.start_or_close_xlite, width=15)
         self.xlite_start_close_button.grid(row=0, column=1, padx=10, pady=5, sticky="e")
 
         # Button for refreshing Xlite config data
-        self.xlite_refresh_button_string_var = tk.StringVar(value="Refresh Config")
-        self.xlite_refresh_button = tk.Button(self.xlite_frame,
-                                              textvariable=self.xlite_refresh_button_string_var,
-                                              command=self.refresh_xlite_confs, width=15)
+        self.xlite_refresh_button_string_var = ctk.StringVar(value="Refresh Config")
+        self.xlite_refresh_button = ctk.CTkButton(self.xlite_frame,
+                                                  textvariable=self.xlite_refresh_button_string_var,
+                                                  command=self.refresh_xlite_confs, width=15)
         self.xlite_refresh_button.grid(row=1, column=1, padx=10, pady=5, sticky="e")
 
         # Create the Button widget with a text variable
-        self.xlite_store_password_button_string_var = tk.StringVar(value="Store Password")
-        self.xlite_store_password_button = tk.Button(self.xlite_frame,
-                                                     textvariable=self.xlite_store_password_button_string_var,
-                                                     width=15)
+        self.xlite_store_password_button_string_var = ctk.StringVar(value="Store Password")
+        self.xlite_store_password_button = ctk.CTkButton(self.xlite_frame,
+                                                         textvariable=self.xlite_store_password_button_string_var,
+                                                         width=15)
 
         self.xlite_store_password_button.grid(row=2, column=1, padx=10, pady=5, sticky="e")
         # Bind left-click event
@@ -361,14 +362,14 @@ class BlocknetGUI:
                                               lambda event: self.xlite_store_password_button_mouse_click(event))
 
         # Set button command for normal button clicks
-        self.xlite_store_password_button.config(command=self.xlite_store_password_button_mouse_click)
+        self.xlite_store_password_button.configure(command=self.xlite_store_password_button_mouse_click)
 
         # Configure column 1 to expand
         self.xlite_frame.grid_columnconfigure(1, weight=1)
 
     def xlite_store_password_button_mouse_click(self, event=None):
 
-        # self.xlite_store_password_button.config(relief='sunken')
+        # self.xlite_store_password_button.configure(relief='sunken')
 
         # Function to handle storing password
 
@@ -386,7 +387,7 @@ class BlocknetGUI:
             # Delete CC_WALLET_AUTOLOGIN variable
             if "CC_WALLET_AUTOLOGIN" in os.environ:
                 os.environ.pop("CC_WALLET_AUTOLOGIN")
-            # self.xlite_store_password_button.config(relief='raised')
+            # self.xlite_store_password_button.configure(relief='raised')
             return "break"
 
         # For left-click event
@@ -394,7 +395,7 @@ class BlocknetGUI:
             # ask_user_pass
             # store_salted_pass
             logging.info("Left click detected")
-            password = simpledialog.askstring("Store Xlite Password", "Please enter Xlite your password:", show='*')
+            password = tk.simpledialog.askstring("Store Xlite Password", "Please enter Xlite your password:", show='*')
             if password:
                 encryption_key = generate_key()
                 salted_pass = encrypt_password(password, encryption_key)
@@ -408,7 +409,7 @@ class BlocknetGUI:
             # Perform actions for left-click (if needed)
 
             # Set button relief style back to 'raised'
-            self.xlite_store_password_button.config(relief='raised')
+            # self.xlite_store_password_button.configure(relief='raised')
             return "break"
 
     def refresh_xlite_confs(self):
@@ -432,20 +433,20 @@ class BlocknetGUI:
         enable_button(self.blockdx_check_config_button)
 
     def open_custom_path_dialog(self):
-        custom_path = filedialog.askdirectory(title="Select Custom Data Path")
+        custom_path = tk.filedialog.askdirectory(title="Select Custom Data Path")
         if custom_path:
             self.on_custom_path_set(custom_path)
 
     def on_custom_path_set(self, custom_path):
         self.blocknet_utility.set_custom_data_path(custom_path)
-        self.blocknet_data_path_entry.config(state='normal')
+        self.blocknet_data_path_entry.configure(state='normal')
         self.blocknet_data_path_entry.delete(0, 'end')
         self.blocknet_data_path_entry.insert(0, custom_path)
-        self.blocknet_data_path_entry.config(state='readonly')
+        self.blocknet_data_path_entry.configure(state='readonly')
 
         # Adjust the width of the Entry widget based on the length of the text
         text_length = len(custom_path)
-        self.blocknet_data_path_entry.config(width=text_length)
+        self.blocknet_data_path_entry.configure(width=text_length)
         save_cfg_json('custom_path', custom_path)
 
     def enable_blocknet_start_button(self):
@@ -511,19 +512,19 @@ class BlocknetGUI:
         #     f", self.disable_start_blocknet_button: {self.disable_start_blocknet_button}, enabled: {enabled}"
         # )
         # (self.blocknet_utility.downloading_bin or self.disable_start_blocknet_button)
-        self.blocknet_start_close_button.config(state='normal' if enabled else 'disabled')
+        self.blocknet_start_close_button.configure(state='normal' if enabled else 'disabled')
 
     def update_blocknet_process_status_checkbox(self):
         # blocknet_process_status_checkbox_string_var
-        var = f"Blocknet Process is running, PIDs: {self.blocknet_utility.blocknet_pids}" if self.blocknet_process_running else "Blocknet Process is not running"
+        var = f"Blocknet Process is running" if self.blocknet_process_running else "Blocknet Process is not running"
+        # , PIDs: {self.blocknet_utility.blocknet_pids}
         self.blocknet_process_status_checkbox_string_var.set(var)
-
         # blocknet_process_status_checkbox_state
         self.blocknet_process_status_checkbox_state.set(self.blocknet_process_running)
 
     def update_blocknet_custom_path_button(self):
         # blocknet_custom_path_button
-        self.blocknet_custom_path_button.config(state='normal' if not self.blocknet_process_running else 'disabled')
+        self.blocknet_custom_path_button.configure(state='normal' if not self.blocknet_process_running else 'disabled')
 
     def update_blocknet_conf_status_checkbox(self):
         # blocknet_conf_status_checkbox_state
@@ -557,7 +558,8 @@ class BlocknetGUI:
         self.blockdx_process_status_checkbox_state.set(self.blockdx_process_running)
 
         # blockdx_process_status_checkbox_string_var
-        var = f"Blockdx Process is running, PIDs: {self.blockdx_utility.blockdx_pids}" if self.blockdx_process_running else "Blockdx Process is not running"
+        var = f"Blockdx Process is running" if self.blockdx_process_running else "Blockdx Process is not running"
+        # , PIDs: {self.blockdx_utility.blockdx_pids}
         self.blockdx_process_status_checkbox_string_var.set(var)
 
     def update_blockdx_start_close_button(self):
@@ -569,7 +571,7 @@ class BlocknetGUI:
         # blockdx_start_close_button
         enabled = (self.blockdx_process_running and not self.disable_start_blockdx_button) or (
                 not self.blockdx_utility.downloading_bin and self.blocknet_utility.valid_rpc and not self.disable_start_blockdx_button)
-        self.blockdx_start_close_button.config(state='normal' if enabled else 'disabled')
+        self.blockdx_start_close_button.configure(state='normal' if enabled else 'disabled')
 
     def update_blockdx_config_button_checkbox(self):
         # blockdx_valid_config_checkbox_state
@@ -581,7 +583,7 @@ class BlocknetGUI:
 
             # blockdx_check_config_button
             blocknet_conf_is_valid = (os.path.exists(xbridgeconfpath) and rpc_password and rpc_user)
-            self.blockdx_check_config_button.config(state='normal' if blocknet_conf_is_valid else 'disabled')
+            self.blockdx_check_config_button.configure(state='normal' if blocknet_conf_is_valid else 'disabled')
 
             # blockdx_valid_config_checkbox_state
             blockdx_conf = self.blockdx_utility.blockdx_conf_local
@@ -601,7 +603,7 @@ class BlocknetGUI:
         else:
             # blockdx_check_config_button
             self.blockdx_valid_config_checkbox_state.set(False)
-            self.blockdx_check_config_button.config(state='disabled')
+            self.blockdx_check_config_button.configure(state='disabled')
 
             # blockdx_valid_config_checkbox_string_var
             var = "Blockdx config is not synchronized, configure blocknet core first"
@@ -612,8 +614,8 @@ class BlocknetGUI:
         self.xlite_process_status_checkbox_state.set(self.xlite_process_running)
 
         # xlite_process_status_checkbox_string_var
-        var = f"Xlite Process is running, PIDs: {self.xlite_utility.xlite_pids}" if self.xlite_process_running else (
-            "Xlite Process is not running")
+        var = f"Xlite Process is running" if self.xlite_process_running else "Xlite Process is not running"
+        # , PIDs: {self.xlite_utility.xlite_pids}
         self.xlite_process_status_checkbox_string_var.set(var)
 
     def update_xlite_start_close_button(self):
@@ -624,19 +626,22 @@ class BlocknetGUI:
 
         # xlite_start_close_button
         disable_start_close_button = self.xlite_utility.downloading_bin or self.disable_start_xlite_button
-        self.xlite_start_close_button.config(state='normal' if not disable_start_close_button else 'disabled')
+        self.xlite_start_close_button.configure(state='normal' if not disable_start_close_button else 'disabled')
 
     def update_xlite_store_password_button(self):
         # xlite_store_password_button
-        self.xlite_store_password_button.config(relief='raised' if not self.xlite_password else 'sunken')
+        var = "Password Stored" if self.xlite_password else "Store Password"
+        self.xlite_store_password_button_string_var.set(var)
+        # self.xlite_store_password_button.configure(relief='raised' if not self.xlite_password else 'sunken')
 
     def update_xlite_daemon_process_status(self):
         # xlite_daemon_process_status_checkbox_state
         self.xlite_daemon_process_status_checkbox_state.set(self.xlite_daemon_process_running)
 
         # xlite_daemon_process_status_checkbox_string_var
-        var = f"Xlite-daemon Process is running, PIDs: {self.xlite_utility.xlite_daemon_pids}" if self.xlite_daemon_process_running else (
+        var = f"Xlite-daemon Process is running" if self.xlite_daemon_process_running else (
             "Xlite-daemon Process is not running")
+        # , PIDs: {self.xlite_utility.xlite_daemon_pids}
         self.xlite_daemon_process_status_checkbox_string_var.set(var)
 
     def update_xlite_valid_config_checkbox(self):
@@ -861,18 +866,18 @@ def decrypt_password(encrypted_password, key):
 
 
 def enable_button(button):
-    button.config(state=tk.NORMAL)
+    button.configure(state=ctk.NORMAL)
 
 
 def disable_button(button):
-    button.config(state=tk.DISABLED)
+    button.configure(state=ctk.DISABLED)
 
 
 def run_gui():
-    root = tk.Tk()
+    root = ctk.CTk()
     app = BlocknetGUI(root=root)
     try:
-        root.mainloop()
+        app.root.mainloop()
     except:
         sys.exit(0)
 
