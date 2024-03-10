@@ -1,3 +1,4 @@
 psutil==5.9.8
 requests==2.31.0
 cryptography==42.0.5
+customtkinter==5.2.2
