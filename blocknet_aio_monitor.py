@@ -201,7 +201,7 @@ class BlocknetGUI(ctk.CTk):
         # Label for Blocknet Core frame
         self.blocknet_core_label = ctk.CTkLabel(self.blocknet_core_frame, text=blocknet_frame_title_string,
                                                 width=gui_width, anchor="w")
-        self.blocknet_core_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.blocknet_core_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
         # # Frame for Data Path label and entry
         # self.blocknet_data_path_frame = ctk.CTkFrame(self.blocknet_core_frame)
@@ -209,7 +209,7 @@ class BlocknetGUI(ctk.CTk):
 
         # Label for Data Path
         self.blocknet_data_path_label = ctk.CTkLabel(self.blocknet_core_frame, text="Data Path: ")
-        self.blocknet_data_path_label.grid(row=1, column=0, padx=(0, 10), pady=5, sticky="w")
+        self.blocknet_data_path_label.grid(row=1, column=0, padx=5, pady=5, sticky="w")
 
         # Entry for Data Path
         self.blocknet_data_path_entry = ctk.CTkEntry(self.blocknet_core_frame, width=55, state='normal')
@@ -282,7 +282,7 @@ class BlocknetGUI(ctk.CTk):
         # Add widgets for Block-dx management inside the block_dx_frame
         # Label for Block-dx frame
         self.block_dx_label = ctk.CTkLabel(self.block_dx_frame, text=blockdx_frame_title_string)
-        self.block_dx_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.block_dx_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
         # Checkboxes
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
@@ -320,7 +320,7 @@ class BlocknetGUI(ctk.CTk):
 
     def setup_xlite(self):
         self.xlite_label = ctk.CTkLabel(self.xlite_frame, text=xlite_frame_title_string)
-        self.xlite_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+        self.xlite_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
         # Checkboxes
         self.xlite_process_status_checkbox_state = ctk.BooleanVar()
