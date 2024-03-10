@@ -34,7 +34,7 @@ xlite_bin = xlite_bin_name.get(system, None)
 # Define the gui strings
 app_title_string = "Blocknet AIO monitor"
 blocknet_frame_title_string = "Blocknet Core Management:"
-blockdx_frame_title_string = "Block-dx Management:"
+blockdx_frame_title_string = " Block-DX Management:"
 xlite_frame_title_string = "XLite Management:"
 start_string = "Start"
 close_string = "Close"
@@ -42,15 +42,16 @@ check_config_string = "Check Config"
 store_password_string = "Store Password"
 set_custom_path_string = "Set Custom Path"
 blocknet_valid_config_string = "Blocknet Config valid"
-blocknet_not_valid_config_string = "Blocknet Config not valid, Click on Check Config button"
+blocknet_not_valid_config_string = "Blocknet Config not valid, Click on Check Config"
 active_rpc_string = "RPC Connection active"
 inactive_rpc_string = "RPC Connection inactive"
 blocknet_running_string = "Blocknet Process running"
 blocknet_not_running_string = "Blocknet Process not running"
-blockdx_running_string = "Block-DX Process running"
-blockdx_not_running_string = "Block-DX Process not running"
-blockdx_valid_config_string = "Block-DX Config valid"
-blockdx_not_valid_config_string = "Block-DX Config not valid, click Check Config."
+blockdx_running_string = " Block-DX Process running"
+blockdx_not_running_string = " Block-DX Process not running"
+blockdx_valid_config_string = " Block-DX Config valid"
+blockdx_not_valid_config_string = " Block-DX Config not valid, Click on Check Config"
+blockdx_missing_blocknet_config_string = " Block-DX Config not valid, Click on Check Config"
 xlite_running_string = "XLite Process running"
 xlite_not_running_string = "XLite Process not running"
 xlite_valid_config_string = "XLite Config valid"
@@ -643,8 +644,7 @@ class BlocknetGUI(ctk.CTk):
             self.blockdx_valid_config_checkbox_state.set(False)
 
             # blockdx_valid_config_checkbox_string_var
-            var = "Block-DX config not valid, Configure blocknet core first"
-            self.blockdx_valid_config_checkbox_string_var.set(var)
+            self.blockdx_valid_config_checkbox_string_var.set(blockdx_missing_blocknet_config_string)
 
     def update_xlite_process_status_checkbox(self):
         # xlite_process_status_checkbox_state
