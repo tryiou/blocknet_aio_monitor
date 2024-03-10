@@ -6,7 +6,8 @@ import platform
 import signal
 import sys
 import time
-import tkinter as tk
+from tkinter.filedialog import askdirectory
+from tkinter import simpledialog
 import customtkinter as ctk
 import json
 import psutil
@@ -257,7 +258,6 @@ class BlocknetGUI(ctk.CTk):
         # Add widgets for Block-dx management inside the block_dx_frame
         # Label for Block-dx frame
         self.block_dx_label = ctk.CTkLabel(self.block_dx_frame, text="Block-dx Management:")
-        # self.block_dx_label = tk.Label(self.block_dx_frame, text="Block-dx Management:")
         self.block_dx_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Checkboxes
@@ -296,7 +296,6 @@ class BlocknetGUI(ctk.CTk):
 
     def setup_xlite(self):
         self.xlite_label = ctk.CTkLabel(self.xlite_frame, text="Xlite Management:")
-        # self.xlite_label = tk.Label(self.xlite_frame, text="Xlite Management:")
         self.xlite_label.grid(row=0, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         # Checkboxes
@@ -411,7 +410,7 @@ class BlocknetGUI(ctk.CTk):
             # ask_user_pass
             # store_salted_pass
             logging.info("Left click detected")
-            password = tk.simpledialog.askstring("Store Xlite Password", "Please enter Xlite your password:", show='*')
+            password = simpledialog.askstring("Store Xlite Password", "Please enter Xlite your password:", show='*')
             if password:
                 encryption_key = generate_key()
                 salted_pass = encrypt_password(password, encryption_key)
@@ -449,7 +448,7 @@ class BlocknetGUI(ctk.CTk):
         enable_button(self.blockdx_check_config_button)
 
     def open_custom_path_dialog(self):
-        custom_path = tk.filedialog.askdirectory(title="Select Custom Data Path")
+        custom_path = askdirectory(parent=self, title="Select Custom Path for Blocknet Core Datadir")
         if custom_path:
             self.on_custom_path_set(custom_path)
 
