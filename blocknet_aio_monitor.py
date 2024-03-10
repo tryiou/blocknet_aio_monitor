@@ -733,7 +733,7 @@ class BlocknetGUI(ctk.CTk):
         asyncio.run(update_status_async())
 
         # Schedule the next update
-        self.after(1000, self.update_status)
+        self.after(1666, self.update_status)
 
     async def check_processes(self):
 
@@ -817,7 +817,7 @@ class BlocknetGUI(ctk.CTk):
         asyncio.run(update_status_async())
 
         # Schedule the next update
-        self.after(2000, self.update_processes)
+        self.after(3333, self.update_processes)
 
 
 def load_cfg_json():
