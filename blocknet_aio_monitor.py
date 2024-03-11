@@ -1,4 +1,5 @@
 import asyncio
+import ctypes
 # import cProfile
 import logging
 import os
@@ -11,7 +12,7 @@ from tkinter import simpledialog
 import customtkinter as ctk
 import json
 import psutil
-from threading import Thread
+from threading import Thread, Event
 from cryptography.fernet import Fernet
 
 from blockdx import BlockdxUtility
@@ -193,9 +194,15 @@ class BlocknetGUI(ctk.CTk):
         # sys.exit(1)
         self.on_close()
 
+    def stop_bootstrap_thread(self):
+        if self.bootstrap_thread and self.bootstrap_thread.is_alive():
+            terminate_thread(self.bootstrap_thread)
+            self.bootstrap_thread.join()
+
     def on_close(self):
         self.blocknet_utility.running = False
         self.blockdx_utility.running = False
+        self.stop_bootstrap_thread()
         self.destroy()
 
     def setup_blocknet_core(self):
@@ -287,11 +294,6 @@ class BlocknetGUI(ctk.CTk):
                                                           command=self.blocknet_check_config,
                                                           width=button_width)
         self.blocknet_check_config_button.grid(row=3, column=3, sticky="e")
-
-    def download_bootstrap_command(self):
-        disable_button(self.blocknet_download_bootstrap_button)
-        my_thread = Thread(target=self.blocknet_utility.download_bootstrap)
-        my_thread.start()
 
     def setup_block_dx(self):
         # Add widgets for Block-dx management inside the block_dx_frame
@@ -511,34 +513,39 @@ class BlocknetGUI(ctk.CTk):
     def enable_xlite_start_button(self):
         self.disable_start_xlite_button = False
 
+    def download_bootstrap_command(self):
+        disable_button(self.blocknet_download_bootstrap_button)
+        self.bootstrap_thread = Thread(target=self.blocknet_utility.download_bootstrap)
+        self.bootstrap_thread.start()
+
     def start_or_close_blocknet(self):
         disable_button(self.blocknet_start_close_button)
         self.disable_start_blocknet_button = True
         if self.blocknet_process_running:
-            my_thread = Thread(target=self.blocknet_utility.close_blocknet)
-            my_thread.start()
+            self.blocknet_t1 = Thread(target=self.blocknet_utility.close_blocknet)
+            self.blocknet_t1.start()
         else:
-            my_thread = Thread(target=self.blocknet_utility.start_blocknet)
-            my_thread.start()
+            self.blocknet_t2 = Thread(target=self.blocknet_utility.start_blocknet)
+            self.blocknet_t2.start()
         self.after(self.time_disable_button, self.enable_blocknet_start_button)
 
     def start_or_close_blockdx(self):
         disable_button(self.blockdx_start_close_button)
         self.disable_start_blockdx_button = True
         if self.blockdx_process_running:
-            my_thread = Thread(target=self.blockdx_utility.close_blockdx)
-            my_thread.start()
+            self.blockdx_t1 = Thread(target=self.blockdx_utility.close_blockdx)
+            self.blockdx_t1.start()
         else:
-            my_thread = Thread(target=self.blockdx_utility.start_blockdx)
-            my_thread.start()
+            self.blockdx_t2 = Thread(target=self.blockdx_utility.start_blockdx)
+            self.blockdx_t2.start()
         self.after(self.time_disable_button, self.enable_blockdx_start_button)
 
     def start_or_close_xlite(self):
         disable_button(self.xlite_start_close_button)
         self.disable_start_xlite_button = True
         if self.xlite_process_running:
-            my_thread = Thread(target=self.xlite_utility.close_xlite)
-            my_thread.start()
+            self.xlite_t1 = Thread(target=self.xlite_utility.close_xlite)
+            self.xlite_t1.start()
 
         else:
             if self.xlite_password and self.xlite_utility.xlite_conf_local and self.xlite_utility.xlite_daemon_confs_local:
@@ -546,8 +553,8 @@ class BlocknetGUI(ctk.CTk):
                 os.environ["CC_WALLET_PASS"] = self.xlite_password
                 # Set the value of CC_WALLET_AUTOLOGIN to 'true'
                 os.environ["CC_WALLET_AUTOLOGIN"] = 'true'
-            my_thread = Thread(target=self.xlite_utility.start_xlite)
-            my_thread.start()
+            self.xlite_t2 = Thread(target=self.xlite_utility.start_xlite)
+            self.xlite_t2.start()
         self.after(self.time_disable_button, self.enable_xlite_start_button)
 
     def update_blocknet_bootstrap_button(self):
@@ -876,6 +883,21 @@ def load_cfg_json():
         logging.info(f"Configuration file '{filename}' not found.")
         return None
 
+def terminate_thread(thread):
+    """Terminates a python thread from another thread."""
+    if not thread.is_alive():
+        return
+
+    exc = ctypes.py_object(SystemExit)
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+        ctypes.c_long(thread.ident), exc)
+    if res == 0:
+        raise ValueError("nonexistent thread id")
+    elif res > 1:
+        # "if it returns a number greater than one, you're in trouble,
+        # and you should call it again with exc=NULL to revert the effect"
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, None)
+        raise SystemError("PyThreadState_SetAsyncExc failed")
 
 def remove_cfg_json_key(key):
     local_filename = "cfg.json"
