@@ -74,8 +74,6 @@ class BlocknetRPCClient:
 class BlocknetUtility:
     def __init__(self, custom_path=None):
         self.checking_bootstrap = False
-        self.tqdm_instance = None
-        self.download_thread = None
         self.bootstrap_percent_download = None
         self.downloading_bin = False
         self.data_folder = get_blocknet_data_folder(custom_path)
@@ -409,6 +407,7 @@ class BlocknetUtility:
                             f.write(chunk)
                             bytes_downloaded += len(chunk)
                             self.bootstrap_percent_download = (bytes_downloaded / total) * 100
+                self.bootstrap_percent_download = None
                 local_file_size = os.path.getsize(temp_file_path)
                 if local_file_size != remote_file_size:
                     raise ValueError("Downloaded bootstrap file size doesn't match the expected size.")
@@ -426,7 +425,6 @@ class BlocknetUtility:
             with zipfile.ZipFile(temp_file_path, "r") as zip_ref:
                 zip_ref.extractall(self.data_folder)
             logging.info("Extraction completed.")
-            self.bootstrap_percent_download = None
 
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}")
