@@ -398,21 +398,13 @@ class BlocknetUtility:
                 logging.info("Local bootstrap file exists but does not match the remote file. Re-downloading...")
                 os.remove(temp_file_path)  # Remove the local file and proceed with download
 
-        logging.info("Downloading Blocknet bootstrap...")
-
         try:
             if need_to_download:
+                logging.info("Downloading Blocknet bootstrap...")
                 with open(temp_file_path, 'wb') as f:
                     r = requests.get(blocknet_bootstrap_url, stream=True)
                     r.raise_for_status()
                     total = int(r.headers.get('content-length', 0))
-                    # self.tqdm_instance = tq.tqdm(total=total, **{
-                    #     'desc': "Download",
-                    #     'miniters': 1,
-                    #     'unit': 'B',
-                    #     'unit_scale': True,
-                    #     'unit_divisor': 1024
-                    # })
                     logging.info(f"_MEIPASS: {hasattr(sys, '_MEIPASS')}")
                     if hasattr(sys, '_MEIPASS'):
                         # Running as a PyInstaller-packaged application
@@ -420,15 +412,17 @@ class BlocknetUtility:
                     else:
                         # Running as a regular Python script
                         tqdm_file = sys.stderr  # Output to stderr
-                    # Create tqdm instance based on the selected file for output
                     self.tqdm_instance = tq.tqdm(total=total, desc="Download", miniters=1, unit='B',
                                                  unit_scale=True, unit_divisor=1024, file=tqdm_file)
                     for chunk in r.iter_content(chunk_size=8192 * 2):
                         if chunk:
                             f.write(chunk)
                             self.tqdm_instance.update(len(chunk))
-
+                local_file_size = os.path.getsize(temp_file_path)
+                if local_file_size != remote_file_size:
+                    raise ValueError("Downloaded bootstrap file size doesn't match the expected size.")
                 logging.info("Bootstrap downloaded successfully.")
+
             folders_to_check = ['blocks', 'chainstate', 'indexes']
             for folder_name in folders_to_check:
                 folder_path = os.path.join(self.data_folder, folder_name)
@@ -445,7 +439,7 @@ class BlocknetUtility:
 
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}")
-            return None
+            self.tqdm_instance = None
         finally:
             self.checking_bootstrap = False
 
