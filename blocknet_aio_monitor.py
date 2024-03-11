@@ -22,7 +22,7 @@ from xlite import XliteUtility
 from conf_data import blockdx_selectedWallets_blocknet, aio_blocknet_data_path, blocknet_bin_name, blockdx_bin_name, \
     xlite_bin_name, xlite_daemon_bin_name
 
-import tqdm
+
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
@@ -561,19 +561,13 @@ class BlocknetGUI(ctk.CTk):
         self.after(self.time_disable_button, self.enable_xlite_start_button)
 
     def update_blocknet_bootstrap_button(self):
-        # logging.info(
-        #     f"update_blocknet_bootstrap_button self.blocknet_utility.tqdm_instance = {self.blocknet_utility.tqdm_instance}")
-        bootstrap_download_in_progress = bool(self.blocknet_utility.checking_bootstrap )
+        bootstrap_download_in_progress = bool(self.blocknet_utility.checking_bootstrap)
         enabled = (self.blocknet_utility.data_folder and not bootstrap_download_in_progress and
                    not self.blocknet_process_running)
-        self.blocknet_download_bootstrap_button.configure(
-            state='normal' if (enabled) else 'disabled')
+        self.blocknet_download_bootstrap_button.configure(state='normal' if enabled else 'disabled')
         if bootstrap_download_in_progress:
-            if self.blocknet_utility.tqdm_instance:
-                n = self.blocknet_utility.tqdm_instance.n
-                total = self.blocknet_utility.tqdm_instance.total
-                progress_percent = (n / total) * 100
-                var = f"Progress: {progress_percent:.2f}%"
+            if self.blocknet_utility.bootstrap_percent_download:
+                var = f"Progress: {self.blocknet_utility.bootstrap_percent_download:.2f}%"
             else:
                 var = "Loading"
         else:
@@ -589,7 +583,7 @@ class BlocknetGUI(ctk.CTk):
 
         # blocknet_start_close_button
         bootstrap_download_in_progress = (
-                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.tqdm_instance)
+                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.bootstrap_percent_download)
         enabled = (not self.blocknet_utility.downloading_bin and not self.disable_start_blocknet_button and
                    not bootstrap_download_in_progress)
         # logging.debug(
@@ -609,7 +603,7 @@ class BlocknetGUI(ctk.CTk):
     def update_blocknet_custom_path_button(self):
         # blocknet_custom_path_button
         bootstrap_download_in_progress = (
-                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.tqdm_instance)
+                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.bootstrap_percent_download)
         self.blocknet_custom_path_button.configure(state='normal' if (
                 not self.blocknet_process_running and not bootstrap_download_in_progress) else 'disabled')
 

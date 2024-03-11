@@ -1,14 +1,10 @@
 import asyncio
 import shutil
-import sys
 import threading
 import logging
 import subprocess
 import os
 import platform
-import time
-
-import tqdm as tq
 
 import psutil
 import requests
@@ -384,13 +380,14 @@ class BlocknetUtility:
         self.checking_bootstrap = True
         filename = "Blocknet.zip"
         temp_file_path = os.path.join(aio_data_path, filename)
-
+        remote_file_size = get_remote_file_size(blocknet_bootstrap_url)
         # Check if the file already exists on disk
         need_to_download = True
         if os.path.exists(temp_file_path):
             # Compare the size of the local file with the remote file
             local_file_size = os.path.getsize(temp_file_path)
-            remote_file_size = get_remote_file_size(blocknet_bootstrap_url)
+            print(local_file_size)
+
             if local_file_size == remote_file_size:
                 logging.info("Bootstrap file already exists on disk and matches the remote file.")
                 need_to_download = False
@@ -402,26 +399,16 @@ class BlocknetUtility:
             if need_to_download:
                 logging.info("Downloading Blocknet bootstrap...")
                 with open(temp_file_path, 'wb') as f:
+
                     r = requests.get(blocknet_bootstrap_url, stream=True)
                     r.raise_for_status()
-                    total = int(r.headers.get('content-length', 0))
-                    logging.info(f"_MEIPASS: {hasattr(sys, '_MEIPASS')}")
-                    if hasattr(sys, '_MEIPASS'):
-                        if sys.platform == 'darwin':
-                            # macOS-specific handling
-                            tqdm_file = None  # Disable the progress bar
-                        else:
-                            # Running as a PyInstaller-packaged application
-                            tqdm_file = open(os.devnull, 'w')  # Output to void
-                    else:
-                        # Running as a regular Python script
-                        tqdm_file = sys.stderr  # Output to stderr
-                    self.tqdm_instance = tq.tqdm(total=total, desc="Download", miniters=1, unit='B',
-                                                 unit_scale=True, unit_divisor=1024, file=tqdm_file)
+                    bytes_downloaded = 0
+                    total = remote_file_size
                     for chunk in r.iter_content(chunk_size=8192 * 2):
                         if chunk:
                             f.write(chunk)
-                            self.tqdm_instance.update(len(chunk))
+                            bytes_downloaded += len(chunk)
+                            self.bootstrap_percent_download = (bytes_downloaded / total) * 100
                 local_file_size = os.path.getsize(temp_file_path)
                 if local_file_size != remote_file_size:
                     raise ValueError("Downloaded bootstrap file size doesn't match the expected size.")
@@ -439,11 +426,11 @@ class BlocknetUtility:
             with zipfile.ZipFile(temp_file_path, "r") as zip_ref:
                 zip_ref.extractall(self.data_folder)
             logging.info("Extraction completed.")
-            self.tqdm_instance = None
+            self.bootstrap_percent_download = None
 
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}")
-            self.tqdm_instance = None
+            self.bootstrap_percent_download = None
         finally:
             self.checking_bootstrap = False
 
@@ -455,51 +442,6 @@ def get_remote_file_size(url):
     r = requests.head(url)
     r.raise_for_status()
     return int(r.headers.get('content-length', 0))
-
-
-class DownloadThread(threading.Thread):
-    tqdm_params = {
-        'desc': "Download",
-        'miniters': 1,
-        'unit': 'B',
-        'unit_scale': True,
-        'unit_divisor': 1024,
-    }
-
-    def __init__(self, url, filename):
-        super().__init__()
-        self.url = url
-        self.filename = filename
-        self.error = None
-        self.tqdm_instance = None
-
-    def run(self):
-        try:
-            with open(self.filename, 'wb') as f:
-                with requests.get(self.url, stream=True) as r:
-                    r.raise_for_status()
-                    total = int(r.headers.get('content-length', 0))
-
-                    self.tqdm_instance = tq.tqdm(total=total, **self.tqdm_params)
-
-                    for chunk in r.iter_content(chunk_size=8192 * 2):
-                        self.tqdm_instance.update(len(chunk))
-                        f.write(chunk)
-                        # logging.info(dir(self.tqdm_instance))
-                    self.tqdm_instance = None
-        except Exception as e:
-            self.error = e
-
-
-def format_time(seconds):
-    if seconds < 60:
-        return f"{seconds:.2f} seconds"
-    elif seconds < 3600:
-        return f"{seconds // 60:.0f} minutes and {seconds % 60:.2f} seconds"
-    elif seconds < 86400:
-        return f"{seconds // 3600:.0f} hours and {(seconds % 3600) // 60:.0f} minutes"
-    else:
-        return f"{seconds // 86400:.0f} days"
 
 
 def download_blocknet_bin():
