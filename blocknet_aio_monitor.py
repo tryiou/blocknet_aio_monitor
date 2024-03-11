@@ -72,6 +72,7 @@ class BlocknetGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        self.bootstrap_thread = None
         self.blocknet_download_bootstrap_button = None
         self.blocknet_download_bootstrap_string_var = None
         self.cfg = load_cfg_json()
