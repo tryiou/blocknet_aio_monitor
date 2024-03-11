@@ -120,7 +120,7 @@ jobs:
 
       - name: Build executable on Windows
         run: |
-          pyinstaller --noconfirm --onefile  --clean "${{ github.workspace }}/blocknet_aio_monitor.py" 
+          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName "${{ github.workspace }}/dist/blocknet_aio_monitor-windows.exe"
 
       - uses: actions/upload-artifact@v3
