@@ -413,15 +413,16 @@ class BlocknetUtility:
                     #     'unit_scale': True,
                     #     'unit_divisor': 1024
                     # })
-                    if getattr(sys, 'frozen', False):
-                        # Running as a PyInstaller-packaged application, output to void
-                        self.tqdm_instance = tq.tqdm(total=total, desc="Download", miniters=1, unit='B',
-                                                  unit_scale=True, unit_divisor=1024, file=open(os.devnull, 'w'))
+                    logging.info(f"_MEIPASS: {hasattr(sys, '_MEIPASS')}")
+                    if hasattr(sys, '_MEIPASS'):
+                        # Running as a PyInstaller-packaged application
+                        tqdm_file = open(os.devnull, 'w')  # Output to void
                     else:
-                        # Running as a regular Python script, output to console
-                        self.tqdm_instance = tq.tqdm(total=total, desc="Download", miniters=1, unit='B',
-                                                  unit_scale=True, unit_divisor=1024)
-
+                        # Running as a regular Python script
+                        tqdm_file = sys.stderr  # Output to stderr
+                    # Create tqdm instance based on the selected file for output
+                    self.tqdm_instance = tq.tqdm(total=total, desc="Download", miniters=1, unit='B',
+                                                 unit_scale=True, unit_divisor=1024, file=tqdm_file)
                     for chunk in r.iter_content(chunk_size=8192 * 2):
                         if chunk:
                             f.write(chunk)
