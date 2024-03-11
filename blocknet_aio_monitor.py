@@ -883,6 +883,7 @@ def load_cfg_json():
         logging.info(f"Configuration file '{filename}' not found.")
         return None
 
+
 def terminate_thread(thread):
     """Terminates a python thread from another thread."""
     if not thread.is_alive():
@@ -898,6 +899,7 @@ def terminate_thread(thread):
         # and you should call it again with exc=NULL to revert the effect"
         ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, None)
         raise SystemError("PyThreadState_SetAsyncExc failed")
+
 
 def remove_cfg_json_key(key):
     local_filename = "cfg.json"
