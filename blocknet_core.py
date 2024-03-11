@@ -384,7 +384,6 @@ class BlocknetUtility:
         if os.path.exists(temp_file_path):
             # Compare the size of the local file with the remote file
             local_file_size = os.path.getsize(temp_file_path)
-            print(local_file_size)
 
             if local_file_size == remote_file_size:
                 logging.info("Bootstrap file already exists on disk and matches the remote file.")
@@ -413,13 +412,18 @@ class BlocknetUtility:
                     raise ValueError("Downloaded bootstrap file size doesn't match the expected size.")
                 logging.info("Bootstrap downloaded successfully.")
 
-            folders_to_check = ['blocks', 'chainstate', 'indexes']
-            for folder_name in folders_to_check:
-                folder_path = os.path.join(self.data_folder, folder_name)
-                if os.path.exists(folder_path) and os.path.isdir(folder_path):
-                    logging.info(f"Deleting existing {folder_name} folder...")
-                    shutil.rmtree(folder_path)
-                    logging.info(f"{folder_name} folder deleted successfully.")
+            to_delete = ['blocks', 'chainstate', 'indexes', 'peers.dat', 'banlist.dat']
+            for item_name in to_delete:
+                item_path = os.path.join(self.data_folder, item_name)
+                if os.path.exists(item_path):
+                    if os.path.isdir(item_path):
+                        logging.info(f"Deleting existing folder: {item_name}...")
+                        shutil.rmtree(item_path)
+                        logging.info(f"{item_name} folder deleted successfully.")
+                    else:
+                        logging.info(f"Deleting existing file: {item_name}...")
+                        os.remove(item_path)
+                        logging.info(f"{item_name} deleted successfully.")
 
             logging.info("Extracting bootstrap...")
             with zipfile.ZipFile(temp_file_path, "r") as zip_ref:
