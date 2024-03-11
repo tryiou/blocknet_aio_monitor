@@ -407,8 +407,12 @@ class BlocknetUtility:
                     total = int(r.headers.get('content-length', 0))
                     logging.info(f"_MEIPASS: {hasattr(sys, '_MEIPASS')}")
                     if hasattr(sys, '_MEIPASS'):
-                        # Running as a PyInstaller-packaged application
-                        tqdm_file = open(os.devnull, 'w')  # Output to void
+                        if sys.platform == 'darwin':
+                            # macOS-specific handling
+                            tqdm_file = None  # Disable the progress bar
+                        else:
+                            # Running as a PyInstaller-packaged application
+                            tqdm_file = open(os.devnull, 'w')  # Output to void
                     else:
                         # Running as a regular Python script
                         tqdm_file = sys.stderr  # Output to stderr

@@ -194,6 +194,7 @@ class BlocknetGUI(ctk.CTk):
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))
         # sys.exit(1)
+        self.stop_bootstrap_thread()
         self.on_close()
 
     def stop_bootstrap_thread(self):
@@ -562,8 +563,7 @@ class BlocknetGUI(ctk.CTk):
     def update_blocknet_bootstrap_button(self):
         # logging.info(
         #     f"update_blocknet_bootstrap_button self.blocknet_utility.tqdm_instance = {self.blocknet_utility.tqdm_instance}")
-        bootstrap_download_in_progress = (
-                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.tqdm_instance)
+        bootstrap_download_in_progress = bool(self.blocknet_utility.checking_bootstrap )
         enabled = (self.blocknet_utility.data_folder and not bootstrap_download_in_progress and
                    not self.blocknet_process_running)
         self.blocknet_download_bootstrap_button.configure(
