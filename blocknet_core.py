@@ -1,5 +1,6 @@
 import asyncio
 import shutil
+import sys
 import threading
 import logging
 import subprocess
@@ -405,13 +406,22 @@ class BlocknetUtility:
                     r = requests.get(blocknet_bootstrap_url, stream=True)
                     r.raise_for_status()
                     total = int(r.headers.get('content-length', 0))
-                    self.tqdm_instance = tq.tqdm(total=total, **{
-                        'desc': "Download",
-                        'miniters': 1,
-                        'unit': 'B',
-                        'unit_scale': True,
-                        'unit_divisor': 1024
-                    })
+                    # self.tqdm_instance = tq.tqdm(total=total, **{
+                    #     'desc': "Download",
+                    #     'miniters': 1,
+                    #     'unit': 'B',
+                    #     'unit_scale': True,
+                    #     'unit_divisor': 1024
+                    # })
+                    if getattr(sys, 'frozen', False):
+                        # Running as a PyInstaller-packaged application, output to void
+                        self.tqdm_instance = tq.tqdm(total=total, desc="Download", miniters=1, unit='B',
+                                                  unit_scale=True, unit_divisor=1024, file=open(os.devnull, 'w'))
+                    else:
+                        # Running as a regular Python script, output to console
+                        self.tqdm_instance = tq.tqdm(total=total, desc="Download", miniters=1, unit='B',
+                                                  unit_scale=True, unit_divisor=1024)
+
                     for chunk in r.iter_content(chunk_size=8192 * 2):
                         if chunk:
                             f.write(chunk)
