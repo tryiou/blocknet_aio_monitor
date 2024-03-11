@@ -22,8 +22,6 @@ from xlite import XliteUtility
 from conf_data import blockdx_selectedWallets_blocknet, aio_blocknet_data_path, blocknet_bin_name, blockdx_bin_name, \
     xlite_bin_name, xlite_daemon_bin_name
 
-
-
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
 
@@ -72,6 +70,12 @@ class BlocknetGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        self.xlite_t2 = None
+        self.xlite_t1 = None
+        self.blockdx_t2 = None
+        self.blockdx_t1 = None
+        self.blocknet_t1 = None
+        self.blocknet_t2 = None
         self.bootstrap_thread = None
         self.blocknet_download_bootstrap_button = None
         self.blocknet_download_bootstrap_string_var = None
