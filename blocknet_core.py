@@ -1,9 +1,14 @@
 import asyncio
+import shutil
 import threading
 import logging
 import subprocess
 import os
 import platform
+import time
+
+import tqdm as tq
+
 import psutil
 import requests
 import random
@@ -15,7 +20,7 @@ import tarfile
 from subprocess import check_output
 
 from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf, \
-    blocknet_bin_name, blocknet_bin_path
+    blocknet_bin_name, blocknet_bin_path, blocknet_releases_urls, blocknet_bootstrap_url
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -27,6 +32,7 @@ urllib3_logger.setLevel(logging.WARNING)
 system = platform.system()
 machine = platform.machine()
 blocknet_bin = blocknet_bin_name.get(system, None)
+aio_data_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
 
 class BlocknetRPCClient:
@@ -70,6 +76,10 @@ class BlocknetRPCClient:
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
+        self.checking_bootstrap = False
+        self.tqdm_instance = None
+        self.download_thread = None
+        self.bootstrap_percent_download = None
         self.downloading_bin = False
         self.data_folder = get_blocknet_data_folder(custom_path)
         self.process_running = None
@@ -136,8 +146,7 @@ class BlocknetUtility:
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blocknet.")
             return
-        local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-        blocknet_exe = os.path.join(local_path, *blocknet_bin_path, blocknet_bin)
+        blocknet_exe = os.path.join(aio_data_path, *blocknet_bin_path, blocknet_bin)
 
         if not os.path.exists(blocknet_exe):
             self.downloading_bin = True
@@ -363,24 +372,141 @@ class BlocknetUtility:
         self.check_blocknet_conf()
         self.check_xbridge_conf()
 
+    def download_bootstrap(self):
+        if not self.data_folder:
+            logging.error("No valid data folder provided to install bootstrap")
+            return None
+        if not aio_data_path:
+            logging.error("No path provided for temporary storage")
+            return None
+
+        self.checking_bootstrap = True
+        filename = "Blocknet.zip"
+        temp_file_path = os.path.join(aio_data_path, filename)
+
+        # Check if the file already exists on disk
+        need_to_download = True
+        if os.path.exists(temp_file_path):
+            # Compare the size of the local file with the remote file
+            local_file_size = os.path.getsize(temp_file_path)
+            remote_file_size = get_remote_file_size(blocknet_bootstrap_url)
+            if local_file_size == remote_file_size:
+                logging.info("Bootstrap file already exists on disk and matches the remote file.")
+                need_to_download = False
+            else:
+                logging.info("Local bootstrap file exists but does not match the remote file. Re-downloading...")
+                os.remove(temp_file_path)  # Remove the local file and proceed with download
+
+        logging.info("Downloading Blocknet bootstrap...")
+
+        try:
+            if need_to_download:
+                with open(temp_file_path, 'wb') as f:
+                    r = requests.get(blocknet_bootstrap_url, stream=True)
+                    r.raise_for_status()
+                    total = int(r.headers.get('content-length', 0))
+                    self.tqdm_instance = tq.tqdm(total=total, **{
+                        'desc': "Download",
+                        'miniters': 1,
+                        'unit': 'B',
+                        'unit_scale': True,
+                        'unit_divisor': 1024
+                    })
+                    for chunk in r.iter_content(chunk_size=8192 * 2):
+                        if chunk:
+                            f.write(chunk)
+                            self.tqdm_instance.update(len(chunk))
+
+                logging.info("Bootstrap downloaded successfully.")
+            folders_to_check = ['blocks', 'chainstate', 'indexes']
+            for folder_name in folders_to_check:
+                folder_path = os.path.join(self.data_folder, folder_name)
+                if os.path.exists(folder_path) and os.path.isdir(folder_path):
+                    logging.info(f"Deleting existing {folder_name} folder...")
+                    shutil.rmtree(folder_path)
+                    logging.info(f"{folder_name} folder deleted successfully.")
+
+            logging.info("Extracting bootstrap...")
+            with zipfile.ZipFile(temp_file_path, "r") as zip_ref:
+                zip_ref.extractall(self.data_folder)
+            logging.info("Extraction completed.")
+            self.tqdm_instance = None
+
+        except Exception as e:
+            logging.error(f"An error occurred: {str(e)}")
+            return None
+        finally:
+            self.checking_bootstrap = False
+
+
+def get_remote_file_size(url):
+    """
+    Fetches the size of a remote file specified by its URL.
+    """
+    r = requests.head(url)
+    r.raise_for_status()
+    return int(r.headers.get('content-length', 0))
+
+
+class DownloadThread(threading.Thread):
+    tqdm_params = {
+        'desc': "Download",
+        'miniters': 1,
+        'unit': 'B',
+        'unit_scale': True,
+        'unit_divisor': 1024,
+    }
+
+    def __init__(self, url, filename):
+        super().__init__()
+        self.url = url
+        self.filename = filename
+        self.error = None
+        self.tqdm_instance = None
+
+    def run(self):
+        try:
+            with open(self.filename, 'wb') as f:
+                with requests.get(self.url, stream=True) as r:
+                    r.raise_for_status()
+                    total = int(r.headers.get('content-length', 0))
+
+                    self.tqdm_instance = tq.tqdm(total=total, **self.tqdm_params)
+
+                    for chunk in r.iter_content(chunk_size=8192 * 2):
+                        self.tqdm_instance.update(len(chunk))
+                        f.write(chunk)
+                        # logging.info(dir(self.tqdm_instance))
+                    self.tqdm_instance = None
+        except Exception as e:
+            self.error = e
+
+
+def format_time(seconds):
+    if seconds < 60:
+        return f"{seconds:.2f} seconds"
+    elif seconds < 3600:
+        return f"{seconds // 60:.0f} minutes and {seconds % 60:.2f} seconds"
+    elif seconds < 86400:
+        return f"{seconds // 3600:.0f} hours and {(seconds % 3600) // 60:.0f} minutes"
+    else:
+        return f"{seconds // 86400:.0f} days"
+
 
 def download_blocknet_bin():
-    from conf_data import blocknet_releases_urls
     url = blocknet_releases_urls.get((system, machine))
     if url is None:
         raise ValueError(f"Unsupported OS or architecture {system} {machine}")
-
-    local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
     response = requests.get(url)
     if response.status_code == 200:
         # Extract the archive from memory
         if url.endswith(".zip"):
             with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                zip_ref.extractall(local_path)
+                zip_ref.extractall(aio_data_path)
         elif url.endswith(".tar.gz"):
             with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
-                tar.extractall(local_path)
+                tar.extractall(aio_data_path)
         else:
             print("Unsupported archive format.")
     else:
@@ -428,8 +554,7 @@ def save_conf_to_file(conf_data, file_path):
 
 def retrieve_remote_blocknet_conf():
     filename = "remote_blocknet.conf"
-    local_conf_path = aio_blocknet_data_path.get(system)
-    local_conf_file = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), filename)
+    local_conf_file = os.path.join(aio_data_path, filename)
     # Check if the local configuration file exists
     if os.path.exists(local_conf_file):
         # Try to open and parse the local configuration file
@@ -474,8 +599,7 @@ def retrieve_remote_blocknet_conf():
 def retrieve_remote_xbridge_conf():
     from conf_data import remote_xbridge_conf_url
     filename = "remote_xbridge.conf"
-    local_conf_path = aio_blocknet_data_path.get(system)
-    local_conf_file = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), filename)
+    local_conf_file = os.path.join(aio_data_path, filename)
     # Check if the local configuration file exists
     if os.path.exists(local_conf_file):
         # Try to open and parse the local configuration file
@@ -552,4 +676,4 @@ def parse_conf_file(file_path=None, input_string=None):
 
 if __name__ == "__main__":
     a = BlocknetUtility()
-    a.retrieve_remote_blocknet_conf()
+    a.download_bootstrap()

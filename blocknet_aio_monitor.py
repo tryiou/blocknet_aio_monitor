@@ -69,6 +69,8 @@ class BlocknetGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        self.blocknet_download_bootstrap_button = None
+        self.blocknet_download_bootstrap_string_var = None
         self.cfg = load_cfg_json()
         custom_path = None
         self.xlite_password = None
@@ -256,6 +258,14 @@ class BlocknetGUI(ctk.CTk):
                                                                 state='disabled')  # , disabledforeground='black')
         self.blocknet_rpc_connection_checkbox.grid(row=5, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
+        # Button for downloading blocknet bootstrap
+        self.blocknet_download_bootstrap_string_var = ctk.StringVar(value="Get Bootstrap")
+        self.blocknet_download_bootstrap_button = ctk.CTkButton(self.blocknet_core_frame,
+                                                                textvariable=self.blocknet_download_bootstrap_string_var,
+                                                                command=self.download_bootstrap_command,
+                                                                width=button_width)
+        self.blocknet_download_bootstrap_button.grid(row=0, column=3, sticky="e")
+
         # Button for setting custom path
         self.blocknet_custom_path_button = ctk.CTkButton(self.blocknet_core_frame,
                                                          text=set_custom_path_string,
@@ -277,6 +287,11 @@ class BlocknetGUI(ctk.CTk):
                                                           command=self.blocknet_check_config,
                                                           width=button_width)
         self.blocknet_check_config_button.grid(row=3, column=3, sticky="e")
+
+    def download_bootstrap_command(self):
+        disable_button(self.blocknet_download_bootstrap_button)
+        my_thread = Thread(target=self.blocknet_utility.download_bootstrap)
+        my_thread.start()
 
     def setup_block_dx(self):
         # Add widgets for Block-dx management inside the block_dx_frame
@@ -535,21 +550,43 @@ class BlocknetGUI(ctk.CTk):
             my_thread.start()
         self.after(self.time_disable_button, self.enable_xlite_start_button)
 
+    def update_blocknet_bootstrap_button(self):
+        # logging.info(
+        #     f"update_blocknet_bootstrap_button self.blocknet_utility.tqdm_instance = {self.blocknet_utility.tqdm_instance}")
+        bootstrap_download_in_progress = (
+                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.tqdm_instance)
+        enabled = (self.blocknet_utility.data_folder and not bootstrap_download_in_progress and
+                   not self.blocknet_process_running)
+        self.blocknet_download_bootstrap_button.configure(
+            state='normal' if (enabled) else 'disabled')
+        if bootstrap_download_in_progress:
+            if self.blocknet_utility.tqdm_instance:
+                n = self.blocknet_utility.tqdm_instance.n
+                total = self.blocknet_utility.tqdm_instance.total
+                progress_percent = (n / total) * 100
+                var = f"Progress: {progress_percent:.2f}%"
+            else:
+                var = "Loading"
+        else:
+            var = "Get Bootstrap"
+        self.blocknet_download_bootstrap_string_var.set(var)
+
     def update_blocknet_start_close_button(self):
         # blocknet_start_close_button_string_var
+
         var = "Downloading..." if self.blocknet_utility.downloading_bin else (
             close_string if self.blocknet_process_running else start_string)
         self.blocknet_start_close_button_string_var.set(var)
 
         # blocknet_start_close_button
-        # not self.blocknet_utility.downloading_bin and not self.disable_start_blocknet_button
-
-        enabled = (not self.blocknet_utility.downloading_bin and not self.disable_start_blocknet_button)
+        bootstrap_download_in_progress = (
+                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.tqdm_instance)
+        enabled = (not self.blocknet_utility.downloading_bin and not self.disable_start_blocknet_button and
+                   not bootstrap_download_in_progress)
         # logging.debug(
         #     f"blocknet_utility.downloading_bin: {self.blocknet_utility.downloading_bin}"
         #     f", self.disable_start_blocknet_button: {self.disable_start_blocknet_button}, enabled: {enabled}"
         # )
-        # (self.blocknet_utility.downloading_bin or self.disable_start_blocknet_button)
         self.blocknet_start_close_button.configure(state='normal' if enabled else 'disabled')
 
     def update_blocknet_process_status_checkbox(self):
@@ -562,7 +599,10 @@ class BlocknetGUI(ctk.CTk):
 
     def update_blocknet_custom_path_button(self):
         # blocknet_custom_path_button
-        self.blocknet_custom_path_button.configure(state='normal' if not self.blocknet_process_running else 'disabled')
+        bootstrap_download_in_progress = (
+                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.tqdm_instance)
+        self.blocknet_custom_path_button.configure(state='normal' if (
+                not self.blocknet_process_running and not bootstrap_download_in_progress) else 'disabled')
 
     def update_blocknet_conf_status_checkbox(self):
         # blocknet_conf_status_checkbox_state
@@ -700,6 +740,7 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_daemon_valid_config_checkbox_string_var.set(var)
 
     async def update_status_blocknet_core(self):
+        self.update_blocknet_bootstrap_button()
         self.update_blocknet_start_close_button()
         self.update_blocknet_process_status_checkbox()
         self.update_blocknet_custom_path_button()
@@ -733,7 +774,7 @@ class BlocknetGUI(ctk.CTk):
         asyncio.run(update_status_async())
 
         # Schedule the next update
-        self.after(1666, self.update_status)
+        self.after(1000, self.update_status)
 
     async def check_processes(self):
 

@@ -4,6 +4,9 @@ aio_blocknet_data_path = {
     "Linux": "~/.AIO_Blocknet",
     "Darwin": "~/Library/Application Support/AIO_Blocknet"
 }
+
+blocknet_bootstrap_url = "https://utils.blocknet.org/Blocknet.zip"
+
 # Releases links
 blocknet_releases_urls = {
     ("Windows", "AMD64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-win64.zip",
