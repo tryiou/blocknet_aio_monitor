@@ -339,6 +339,11 @@ class BlocknetUtility:
                         self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcPassword']
                     else:
                         self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcpassword']
+                elif key ==  'Port':
+                    if xlite_daemon_conf and section in xlite_daemon_conf:
+                        self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcPort']
+                    else:
+                        self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcport']
                 else:
                     if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
                         self.xbridge_conf_local[section][key] = value
