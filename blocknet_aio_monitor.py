@@ -700,7 +700,7 @@ class BlocknetGUI(ctk.CTk):
                     blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets', [])
             )
 
-            self.blockdx_valid_config_checkbox_state.set(self.is_blockdx_config_sync)
+            self.blockdx_valid_config_checkbox_state.set((self.is_blockdx_config_sync and self.blocknet_utility.valid_rpc))
 
         else:
             self.blockdx_valid_config_checkbox_state.set(False)
