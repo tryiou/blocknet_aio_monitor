@@ -12,6 +12,7 @@ For more information about Blocknet projects, visit:
 ## Features
 
 - **Download Binaries:** Automatically downloads necessary binaries for Blocknet Core, Block-DX, and XLite from the official GitHub repository if needed.
+- **Download Bootstrap:** Automatically download the Bootstrap for Blocknet Core to facilitate a faster initial sync.
 - **Control Panel:** Easily start or close any of the applications from the control panel and monitor their status.
 - **Configuration Management:** Check and update configurations for Blocknet Core and Block-DX, ensuring they work together seamlessly at first launch.
 - **XLite to Block-DX Configuration:** Configure XLite to work with Block-DX using the Block-DX setup wizard. No wallet restart is required at this stage.
