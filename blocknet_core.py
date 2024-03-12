@@ -304,7 +304,7 @@ class BlocknetUtility:
             logging.info("Local blocknet.conf remains the same. No need to save.")
             return False
 
-    def check_xbridge_conf(self):
+    def check_xbridge_conf(self, xlite_daemon_conf):
         self.parse_xbridge_conf()
         logging.info(f"Current local configuration:\n{self.xbridge_conf_local}")
         # logging.info(f"Current remote configuration:\n{self.xbridge_conf_remote}")
@@ -327,12 +327,18 @@ class BlocknetUtility:
         for section, options in self.xbridge_conf_remote.items():
             if section not in self.xbridge_conf_local:
                 self.xbridge_conf_local[section] = {}
-
+            logging.info(f"section: {section}, options: {options}")
             for key, value in options.items():
                 if key == 'Username':
-                    self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcuser']
+                    if xlite_daemon_conf and section in xlite_daemon_conf:
+                        self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcUsername']
+                    else:
+                        self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcuser']
                 elif key == 'Password':
-                    self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcpassword']
+                    if xlite_daemon_conf and section in xlite_daemon_conf:
+                        self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcPassword']
+                    else:
+                        self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcpassword']
                 else:
                     if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
                         self.xbridge_conf_local[section][key] = value
@@ -365,9 +371,9 @@ class BlocknetUtility:
             logging.info("Local xbridge.conf remains the same. No need to save.")
             return False
 
-    def compare_and_update_local_conf(self):
+    def compare_and_update_local_conf(self, xlite_daemon_conf=None):
         self.check_blocknet_conf()
-        self.check_xbridge_conf()
+        self.check_xbridge_conf(xlite_daemon_conf)
 
     def create_data_folder(self):
         if self.data_folder and not os.path.exists(self.data_folder):

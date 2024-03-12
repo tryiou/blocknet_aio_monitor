@@ -482,7 +482,12 @@ class BlocknetGUI(ctk.CTk):
 
     def blocknet_check_config(self):
         # disable_button(self.blocknet_check_config_button)
-        self.blocknet_utility.compare_and_update_local_conf()
+        use_xlite = bool(self.xlite_utility.xlite_daemon_confs_local)
+        if use_xlite:
+            xlite_daemon_conf = self.xlite_utility.xlite_daemon_confs_local
+        else:
+            xlite_daemon_conf = None
+        self.blocknet_utility.compare_and_update_local_conf(xlite_daemon_conf)
         # enable_button(self.blocknet_check_config_button)
 
     def blockdx_check_config(self):
