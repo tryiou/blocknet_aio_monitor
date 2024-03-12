@@ -138,6 +138,8 @@ class BlocknetUtility:
             self.blocknet_rpc = None
 
     def start_blocknet(self, retry_limit=3, retry_count=0):
+        self.create_data_folder()
+
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blocknet.")
             return
@@ -367,6 +369,9 @@ class BlocknetUtility:
         self.check_blocknet_conf()
         self.check_xbridge_conf()
 
+    def create_data_folder(self):
+        if self.data_folder and not os.path.exists(self.data_folder):
+            os.makedirs(self.data_folder)
     def download_bootstrap(self):
         if not self.data_folder:
             logging.error("No valid data folder provided to install bootstrap")
@@ -375,6 +380,7 @@ class BlocknetUtility:
             logging.error("No path provided for temporary storage")
             return None
 
+        self.create_data_folder()
         self.checking_bootstrap = True
         filename = "Blocknet.zip"
         temp_file_path = os.path.join(aio_data_path, filename)
