@@ -59,7 +59,7 @@ class XliteUtility:
         # List all files in the confs_folder
         if not os.path.exists(confs_folder):
             logging.warning(f"{confs_folder} doesn't exist")
-            return 0
+            self.xlite_daemon_confs_local = {}
 
         files_in_folder = os.listdir(confs_folder)
 
