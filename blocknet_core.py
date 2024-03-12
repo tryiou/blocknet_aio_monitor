@@ -372,6 +372,7 @@ class BlocknetUtility:
     def create_data_folder(self):
         if self.data_folder and not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
+
     def download_bootstrap(self):
         if not self.data_folder:
             logging.error("No valid data folder provided to install bootstrap")

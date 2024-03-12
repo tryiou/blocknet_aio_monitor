@@ -458,7 +458,7 @@ class BlocknetGUI(ctk.CTk):
             # ask_user_pass
             # store_salted_pass
             logging.info("Left click detected")
-            password = simpledialog.askstring("Store XLite Password", "Please enter XLite your password:", show='*')
+            password = simpledialog.askstring("Store XLite Password", "Enter XLite password:", show='*')
             if password:
                 encryption_key = generate_key()
                 salted_pass = encrypt_password(password, encryption_key)
