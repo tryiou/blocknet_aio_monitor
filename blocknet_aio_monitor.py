@@ -70,6 +70,7 @@ class BlocknetGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        self.is_blockdx_config_sync = None
         self.xlite_t2 = None
         self.xlite_t1 = None
         self.blockdx_t2 = None
@@ -657,9 +658,14 @@ class BlocknetGUI(ctk.CTk):
             close_string if self.blockdx_process_running else start_string)
         self.blockdx_start_close_button_string_var.set(var)
 
-        # blockdx_start_close_button
-        enabled = (self.blockdx_process_running and not self.disable_start_blockdx_button) or (
-                not self.blockdx_utility.downloading_bin and self.blocknet_utility.valid_rpc and not self.disable_start_blockdx_button)
+        # blockdx_start_close_button self.is_blockdx_config_sync
+        # enabled = (self.blockdx_process_running and not self.disable_start_blockdx_button) or (
+        #         not self.blockdx_utility.downloading_bin and self.blocknet_utility.valid_rpc and not self.disable_start_blockdx_button)
+        enabled = ((self.blockdx_process_running or not self.blockdx_utility.downloading_bin) and
+                   self.blocknet_utility.valid_rpc and
+                   not self.disable_start_blockdx_button and
+                   self.is_blockdx_config_sync)
+
         self.blockdx_start_close_button.configure(state='normal' if enabled else 'disabled')
 
     def update_blockdx_config_button_checkbox(self):
@@ -676,7 +682,7 @@ class BlocknetGUI(ctk.CTk):
 
             # blockdx_valid_config_checkbox_state
             blockdx_conf = self.blockdx_utility.blockdx_conf_local
-            is_blockdx_config_sync = (
+            self.is_blockdx_config_sync = (
                     bool(blockdx_conf) and
                     blockdx_conf.get('user') == rpc_user and
                     blockdx_conf.get('password') == rpc_password and
@@ -686,8 +692,8 @@ class BlocknetGUI(ctk.CTk):
             )
 
             # blockdx_valid_config_checkbox_string_var
-            self.blockdx_valid_config_checkbox_state.set(is_blockdx_config_sync)
-            var = blockdx_valid_config_string if is_blockdx_config_sync else blockdx_not_valid_config_string
+            self.blockdx_valid_config_checkbox_state.set(self.is_blockdx_config_sync)
+            var = blockdx_valid_config_string if self.is_blockdx_config_sync else blockdx_not_valid_config_string
             self.blockdx_valid_config_checkbox_string_var.set(var)
         else:
             # blockdx_check_config_button
