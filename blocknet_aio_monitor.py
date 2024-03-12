@@ -580,17 +580,19 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_download_bootstrap_string_var.set(var)
 
     def update_blocknet_start_close_button(self):
+        # blocknet_start_close_button
         # blocknet_start_close_button_string_var
 
         var = "Downloading..." if self.blocknet_utility.downloading_bin else (
             close_string if self.blocknet_process_running else start_string)
         self.blocknet_start_close_button_string_var.set(var)
 
-        # blocknet_start_close_button
-        bootstrap_download_in_progress = (
-                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.bootstrap_percent_download)
+        conf_exist_and_parsed = bool(
+            self.blocknet_utility.blocknet_conf_local and self.blocknet_utility.xbridge_conf_local)
+
         enabled = (not self.blocknet_utility.downloading_bin and not self.disable_start_blocknet_button and
-                   not bootstrap_download_in_progress)
+                   not self.blocknet_utility.checking_bootstrap and conf_exist_and_parsed)
+
         # logging.debug(
         #     f"blocknet_utility.downloading_bin: {self.blocknet_utility.downloading_bin}"
         #     f", self.disable_start_blocknet_button: {self.disable_start_blocknet_button}, enabled: {enabled}"
