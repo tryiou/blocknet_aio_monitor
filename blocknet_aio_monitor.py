@@ -52,7 +52,7 @@ blockdx_running_string = " Block-DX Process running"
 blockdx_not_running_string = " Block-DX Process not running"
 blockdx_valid_config_string = " Block-DX Config valid"
 blockdx_not_valid_config_string = " Block-DX Config not valid, Click on Check Config"
-blockdx_missing_blocknet_config_string = " Block-DX Config not valid, Click on Check Config"
+blockdx_missing_blocknet_config_string = " Block-DX need Blocknet configured first"
 xlite_running_string = "XLite Process running"
 xlite_not_running_string = "XLite Process not running"
 xlite_valid_config_string = "XLite Config valid"
@@ -592,7 +592,7 @@ class BlocknetGUI(ctk.CTk):
             self.blocknet_utility.blocknet_conf_local and self.blocknet_utility.xbridge_conf_local)
 
         enabled = (not self.blocknet_utility.downloading_bin and not self.disable_start_blocknet_button and
-                   not self.blocknet_utility.checking_bootstrap and conf_exist_and_parsed)
+                   not self.blocknet_utility.checking_bootstrap and conf_exist_and_parsed or self.blocknet_process_running)
 
         # logging.debug(
         #     f"blocknet_utility.downloading_bin: {self.blocknet_utility.downloading_bin}"
