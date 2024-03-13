@@ -535,11 +535,11 @@ class BlocknetGUI(ctk.CTk):
     def start_or_close_blocknet(self):
         disable_button(self.blocknet_start_close_button)
         self.disable_start_blocknet_button = True
-        self.blocknet_check_config()
         if self.blocknet_process_running:
             self.blocknet_t1 = Thread(target=self.blocknet_utility.close_blocknet)
             self.blocknet_t1.start()
         else:
+            self.blocknet_check_config()
             self.blocknet_t2 = Thread(target=self.blocknet_utility.start_blocknet)
             self.blocknet_t2.start()
         self.after(self.time_disable_button, self.enable_blocknet_start_button)
@@ -547,11 +547,11 @@ class BlocknetGUI(ctk.CTk):
     def start_or_close_blockdx(self):
         disable_button(self.blockdx_start_close_button)
         self.disable_start_blockdx_button = True
-        self.blockdx_check_config()
         if self.blockdx_process_running:
             self.blockdx_t1 = Thread(target=self.blockdx_utility.close_blockdx)
             self.blockdx_t1.start()
         else:
+            self.blockdx_check_config()
             self.blockdx_t2 = Thread(target=self.blockdx_utility.start_blockdx)
             self.blockdx_t2.start()
         self.after(self.time_disable_button, self.enable_blockdx_start_button)
