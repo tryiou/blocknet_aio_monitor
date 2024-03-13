@@ -670,8 +670,8 @@ class BlocknetGUI(ctk.CTk):
         #         not self.blockdx_utility.downloading_bin and self.blocknet_utility.valid_rpc and not self.disable_start_blockdx_button)
         #  and
         #                    self.is_blockdx_config_sync
-        enabled = ((self.blockdx_process_running or not self.blockdx_utility.downloading_bin) and
-                   self.blocknet_utility.valid_rpc and
+        enabled = (self.blockdx_process_running or (not self.blockdx_utility.downloading_bin and
+                                                    self.blocknet_utility.valid_rpc) and
                    not self.disable_start_blockdx_button)
 
         self.blockdx_start_close_button.configure(state='normal' if enabled else 'disabled')
@@ -705,7 +705,8 @@ class BlocknetGUI(ctk.CTk):
                     blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets', [])
             )
 
-            self.blockdx_valid_config_checkbox_state.set((self.is_blockdx_config_sync and self.blocknet_utility.valid_rpc))
+            self.blockdx_valid_config_checkbox_state.set(
+                (self.is_blockdx_config_sync and self.blocknet_utility.valid_rpc))
 
         else:
             self.blockdx_valid_config_checkbox_state.set(False)
