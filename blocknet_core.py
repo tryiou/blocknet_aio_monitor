@@ -85,7 +85,7 @@ class BlocknetUtility:
         self.xbridge_conf_local = None
         self.xb_manifest = retrieve_xb_manifest()
         self.blocknet_conf_remote = retrieve_remote_blocknet_conf()
-        self.xbridge_conf_remote = retrieve_remote_blocknet_xbridge_conf()
+        self.blocknet_xbridge_conf_remote = retrieve_remote_blocknet_xbridge_conf()
         self.blocknet_pids = []
         self.blocknet_process = None
         self.blocknet_rpc = None
@@ -364,7 +364,7 @@ class BlocknetUtility:
             # We want this on 'top' of file, add it if missing
             self.xbridge_conf_local['Main'] = base_xbridge_conf
 
-        if self.xbridge_conf_remote is None:
+        if self.blocknet_xbridge_conf_remote is None:
             logging.error("Remote xbridge.conf not available.")
             return False
 
@@ -373,6 +373,7 @@ class BlocknetUtility:
             return False
         # section = 'global'
         if xlite_daemon_conf:
+            # XLITE SESSION DETECTED, USE XLITE RPC PARAMS
             for coin in xlite_daemon_conf:
                 if coin == "master":
                     continue
@@ -395,23 +396,22 @@ class BlocknetUtility:
                                     # exit()
                                     self.xbridge_conf_local[section][key] = value
 
-        for section, options in self.xbridge_conf_remote.items():
-            if section not in self.xbridge_conf_local:
-                self.xbridge_conf_local[section] = {}
-            logging.info(f"section: {section}, options: {options}")
-            for key, value in options.items():
-                if key == 'Username':
-                    if not (xlite_daemon_conf and section in xlite_daemon_conf):
+        if not (xlite_daemon_conf and section in xlite_daemon_conf):
+            # NO XLITE SESSION DETECTED, SET XBRIDGE TO USE BLOCKNET CORE RPC
+            for section, options in self.blocknet_xbridge_conf_remote.items():
+                if section not in self.xbridge_conf_local:
+                    self.xbridge_conf_local[section] = {}
+                logging.info(f"section: {section}, options: {options}")
+                for key, value in options.items():
+                    if key == 'Username':
                         self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcuser']
-                elif key == 'Password':
-                    if not (xlite_daemon_conf and section in xlite_daemon_conf):
+                    elif key == 'Password':
                         self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcpassword']
-                elif key == 'Port':
-                    if not (xlite_daemon_conf and section in xlite_daemon_conf):
+                    elif key == 'Port':
                         self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcport']
-                else:
-                    if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
-                        self.xbridge_conf_local[section][key] = value
+                    else:
+                        if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
+                            self.xbridge_conf_local[section][key] = value
 
         # Prepare the string of sections (excluding 'Main')
         sections_string = ','.join(section for section in self.xbridge_conf_local.keys() if section != 'Main')
