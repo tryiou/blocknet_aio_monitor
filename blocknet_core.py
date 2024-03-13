@@ -17,7 +17,7 @@ import tarfile
 from subprocess import check_output
 
 from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf, \
-    blocknet_bin_name, blocknet_bin_path, blocknet_releases_urls, blocknet_bootstrap_url
+    blocknet_bin_name, blocknet_bin_path, blocknet_releases_urls, blocknet_bootstrap_url, nodes_to_add
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -268,9 +268,26 @@ class BlocknetUtility:
             logging.error("Local blocknet.conf not available.")
             return False
 
+        section_name = 'global'
+        if section_name not in self.blocknet_conf_local:
+            self.blocknet_conf_local[section_name] = {}
+
+        # Ensure self.blocknet_conf_local[section_name]['addnode'] is a list
+        addnode_value = self.blocknet_conf_local[section_name].get('addnode', [])
+        if not isinstance(addnode_value, list):
+            addnode_value = [addnode_value]
+
+        # Add the nodes to the end of the file if not already existing
+        for node in nodes_to_add:
+            if node not in addnode_value:
+                addnode_value.append(node)
+                logging.info(f"Added new node: {node}")
+
+        self.blocknet_conf_local[section_name]['addnode'] = addnode_value
+
         for section, options in self.blocknet_conf_remote.items():
-            if section not in self.blocknet_conf_local:
-                self.blocknet_conf_local[section] = {}
+            # if section not in self.blocknet_conf_local:
+            #     self.blocknet_conf_local[section] = {}
 
             for key, value in options.items():
                 if key == 'rpcuser' or key == 'rpcpassword':
@@ -294,7 +311,7 @@ class BlocknetUtility:
 
         # logging.info(f"Old local configuration:\n{old_local_json}")
         # logging.info(f"Updated local configuration:\n{new_local_json}")
-
+        logging.info(new_local_json)
         if old_local_json != new_local_json:
             logging.info("Local blocknet.conf has been updated. Saving...")
             self.save_blocknet_conf()
@@ -339,7 +356,7 @@ class BlocknetUtility:
                         self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcPassword']
                     else:
                         self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcpassword']
-                elif key ==  'Port':
+                elif key == 'Port':
                     if xlite_daemon_conf and section in xlite_daemon_conf:
                         self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcPort']
                     else:
@@ -361,7 +378,7 @@ class BlocknetUtility:
                 'ShowAllOrders': base_xbridge_conf['ShowAllOrders'],
             }
 
-        logging.info("Local xbridge.conf updated successfully.")
+        # logging.info("Local xbridge.conf updated successfully.")
 
         new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
 
@@ -509,13 +526,17 @@ def save_conf_to_file(conf_data, file_path):
     try:
         # Create missing directories if needed
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
         with open(file_path, 'w') as f:
             for section, options in conf_data.items():
                 if section != 'global':
                     f.write(f"[{section}]\n")
                 for key, value in options.items():
-                    f.write(f"{key}={value}\n")
+                    if key == "addnode":
+                        for node in value:
+                            f.write(f"addnode={node}\n")
+                    else:
+                        f.write(f"{key}={value}\n")
+
         logging.info(f"Configuration data saved to {file_path} successfully")
         return True
     except Exception as e:
@@ -624,7 +645,11 @@ def parse_conf_file(file_path=None, input_string=None):
                     continue
                 if '=' in line:
                     key, value = line.split('=', 1)
-                    conf_data.setdefault(current_section.strip('[]'), {})[key.strip()] = value.strip()
+                    if key.strip() == 'addnode':
+                        conf_data.setdefault(current_section.strip('[]'), {}).setdefault(key.strip(), []).append(
+                            value.strip())
+                    else:
+                        conf_data.setdefault(current_section.strip('[]'), {})[key.strip()] = value.strip()
                 else:
                     current_section = line.strip()
                     conf_data.setdefault(current_section.strip('[]'), {})

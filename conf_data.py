@@ -6,7 +6,12 @@ aio_blocknet_data_path = {
 }
 
 blocknet_bootstrap_url = "https://utils.blocknet.org/Blocknet.zip"
-
+nodes_to_add = [
+    "130.185.119.91:41412",
+    "75.119.135.155:41412",
+    "75.119.157.65:41412",
+    "exrproxy1.airdns.org:42111"
+]
 # Releases links
 blocknet_releases_urls = {
     ("Windows", "AMD64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-win64.zip",
