@@ -98,8 +98,16 @@ base_xbridge_conf = {
     'ShowAllOrders': 'true'
 }
 
-remote_blocknet_conf_url = "https://raw.githubusercontent.com/blocknetdx/block-dx/master/blockchain-configuration-files/wallet-confs/blocknet--v4.3.0.conf"
-remote_xbridge_conf_url = "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master/xbridge-confs/blocknet--v4.3.0.conf"
+remote_blockchain_configuration_repo = "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master"
+manifest = "/manifest-latest.json"
+remote_manifest_url = f"{remote_blockchain_configuration_repo}{manifest}"
+remote_blocknet_xbridge = "/xbridge-confs/blocknet--v4.3.0.conf"
+remote_blocknet_conf = "/wallet-confs/blocknet--v4.3.0.conf"
+# manifest-latest.json
+# xbridge-confs/ColossusXT--v1.2.3.conf
+# wallet-confs/ColossusXT--v1.2.3.conf
+remote_blocknet_conf_url = f"{remote_blockchain_configuration_repo}{remote_blocknet_conf}"
+remote_xbridge_conf_url = f"{remote_blockchain_configuration_repo}{remote_blocknet_xbridge}"
 
 blockdx_selectedWallets_blocknet = "blocknet--v4.2.0"
 

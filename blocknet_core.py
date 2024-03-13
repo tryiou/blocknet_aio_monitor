@@ -17,7 +17,8 @@ import tarfile
 from subprocess import check_output
 
 from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf, \
-    blocknet_bin_name, blocknet_bin_path, blocknet_releases_urls, blocknet_bootstrap_url, nodes_to_add
+    blocknet_bin_name, blocknet_bin_path, blocknet_releases_urls, blocknet_bootstrap_url, nodes_to_add, \
+    remote_xbridge_conf_url, remote_manifest_url, remote_blockchain_configuration_repo
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -73,6 +74,8 @@ class BlocknetRPCClient:
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
+        self.parsed_wallet_confs = {}
+        self.parsed_xbridge_confs = {}
         self.checking_bootstrap = False
         self.bootstrap_percent_download = None
         self.downloading_bin = False
@@ -80,8 +83,9 @@ class BlocknetUtility:
         self.process_running = None
         self.blocknet_conf_local = None
         self.xbridge_conf_local = None
+        self.xb_manifest = retrieve_xb_manifest()
         self.blocknet_conf_remote = retrieve_remote_blocknet_conf()
-        self.xbridge_conf_remote = retrieve_remote_xbridge_conf()
+        self.xbridge_conf_remote = retrieve_remote_blocknet_xbridge_conf()
         self.blocknet_pids = []
         self.blocknet_process = None
         self.blocknet_rpc = None
@@ -321,6 +325,34 @@ class BlocknetUtility:
             logging.info("Local blocknet.conf remains the same. No need to save.")
             return False
 
+    def retrieve_coin_conf(self, coin):
+        xb_folder = "xb_conf"
+        latest_version = None
+        highest_version_id = None
+
+        for entry in self.xb_manifest:
+            if 'ticker' in entry and entry['ticker'] == coin.upper():
+                ver_id = entry['ver_id']
+                if latest_version is None or ver_id > highest_version_id:
+                    latest_version = entry
+                    highest_version_id = ver_id
+
+        if latest_version:
+            xbridge_conf = latest_version['xbridge_conf']
+            xbridge_url = f"{remote_blockchain_configuration_repo}/xbridge-confs/{xbridge_conf}"
+            wallet_conf = latest_version['wallet_conf']
+            wallet_conf_url = f"{remote_blockchain_configuration_repo}/wallet-confs/{wallet_conf}"
+            # download_remote_conf()
+            parsed_xbridge_conf = retrieve_remote_conf(xbridge_url, "xbridge-confs", xbridge_conf)
+            parsed_wallet_conf = retrieve_remote_conf(wallet_conf_url, "wallet-confs", wallet_conf)
+            self.parsed_xbridge_confs[coin] = parsed_xbridge_conf
+            self.parsed_wallet_confs[coin] = parsed_wallet_conf
+            logging.info(parsed_xbridge_conf)
+            logging.info(parsed_wallet_conf)
+            # Do whatever you need to do with the highest version entry
+        else:
+            logging.error("No entries found in the manifest.")
+
     def check_xbridge_conf(self, xlite_daemon_conf):
         self.parse_xbridge_conf()
         logging.info(f"Current local configuration:\n{self.xbridge_conf_local}")
@@ -330,7 +362,6 @@ class BlocknetUtility:
 
         if 'Main' not in self.xbridge_conf_local:
             # We want this on 'top' of file, add it if missing
-
             self.xbridge_conf_local['Main'] = base_xbridge_conf
 
         if self.xbridge_conf_remote is None:
@@ -340,6 +371,27 @@ class BlocknetUtility:
         if self.xbridge_conf_local is None:
             logging.error("Local xbridge.conf not available.")
             return False
+        # section = 'global'
+        if xlite_daemon_conf:
+            for coin in xlite_daemon_conf:
+                self.retrieve_coin_conf(coin)
+                if coin in self.parsed_xbridge_confs:
+                    if coin not in self.xbridge_conf_local:
+                        self.xbridge_conf_local[coin] = {}
+                    logging.warning(self.parsed_xbridge_confs[coin])
+                    for section, options in self.parsed_xbridge_confs[coin].items():
+                        for key, value in options.items():
+                            if key == 'Username':
+                                self.xbridge_conf_local[section][key] = xlite_daemon_conf[coin]['rpcUsername']
+                            elif key == 'Password':
+                                self.xbridge_conf_local[section][key] = xlite_daemon_conf[coin]['rpcPassword']
+                            elif key == 'Port':
+                                self.xbridge_conf_local[section][key] = xlite_daemon_conf[coin]['rpcPort']
+                            else:
+                                if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
+                                    logging.warning(f"value: {value}")
+                                    # exit()
+                                    self.xbridge_conf_local[section][key] = value
 
         for section, options in self.xbridge_conf_remote.items():
             if section not in self.xbridge_conf_local:
@@ -378,12 +430,7 @@ class BlocknetUtility:
                 'ShowAllOrders': base_xbridge_conf['ShowAllOrders'],
             }
 
-        # logging.info("Local xbridge.conf updated successfully.")
-
         new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
-
-        # logging.info(f"Old local xbridge.conf:\n{old_local_json}")
-        # logging.info(f"Updated local xbridge.conf:\n{new_local_json}")
 
         if old_local_json != new_local_json:
             logging.info("Local xbridge.conf has been updated. Saving...")
@@ -544,12 +591,11 @@ def save_conf_to_file(conf_data, file_path):
         return False
 
 
-def retrieve_remote_blocknet_conf():
-    filename = "remote_blocknet.conf"
-    local_conf_file = os.path.join(aio_data_path, filename)
-    # Check if the local configuration file exists
+def retrieve_remote_conf(remote_url, subfolder, expected_filename):
+    folder = "xb_conf"
+    local_conf_file = os.path.join(aio_data_path, folder, subfolder, expected_filename)
+
     if os.path.exists(local_conf_file):
-        # Try to open and parse the local configuration file
         try:
             with open(local_conf_file, 'r') as f:
                 conf_data = f.read()
@@ -559,78 +605,76 @@ def retrieve_remote_blocknet_conf():
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse: {local_conf_file}")
-                # If parsing fails, proceed to retrieve remote configuration
         except Exception as e:
             logging.error(f"{local_conf_file} Error opening or parsing file: {e}")
-            # If opening or parsing fails, proceed to retrieve remote configuration
 
-    # If local configuration retrieval fails or the local file does not exist,
-    # retrieve the remote configuration from GitHub
+    return download_remote_conf(remote_url, local_conf_file)
+
+
+def download_remote_conf(url, filepath):
     try:
-        response = requests.get(remote_blocknet_conf_url)
+        response = requests.get(url)
         if response.status_code == 200:
             conf_data = response.text
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
                 # Save the remote configuration to a local file
-                save_conf_to_file(parsed_conf, local_conf_file)
-                logging.info(f"retrieved and parsed successfully: {local_conf_file} ")
+                save_conf_to_file(parsed_conf, filepath)
+                logging.info(f"retrieved and parsed successfully: {filepath} ")
                 return parsed_conf
             else:
-                logging.error(f"Failed to parse: {local_conf_file} ")
+                logging.error(f"Failed to parse: {filepath} ")
                 return None
         else:
             logging.error(
-                f"Failed to retrieve remote blocknet configuration file: {remote_blocknet_conf_url} {response.status_code}")
+                f"Failed to retrieve remote blocknet configuration file: {url} {response.status_code}")
             return None
     except requests.RequestException as e:
         logging.error(f"Error retrieving remote blocknet configuration file: {e}")
         return None
 
 
-def retrieve_remote_xbridge_conf():
-    from conf_data import remote_xbridge_conf_url
-    filename = "remote_xbridge.conf"
-    local_conf_file = os.path.join(aio_data_path, filename)
-    # Check if the local configuration file exists
-    if os.path.exists(local_conf_file):
-        # Try to open and parse the local configuration file
-        try:
-            with open(local_conf_file, 'r') as f:
-                conf_data = f.read()
-            parsed_conf = parse_conf_file(input_string=conf_data)
-            if parsed_conf:
-                logging.info(f"REMOTE: Found and parsed successfully: {local_conf_file} ")
-                return parsed_conf
-            else:
-                logging.error(f"Failed to parse {local_conf_file} ")
-                # If parsing fails, proceed to retrieve remote configuration
-        except Exception as e:
-            logging.error(f"{local_conf_file} Error opening or parsing file: {e}")
-            # If opening or parsing fails, proceed to retrieve remote configuration
+def retrieve_xb_manifest():
+    # remote_manifest_url
+    folder = "xb_conf"
+    filename = os.path.basename(remote_manifest_url)
+    local_manifest_file = os.path.join(aio_data_path, folder, filename)
 
-    # If local configuration retrieval fails or the local file does not exist,
-    # retrieve the remote configuration from GitHub
+    if os.path.exists(local_manifest_file):
+        try:
+            with open(local_manifest_file, 'r') as f:
+                json_data = f.read()
+            parsed_json = json.loads(json_data)
+            logging.info(f"REMOTE: Found and parsed successfully: {local_manifest_file}")
+            return parsed_json
+        except Exception as e:
+            logging.error(f"{local_manifest_file} Error opening or parsing file: {e}")
+
     try:
-        response = requests.get(remote_xbridge_conf_url)
+        response = requests.get(remote_manifest_url)
         if response.status_code == 200:
-            conf_data = response.text
-            parsed_conf = parse_conf_file(input_string=conf_data)
-            if parsed_conf:
-                # Save the remote configuration to a local file
-                save_conf_to_file(parsed_conf, local_conf_file)
-                logging.info(f"REMOTE: retrieved and parsed successfully: {local_conf_file} ")
-                return parsed_conf
-            else:
-                logging.error(f"Failed to parse remote file: {local_conf_file}")
-                return None
+            parsed_json = response.json()
+            os.makedirs(os.path.dirname(local_manifest_file), exist_ok=True)
+            with open(local_manifest_file, 'w') as f:
+                f.write(json.dumps(parsed_json, indent=4))  # Save the JSON data to local file
+            logging.info(f"REMOTE: Retrieved and parsed successfully: {local_manifest_file}")
+            return parsed_json
         else:
-            logging.error(
-                f"Failed to retrieve remote xbridge configuration file: {remote_xbridge_conf_url} {response.status_code}")
+            logging.error(f"Failed to retrieve remote configuration file: {remote_manifest_url} {response.status_code}")
             return None
     except requests.RequestException as e:
-        logging.error(f"Error retrieving remote xbridge configuration file: {e}")
+        logging.error(f"Error retrieving remote configuration file: {e}")
         return None
+
+
+def retrieve_remote_blocknet_conf():
+    filename = os.path.basename(remote_blocknet_conf_url)
+    return retrieve_remote_conf(remote_blocknet_conf_url, "wallet-confs", filename)
+
+
+def retrieve_remote_blocknet_xbridge_conf():
+    filename = os.path.basename(remote_xbridge_conf_url)
+    return retrieve_remote_conf(remote_xbridge_conf_url, "xbridge-confs", filename)
 
 
 def parse_conf_file(file_path=None, input_string=None):
@@ -672,4 +716,4 @@ def parse_conf_file(file_path=None, input_string=None):
 
 if __name__ == "__main__":
     a = BlocknetUtility()
-    a.download_bootstrap()
+    a.retrieve_coin_conf('BTC')
