@@ -347,11 +347,11 @@ class BlocknetUtility:
             parsed_wallet_conf = retrieve_remote_conf(wallet_conf_url, "wallet-confs", wallet_conf)
             self.parsed_xbridge_confs[coin] = parsed_xbridge_conf
             self.parsed_wallet_confs[coin] = parsed_wallet_conf
-            logging.info(parsed_xbridge_conf)
-            logging.info(parsed_wallet_conf)
+            # logging.info(parsed_xbridge_conf)
+            # logging.info(parsed_wallet_conf)
             # Do whatever you need to do with the highest version entry
         else:
-            logging.error("No entries found in the manifest.")
+            logging.error("No entries found in the manifest. " + coin)
 
     def check_xbridge_conf(self, xlite_daemon_conf):
         self.parse_xbridge_conf()
@@ -374,11 +374,13 @@ class BlocknetUtility:
         # section = 'global'
         if xlite_daemon_conf:
             for coin in xlite_daemon_conf:
+                if coin == "master":
+                    continue
                 self.retrieve_coin_conf(coin)
                 if coin in self.parsed_xbridge_confs:
                     if coin not in self.xbridge_conf_local:
                         self.xbridge_conf_local[coin] = {}
-                    logging.warning(self.parsed_xbridge_confs[coin])
+                    # logging.warning(self.parsed_xbridge_confs[coin])
                     for section, options in self.parsed_xbridge_confs[coin].items():
                         for key, value in options.items():
                             if key == 'Username':
@@ -389,7 +391,7 @@ class BlocknetUtility:
                                 self.xbridge_conf_local[section][key] = xlite_daemon_conf[coin]['rpcPort']
                             else:
                                 if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
-                                    logging.warning(f"value: {value}")
+                                    # logging.warning(f"value: {value}")
                                     # exit()
                                     self.xbridge_conf_local[section][key] = value
 
@@ -399,19 +401,13 @@ class BlocknetUtility:
             logging.info(f"section: {section}, options: {options}")
             for key, value in options.items():
                 if key == 'Username':
-                    if xlite_daemon_conf and section in xlite_daemon_conf:
-                        self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcUsername']
-                    else:
+                    if not (xlite_daemon_conf and section in xlite_daemon_conf):
                         self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcuser']
                 elif key == 'Password':
-                    if xlite_daemon_conf and section in xlite_daemon_conf:
-                        self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcPassword']
-                    else:
+                    if not (xlite_daemon_conf and section in xlite_daemon_conf):
                         self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcpassword']
                 elif key == 'Port':
-                    if xlite_daemon_conf and section in xlite_daemon_conf:
-                        self.xbridge_conf_local[section][key] = xlite_daemon_conf[section]['rpcPort']
-                    else:
+                    if not (xlite_daemon_conf and section in xlite_daemon_conf):
                         self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcport']
                 else:
                     if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
