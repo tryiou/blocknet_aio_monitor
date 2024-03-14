@@ -211,6 +211,7 @@ class BlocknetGUI(ctk.CTk):
     def on_close(self):
         self.blocknet_utility.running = False
         self.blockdx_utility.running = False
+        self.xlite_utility.running = False
         self.stop_bootstrap_thread()
         self.destroy()
 
@@ -782,13 +783,13 @@ class BlocknetGUI(ctk.CTk):
         self.update_blockdx_config_button_checkbox()
 
     def detect_new_xlite_install_and_add_to_xbridge(self):
-        if not self.disable_daemons_conf_check and self.xlite_utility.valid_master_rpc:
+        if not self.disable_daemons_conf_check and self.xlite_utility.valid_coins_rpc:
             self.blocknet_utility.check_xbridge_conf(self.xlite_utility.xlite_daemon_confs_local)
             if self.blocknet_process_running and self.blocknet_utility.valid_rpc:
                 logging.debug("dxloadxbridgeConf")
                 self.blocknet_utility.blocknet_rpc.send_rpc_request("dxloadxbridgeConf")
             self.disable_daemons_conf_check = True
-        if self.disable_daemons_conf_check and not self.xlite_utility.valid_master_rpc:
+        if self.disable_daemons_conf_check and not self.xlite_utility.valid_coins_rpc:
             self.disable_daemons_conf_check = False
 
     async def update_status_xlite(self):
@@ -1012,8 +1013,19 @@ def run_gui():
     app = BlocknetGUI()
     try:
         app.mainloop()
-    except:
-        sys.exit(0)
+    except KeyboardInterrupt:
+        print("GUI execution terminated by user.")
+        # app.on_close()
+        # sys.exit(0)
+    except Exception as e:
+        # Log the error to a file
+        logging.basicConfig(filename='gui_errors.log', level=logging.ERROR,
+                            format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.error("An error occurred: %s", e)
+
+        # Print a user-friendly error message
+        print("An unexpected error occurred. Please check the log file 'gui_errors.log' for more information.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

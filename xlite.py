@@ -64,8 +64,8 @@ class XliteUtility:
     def __init__(self):
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
-        self.master_rpc = {}
-        self.valid_master_rpc = False
+        self.coins_rpc = {}
+        self.valid_coins_rpc = False
         self.process_running = None
         self.xlite_process = None
         self.xlite_daemon_process = None
@@ -80,57 +80,49 @@ class XliteUtility:
         self.start_async_tasks()
 
     async def check_xlite_conf(self):
-        while not (self.xlite_conf_local and 'APP_VERSION' in self.xlite_conf_local):
+        while self.running and not (self.xlite_conf_local and 'APP_VERSION' in self.xlite_conf_local):
             self.parse_xlite_conf()
             # logging.debug("check_xlite_conf")
             await asyncio.sleep(1)
 
     def check_xlite_daemon_confs_sequence(self, silent=True):
         self.parse_xlite_daemon_conf(silent)
-        rpc_server = 'BLOCK'
         if self.xlite_daemon_confs_local:
             for coin in self.xlite_daemon_confs_local:
-                # if self.xlite_daemon_confs_local and rpc_server in self.xlite_daemon_confs_local:
                 port = self.xlite_daemon_confs_local[coin]['rpcPort']
                 user = self.xlite_daemon_confs_local[coin]['rpcUsername']
                 password = self.xlite_daemon_confs_local[coin]['rpcPassword']
-                self.master_rpc[coin] = XliteRPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
+                self.coins_rpc[coin] = XliteRPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
 
     async def check_xlite_daemon_confs(self):
-        done = False
-        while not self.valid_master_rpc:
+        while self.running and not self.valid_coins_rpc:
             await asyncio.sleep(3)
             self.check_xlite_daemon_confs_sequence(silent=True)
-            await self.check_valid_master_rpc(runonce=True)
-                # result = self.master_rpc.send_rpc_request("help")
-        # self.check_xlite_daemon_confs_sequence()
-        # self.check_xlite_daemon_confs_sequence()
+            await self.check_valid_coins_rpc(runonce=True)
 
-    async def check_valid_master_rpc(self, runonce=False):
-        while True:
-            if self.master_rpc:
-                for coin, rpc_server in self.master_rpc.items():
+    async def check_valid_coins_rpc(self, runonce=False):
+        while self.running:
+            if self.coins_rpc:
+                for coin, rpc_server in self.coins_rpc.items():
                     valid = False
                     if coin != "master" and coin != "TBLOCK":
-                        # print(self.xlite_daemon_confs_local[coin]['rpcEnabled'])
+                        # logging.info(self.xlite_daemon_confs_local[coin]['rpcEnabled'])
                         if self.xlite_daemon_confs_local[coin]['rpcEnabled'] is True:
                             res = rpc_server.send_rpc_request("getinfo")
-                            # print(f"coin {coin} result:{res}")
+                            # logging.info(f"coin {coin} result:{res}")
                             if res is not None:
                                 valid = True
                         if not valid:
                             break
                 if valid:
-                    # logging.info("Xlite-daemon, servers ok")
-                    self.valid_master_rpc = True
+                    self.valid_coins_rpc = True
                 else:
-                    # logging.info("Xlite-daemon, no responding servers")
-                    self.valid_master_rpc = False
+                    self.valid_coins_rpc = False
             else:
-                self.valid_master_rpc = False
-            logging.info(f"valid_master_rpc: {self.valid_master_rpc}")
+                self.valid_coins_rpc = False
             if runonce:
                 return
+            # logging.info(f"valid_master_rpc: {self.valid_master_rpc}")
             await asyncio.sleep(5)
 
     def start_async_tasks(self):
@@ -141,7 +133,7 @@ class XliteUtility:
                 asyncio.gather(
                     self.check_xlite_conf(),
                     self.check_xlite_daemon_confs(),
-                    self.check_valid_master_rpc()
+                    self.check_valid_coins_rpc()
                 )  # self.check_blocknet_process(),
             )
             loop.close()
@@ -313,19 +305,6 @@ class XliteUtility:
                     logging.info(f"Xlite process with PID {pid} has been force terminated.")
             except Exception as e:
                 logging.error(f"Error: {e}")
-
-
-@contextmanager
-def change_directory(directory):
-    # Save the current working directory
-    saved_directory = os.getcwd()
-    try:
-        # Change the directory
-        os.chdir(directory)
-        yield
-    finally:
-        # Restore the original working directory
-        os.chdir(saved_directory)
 
 
 def download_xlite_bin():
