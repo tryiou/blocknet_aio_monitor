@@ -70,6 +70,7 @@ class BlocknetGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        self.disable_daemons_conf_check = False
         self.is_blockdx_config_sync = None
         self.xlite_t2 = None
         self.xlite_t1 = None
@@ -97,7 +98,6 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_utility = BlocknetUtility(custom_path=custom_path)
         self.blockdx_utility = BlockdxUtility()
         self.xlite_utility = XliteUtility()
-
         # block-dx
         self.block_dx_label = None
         self.blockdx_check_config_button = None
@@ -168,9 +168,9 @@ class BlocknetGUI(ctk.CTk):
         self.time_disable_button = 3000
 
         # self.root = ctk.CTk()
-
         self.title(app_title_string)
         # self.geometry("570x600")
+
         # Create frames for Blocknet Core/Block-dx/Xlite management
         self.blocknet_core_frame = ctk.CTkFrame(master=self)  # , borderwidth=2, relief="groove")
         self.blocknet_core_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
@@ -564,12 +564,15 @@ class BlocknetGUI(ctk.CTk):
             self.xlite_t1.start()
 
         else:
-            if self.xlite_password and self.xlite_utility.xlite_conf_local and self.xlite_utility.xlite_daemon_confs_local:
+            if self.xlite_password:
                 # Set the value of CC_WALLET_PASS using self.xlite_password
-                os.environ["CC_WALLET_PASS"] = self.xlite_password
-                # Set the value of CC_WALLET_AUTOLOGIN to 'true'
-                os.environ["CC_WALLET_AUTOLOGIN"] = 'true'
-            self.xlite_t2 = Thread(target=self.xlite_utility.start_xlite)
+                # os.environ["CC_WALLET_PASS"] = self.xlite_password
+                # # Set the value of CC_WALLET_AUTOLOGIN to 'true'
+                # os.environ["CC_WALLET_AUTOLOGIN"] = 'true'
+                env_vars = [{"CC_WALLET_PASS": self.xlite_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
+            else:
+                env_vars = []
+            self.xlite_t2 = Thread(target=lambda: self.xlite_utility.start_xlite(env_vars=env_vars))
             self.xlite_t2.start()
         self.after(self.time_disable_button, self.enable_xlite_start_button)
 
@@ -778,7 +781,18 @@ class BlocknetGUI(ctk.CTk):
         self.update_blockdx_start_close_button()
         self.update_blockdx_config_button_checkbox()
 
+    def detect_new_xlite_install_and_add_to_xbridge(self):
+        if not self.disable_daemons_conf_check and self.xlite_utility.valid_master_rpc:
+            self.blocknet_utility.check_xbridge_conf(self.xlite_utility.xlite_daemon_confs_local)
+            if self.blocknet_process_running and self.blocknet_utility.valid_rpc:
+                logging.debug("dxloadxbridgeConf")
+                self.blocknet_utility.blocknet_rpc.send_rpc_request("dxloadxbridgeConf")
+            self.disable_daemons_conf_check = True
+        if self.disable_daemons_conf_check and not self.xlite_utility.valid_master_rpc:
+            self.disable_daemons_conf_check = False
+
     async def update_status_xlite(self):
+        self.detect_new_xlite_install_and_add_to_xbridge()
         self.update_xlite_process_status_checkbox()
         self.update_xlite_start_close_button()
         self.update_xlite_store_password_button()

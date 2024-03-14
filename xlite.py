@@ -1,6 +1,8 @@
+import asyncio
 import io
 import platform
 import tarfile
+import threading
 import zipfile
 import psutil
 import requests
@@ -19,12 +21,54 @@ system = platform.system()
 machine = platform.machine()
 
 
+class XliteRPCClient:
+    def __init__(self, rpc_user, rpc_password, rpc_port):
+        self.rpc_user = rpc_user
+        self.rpc_password = rpc_password
+        self.rpc_port = rpc_port
+
+    def send_rpc_request(self, method=None, params=None):
+        url = f"http://localhost:{self.rpc_port}"
+        headers = {'content-type': 'application/json'}
+        auth = (self.rpc_user, self.rpc_password)
+        data = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params if params is not None else [],
+            "id": 1,
+        }
+        try:
+            # logging.debug(
+            # f"Sending RPC request to URL: {url}, Method: {data['method']}, Params: {data['params']}, Auth: {auth}")
+            response = requests.post(url, json=data, headers=headers, auth=auth)
+            # Check status code explicitly
+            if response.status_code != 200:
+                # logging.error(f"Error sending RPC request: HTTP status code {response.status_code}")
+                return None
+
+            json_answer = response.json()
+            # logging.debug(f"RPC request successful. Response: {json}")
+            if 'result' in json_answer:
+                return json_answer['result']
+            else:
+                logging.error(f"No result in json: {json_answer}")
+        except requests.RequestException as e:
+            # logging.error(f"Error sending RPC request: {e}")
+            return None
+        except Exception as ex:
+            logging.exception(f"An unexpected error occurred while sending RPC request: {ex}")
+            return None
+
+
 class XliteUtility:
     def __init__(self):
+        self.xlite_daemon_confs_local = {}
+        self.master_rpc = None
+        self.valid_master_rpc = False
         self.process_running = None
         self.xlite_process = None
         self.xlite_daemon_process = None
-        self.xlite_conf_local = None
+        self.xlite_conf_local = {}
         self.xlite_daemon_confs_local = {}
         self.running = True  # flag for async funcs
         self.xlite_pids = []
@@ -32,7 +76,56 @@ class XliteUtility:
         self.parse_xlite_conf()
         self.parse_xlite_daemon_conf()
         self.downloading_bin = False
-        # self.start_async_tasks()
+        self.start_async_tasks()
+
+    async def check_xlite_conf(self):
+        while not (self.xlite_conf_local and 'APP_VERSION' in self.xlite_conf_local):
+            self.parse_xlite_conf()
+            # logging.debug("check_xlite_conf")
+            await asyncio.sleep(1)
+
+    def check_xlite_daemon_confs_sequence(self):
+        self.parse_xlite_daemon_conf()
+        if self.xlite_daemon_confs_local:
+            port = self.xlite_daemon_confs_local['master']['rpcPort']
+            user = self.xlite_daemon_confs_local['master']['rpcUsername']
+            password = self.xlite_daemon_confs_local['master']['rpcPassword']
+            self.master_rpc = XliteRPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
+
+    async def check_xlite_daemon_confs(self):
+        result = None
+        while result is None:
+            while self.master_rpc is None:
+                self.check_xlite_daemon_confs_sequence()
+                await asyncio.sleep(2)
+            await asyncio.sleep(2)
+            result = self.master_rpc.send_rpc_request("help")
+        self.check_xlite_daemon_confs_sequence()
+        # self.check_xlite_daemon_confs_sequence()
+
+    async def check_valid_master_rpc(self):
+        while True:
+            if self.master_rpc and self.master_rpc.send_rpc_request("help") is not None:
+                self.valid_master_rpc = True
+            else:
+                self.valid_master_rpc = False
+            await asyncio.sleep(2)
+
+    def start_async_tasks(self):
+        def async_loop():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(
+                asyncio.gather(
+                    self.check_xlite_conf(),
+                    self.check_xlite_daemon_confs(),
+                    self.check_valid_master_rpc()
+                )  # self.check_blocknet_process(),
+            )
+            loop.close()
+
+        thread = threading.Thread(target=async_loop)
+        thread.start()
 
     def parse_xlite_conf(self):
         data_folder = os.path.expandvars(os.path.expanduser(xlite_default_paths.get(system, None)))
@@ -48,7 +141,8 @@ class XliteUtility:
             except Exception as e:
                 logging.error(f"Error parsing {file_path}: {e}, repairing file")
         else:
-            logging.warning(f"{file_path} doesn't exist")
+            # logging.warning(f"{file_path} doesn't exist")
+            pass
         self.xlite_conf_local = meta_data
 
     def parse_xlite_daemon_conf(self):
@@ -58,7 +152,7 @@ class XliteUtility:
 
         # List all files in the confs_folder
         if not os.path.exists(confs_folder):
-            logging.warning(f"{confs_folder} doesn't exist")
+            # logging.warning(f"{confs_folder} doesn't exist")
             self.xlite_daemon_confs_local = {}
             return
 
@@ -82,7 +176,12 @@ class XliteUtility:
                 logging.error(f"Error parsing {json_file_path}: {e}")
         logging.info(f"XLITE-DAEMON: Parsed every coins conf {self.xlite_daemon_confs_local}")
 
-    def start_xlite(self, retry_limit=3, retry_count=0):
+    def start_xlite(self, retry_limit=3, retry_count=0, env_vars=[]):
+        for var_dict in env_vars:
+            for var_name, var_value in var_dict.items():
+                # logging.info(f"var_name: {var_name} var_value: {var_value}")
+                os.environ[var_name] = var_value
+
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Xlite.")
             return

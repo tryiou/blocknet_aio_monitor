@@ -39,7 +39,7 @@ class BlocknetRPCClient:
         self.rpc_password = rpc_password
         self.rpc_port = rpc_port
 
-    def send_rpc_request(self, method, params=None):
+    def send_rpc_request(self, method=None, params=None):
         url = f"http://localhost:{self.rpc_port}"
         headers = {'content-type': 'application/json'}
         auth = (self.rpc_user, self.rpc_password)
@@ -355,7 +355,7 @@ class BlocknetUtility:
 
     def check_xbridge_conf(self, xlite_daemon_conf):
         self.parse_xbridge_conf()
-        logging.info(f"Current local configuration:\n{self.xbridge_conf_local}")
+        # logging.info(f"Current local configuration:\n{self.xbridge_conf_local}")
         # logging.info(f"Current remote configuration:\n{self.xbridge_conf_remote}")
 
         old_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
@@ -385,18 +385,19 @@ class BlocknetUtility:
                     for section, options in self.parsed_xbridge_confs[coin].items():
                         for key, value in options.items():
                             if key == 'Username':
-                                self.xbridge_conf_local[section][key] = xlite_daemon_conf[coin]['rpcUsername']
+                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]['rpcUsername'])
                             elif key == 'Password':
-                                self.xbridge_conf_local[section][key] = xlite_daemon_conf[coin]['rpcPassword']
+                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]['rpcPassword'])
                             elif key == 'Port':
-                                self.xbridge_conf_local[section][key] = xlite_daemon_conf[coin]['rpcPort']
+                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]['rpcPort'])
                             else:
-                                if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
+                                if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][
+                                    key] != value:
                                     # logging.warning(f"value: {value}")
                                     # exit()
-                                    self.xbridge_conf_local[section][key] = value
+                                    self.xbridge_conf_local[section][key] = str(value)
 
-        if not (xlite_daemon_conf and section in xlite_daemon_conf):
+        if not (xlite_daemon_conf and "BLOCK" in xlite_daemon_conf):
             # NO XLITE SESSION DETECTED, SET XBRIDGE TO USE BLOCKNET CORE RPC
             for section, options in self.blocknet_xbridge_conf_remote.items():
                 if section not in self.xbridge_conf_local:
@@ -404,14 +405,15 @@ class BlocknetUtility:
                 logging.info(f"section: {section}, options: {options}")
                 for key, value in options.items():
                     if key == 'Username':
-                        self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcuser']
+                        self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcuser'])
                     elif key == 'Password':
-                        self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcpassword']
+                        self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcpassword'])
                     elif key == 'Port':
-                        self.xbridge_conf_local[section][key] = self.blocknet_conf_local['global']['rpcport']
+                        self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcport'])
                     else:
-                        if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][key] != value:
-                            self.xbridge_conf_local[section][key] = value
+                        if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][
+                            key] != value:
+                            self.xbridge_conf_local[section][key] = str(value)
 
         # Prepare the string of sections (excluding 'Main')
         sections_string = ','.join(section for section in self.xbridge_conf_local.keys() if section != 'Main')
@@ -427,7 +429,7 @@ class BlocknetUtility:
             }
 
         new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
-
+        logging.debug(f"\nold_local_json: {old_local_json}\nnew_local_json: {new_local_json}")
         if old_local_json != new_local_json:
             logging.info("Local xbridge.conf has been updated. Saving...")
             self.save_xbridge_conf()
