@@ -62,6 +62,7 @@ class XliteRPCClient:
 
 class XliteUtility:
     def __init__(self):
+        self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
         self.master_rpc = {}
         self.valid_master_rpc = False
@@ -89,21 +90,31 @@ class XliteUtility:
         rpc_server = 'BLOCK'
         if self.xlite_daemon_confs_local:
             for coin in self.xlite_daemon_confs_local:
-            # if self.xlite_daemon_confs_local and rpc_server in self.xlite_daemon_confs_local:
+                # if self.xlite_daemon_confs_local and rpc_server in self.xlite_daemon_confs_local:
                 port = self.xlite_daemon_confs_local[coin]['rpcPort']
                 user = self.xlite_daemon_confs_local[coin]['rpcUsername']
                 password = self.xlite_daemon_confs_local[coin]['rpcPassword']
                 self.master_rpc[coin] = XliteRPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
 
     async def check_xlite_daemon_confs(self):
-        while not self.valid_master_rpc:
-            await asyncio.sleep(3)
+        done = False
+        while not done:
+            await asyncio.sleep(2)
             self.check_xlite_daemon_confs_sequence(silent=True)
+            await self.check_valid_master_rpc(runonce=True)
+            if self.valid_daemons_rpc_servers:
+                await asyncio.sleep(5)
+                self.check_xlite_daemon_confs_sequence(silent=True)
+                await self.check_valid_master_rpc(runonce=True)
+                if self.valid_daemons_rpc_servers:
+                    logging.info(f"check_xlite_daemon_confs done")
+                    self.valid_master_rpc = True
+                    done = True
                 # result = self.master_rpc.send_rpc_request("help")
-        self.check_xlite_daemon_confs_sequence()
+        # self.check_xlite_daemon_confs_sequence()
         # self.check_xlite_daemon_confs_sequence()
 
-    async def check_valid_master_rpc(self):
+    async def check_valid_master_rpc(self, runonce=False):
         while True:
             if self.master_rpc:
                 for coin, rpc_server in self.master_rpc.items():
@@ -111,19 +122,23 @@ class XliteUtility:
                     if coin != "master" and coin != "TBLOCK":
                         # print(self.xlite_daemon_confs_local[coin]['rpcEnabled'])
                         if self.xlite_daemon_confs_local[coin]['rpcEnabled'] is True:
-                            # print(rpc_server.send_rpc_request("help"))
-                            if rpc_server.send_rpc_request("help") is not None:
+                            res = rpc_server.send_rpc_request("help")
+                            # print(f"coin {coin} result:{res}")
+                            if res is not None:
                                 valid = True
                         if not valid:
                             break
                 if valid:
                     # logging.info("Xlite-daemon, servers ok")
-                    self.valid_master_rpc = True
+                    self.valid_daemons_rpc_servers = True
                 else:
                     # logging.info("Xlite-daemon, no responding servers")
-                    self.valid_master_rpc = True
+                    self.valid_daemons_rpc_servers = False
             else:
-                self.valid_master_rpc = False
+                self.valid_daemons_rpc_servers = False
+            logging.info(f"valid_daemons_rpc_servers: {self.valid_daemons_rpc_servers}")
+            if runonce:
+                return
             await asyncio.sleep(5)
 
     def start_async_tasks(self):
