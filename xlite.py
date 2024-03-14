@@ -84,8 +84,8 @@ class XliteUtility:
             # logging.debug("check_xlite_conf")
             await asyncio.sleep(1)
 
-    def check_xlite_daemon_confs_sequence(self):
-        self.parse_xlite_daemon_conf()
+    def check_xlite_daemon_confs_sequence(self, silent=True):
+        self.parse_xlite_daemon_conf(silent)
         rpc_server = 'BLOCK'
         if self.xlite_daemon_confs_local and rpc_server in self.xlite_daemon_confs_local:
             port = self.xlite_daemon_confs_local[rpc_server]['rpcPort']
@@ -96,11 +96,10 @@ class XliteUtility:
     async def check_xlite_daemon_confs(self):
         result = None
         while result is None:
-            while self.master_rpc is None:
-                self.check_xlite_daemon_confs_sequence()
-                await asyncio.sleep(2)
             await asyncio.sleep(2)
-            result = self.master_rpc.send_rpc_request("help")
+            self.check_xlite_daemon_confs_sequence(silent=True)
+            if self.master_rpc:
+                result = self.master_rpc.send_rpc_request("help")
         self.check_xlite_daemon_confs_sequence()
         # self.check_xlite_daemon_confs_sequence()
 
@@ -146,7 +145,7 @@ class XliteUtility:
             pass
         self.xlite_conf_local = meta_data
 
-    def parse_xlite_daemon_conf(self):
+    def parse_xlite_daemon_conf(self, silent=False):
         # Assuming daemon_data_path and confs_folder are defined earlier in your code
         daemon_data_path = os.path.expandvars(os.path.expanduser(xlite_daemon_default_paths.get(system, None)))
         confs_folder = os.path.join(daemon_data_path, "settings")
@@ -175,7 +174,8 @@ class XliteUtility:
             except Exception as e:
                 self.xlite_daemon_confs_local[coin] = "ERROR PARSING"
                 logging.error(f"Error parsing {json_file_path}: {e}")
-        logging.info(f"XLITE-DAEMON: Parsed every coins conf {self.xlite_daemon_confs_local}")
+        if not silent:
+            logging.info(f"XLITE-DAEMON: Parsed every coins conf {self.xlite_daemon_confs_local}")
 
     def start_xlite(self, retry_limit=3, retry_count=0, env_vars=[]):
         for var_dict in env_vars:
