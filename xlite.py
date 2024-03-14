@@ -115,7 +115,7 @@ class XliteUtility:
                         # print(self.xlite_daemon_confs_local[coin]['rpcEnabled'])
                         if self.xlite_daemon_confs_local[coin]['rpcEnabled'] is True:
                             res = rpc_server.send_rpc_request("getinfo")
-                            print(f"coin {coin} result:{res}")
+                            # print(f"coin {coin} result:{res}")
                             if res is not None:
                                 valid = True
                         if not valid:
