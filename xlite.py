@@ -98,18 +98,10 @@ class XliteUtility:
 
     async def check_xlite_daemon_confs(self):
         done = False
-        while not done:
-            await asyncio.sleep(2)
+        while not self.valid_daemons_rpc_servers:
+            await asyncio.sleep(3)
             self.check_xlite_daemon_confs_sequence(silent=True)
             await self.check_valid_master_rpc(runonce=True)
-            if self.valid_daemons_rpc_servers:
-                await asyncio.sleep(5)
-                self.check_xlite_daemon_confs_sequence(silent=True)
-                await self.check_valid_master_rpc(runonce=True)
-                if self.valid_daemons_rpc_servers:
-                    logging.info(f"check_xlite_daemon_confs done")
-                    self.valid_master_rpc = True
-                    done = True
                 # result = self.master_rpc.send_rpc_request("help")
         # self.check_xlite_daemon_confs_sequence()
         # self.check_xlite_daemon_confs_sequence()
@@ -122,8 +114,8 @@ class XliteUtility:
                     if coin != "master" and coin != "TBLOCK":
                         # print(self.xlite_daemon_confs_local[coin]['rpcEnabled'])
                         if self.xlite_daemon_confs_local[coin]['rpcEnabled'] is True:
-                            res = rpc_server.send_rpc_request("help")
-                            # print(f"coin {coin} result:{res}")
+                            res = rpc_server.send_rpc_request("getinfo")
+                            print(f"coin {coin} result:{res}")
                             if res is not None:
                                 valid = True
                         if not valid:
