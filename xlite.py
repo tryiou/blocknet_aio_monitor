@@ -97,10 +97,10 @@ class XliteUtility:
 
     async def check_xlite_daemon_confs(self):
         while not self.valid_master_rpc:
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
             self.check_xlite_daemon_confs_sequence(silent=True)
                 # result = self.master_rpc.send_rpc_request("help")
-        # self.check_xlite_daemon_confs_sequence()
+        self.check_xlite_daemon_confs_sequence()
         # self.check_xlite_daemon_confs_sequence()
 
     async def check_valid_master_rpc(self):
