@@ -88,9 +88,9 @@ class XliteUtility:
         self.parse_xlite_daemon_conf()
         rpc_server = 'BLOCK'
         if self.xlite_daemon_confs_local and rpc_server in self.xlite_daemon_confs_local:
-            port = self.xlite_daemon_confs_local['master']['rpcPort']
-            user = self.xlite_daemon_confs_local['master']['rpcUsername']
-            password = self.xlite_daemon_confs_local['master']['rpcPassword']
+            port = self.xlite_daemon_confs_local[rpc_server]['rpcPort']
+            user = self.xlite_daemon_confs_local[rpc_server]['rpcUsername']
+            password = self.xlite_daemon_confs_local[rpc_server]['rpcPassword']
             self.master_rpc = XliteRPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
 
     async def check_xlite_daemon_confs(self):
