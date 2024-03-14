@@ -98,7 +98,7 @@ class XliteUtility:
 
     async def check_xlite_daemon_confs(self):
         done = False
-        while not self.valid_daemons_rpc_servers:
+        while not self.valid_master_rpc:
             await asyncio.sleep(3)
             self.check_xlite_daemon_confs_sequence(silent=True)
             await self.check_valid_master_rpc(runonce=True)
@@ -122,13 +122,13 @@ class XliteUtility:
                             break
                 if valid:
                     # logging.info("Xlite-daemon, servers ok")
-                    self.valid_daemons_rpc_servers = True
+                    self.valid_master_rpc = True
                 else:
                     # logging.info("Xlite-daemon, no responding servers")
-                    self.valid_daemons_rpc_servers = False
+                    self.valid_master_rpc = False
             else:
-                self.valid_daemons_rpc_servers = False
-            logging.info(f"valid_daemons_rpc_servers: {self.valid_daemons_rpc_servers}")
+                self.valid_master_rpc = False
+            logging.info(f"valid_master_rpc: {self.valid_master_rpc}")
             if runonce:
                 return
             await asyncio.sleep(5)
