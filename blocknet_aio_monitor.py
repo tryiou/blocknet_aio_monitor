@@ -404,11 +404,11 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_start_close_button.grid(row=0, column=1, sticky="e")
 
         # Button for refreshing Xlite config data
-        self.xlite_check_config_button_string_var = ctk.StringVar(value=check_config_string)
-        self.xlite_check_config_button = ctk.CTkButton(self.xlite_frame,
-                                                       textvariable=self.xlite_check_config_button_string_var,
-                                                       command=self.refresh_xlite_confs, width=button_width)
-        self.xlite_check_config_button.grid(row=1, column=1, sticky="e")
+        # self.xlite_check_config_button_string_var = ctk.StringVar(value=check_config_string)
+        # self.xlite_check_config_button = ctk.CTkButton(self.xlite_frame,
+        #                                                textvariable=self.xlite_check_config_button_string_var,
+        #                                                command=self.refresh_xlite_confs, width=button_width)
+        # self.xlite_check_config_button.grid(row=1, column=1, sticky="e")
 
         # Create the Button widget with a text variable
         self.xlite_store_password_button_string_var = ctk.StringVar(value=store_password_string)
@@ -416,7 +416,7 @@ class BlocknetGUI(ctk.CTk):
                                                          textvariable=self.xlite_store_password_button_string_var,
                                                          width=button_width)
 
-        self.xlite_store_password_button.grid(row=2, column=1, sticky="e")
+        self.xlite_store_password_button.grid(row=1, column=1, sticky="e")
         # Bind left-click event
         self.xlite_store_password_button.bind("<Button-1>",
                                               lambda event: self.xlite_store_password_button_mouse_click(event))
