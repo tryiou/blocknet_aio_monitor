@@ -815,6 +815,7 @@ class BlocknetGUI(ctk.CTk):
         self.update_blockdx_config_button_checkbox()
 
     def detect_new_xlite_install_and_add_to_xbridge(self):
+        # logging.info(f"detect_new_xlite_install_and_add_to_xbridge, valid_coins_rpc: {self.xlite_utility.valid_coins_rpc}, disable_daemons_conf_check: {self.disable_daemons_conf_check}")
         if not self.disable_daemons_conf_check and self.xlite_utility.valid_coins_rpc:
             self.blocknet_utility.check_xbridge_conf(self.xlite_utility.xlite_daemon_confs_local)
             if self.blocknet_process_running and self.blocknet_utility.valid_rpc:
