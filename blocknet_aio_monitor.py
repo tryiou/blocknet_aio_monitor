@@ -9,6 +9,8 @@ import sys
 import time
 from tkinter.filedialog import askdirectory
 from tkinter import simpledialog
+# from tktooltip import ToolTip
+import CTkToolTip as Tooltip
 import customtkinter as ctk
 import json
 import psutil
@@ -33,35 +35,50 @@ xlite_daemon_bin = xlite_daemon_bin_name.get((system, machine))
 blockdx_bin = blockdx_bin_name.get(system, None)
 xlite_bin = xlite_bin_name.get(system, None)
 
-# Define the gui strings
 app_title_string = "Blocknet AIO monitor"
+# Define the gui strings
+tooltip_howtouse = (f"{app_title_string}\n"
+                    "HOW TO USE:\n"
+                    "1/ (Optional) Set a custom path for the Blocknet core chain directory, or use the default path.\n"
+                    "2/ (Optional) Obtain the bootstrap for a faster initial synchronization of the Core wallet.\n"
+                    "3/ Start Blocknet Core and unlock it.\n"
+                    "4/ Start Block-DX.\n"
+                    "5/ Start Xlite, create a wallet, and carefully backup the mnemonic.")
+
+tooltip_blocknet_core_label_msg = "Blocknet Core is used to connect Xbridge to P2P network and expose it locally"
+tooltip_blockdx_label_msg = "Block-DX is a GUI for Xbridge API"
+tooltip_xlite_label_msg = "The XLite wallet allows you to manage a variety of digital assets in a single, noncustodial, lightweight, decentralized wallet. Compatible with Xbridge"
+
 blocknet_frame_title_string = "Blocknet Core Management:"
 blockdx_frame_title_string = " Block-DX Management:"
 xlite_frame_title_string = "XLite Management:"
 start_string = "Start"
 close_string = "Close"
 check_config_string = "Check Config"
-store_password_string = "Store Password"
-set_custom_path_string = "Set Custom Path"
-blocknet_valid_config_string = "Blocknet Config Valid"
-blocknet_not_valid_config_string = "Blocknet Config Invalid. Click Start to Initialize"
-active_rpc_string = "RPC Connection active"
-inactive_rpc_string = "RPC Connection inactive"
+xlite_store_password_string = "Store Password"
+xlite_stored_password_string = "Password Stored"
+blocknet_set_custom_path_string = "Set Custom Path"
+blocknet_valid_config_string = "Blocknet Config Found"
+blocknet_not_valid_config_string = "Blocknet Config Not Found. Click Start to Initialize"
+blocknet_active_rpc_string = "RPC Connection active"
+blocknet_inactive_rpc_string = "RPC Connection inactive"
+blocknet_data_path_created_string = "Data Path folder created"
+blocknet_data_path_notfound_string = "Data path folder not created"
 blocknet_running_string = "Blocknet Process running"
 blocknet_not_running_string = "Blocknet Process not running"
 blockdx_running_string = "Block-DX Process running"
 blockdx_not_running_string = "Block-DX Process not running"
-blockdx_valid_config_string = "Block-DX Config Valid"
-blockdx_not_valid_config_string = "Block-DX Config Invalid, Click Start to Initialize"
+blockdx_valid_config_string = "Block-DX Config Found"
+blockdx_not_valid_config_string = "Block-DX Config Not Found, Click Start to Initialize"
 blockdx_missing_blocknet_config_string = "Block-DX requires Blocknet RPC Connection"
 xlite_running_string = "XLite Process running"
 xlite_not_running_string = "XLite Process not running"
-xlite_valid_config_string = "XLite Config Valid"
-xlite_not_valid_config_string = "XLite Config Invalid"
+xlite_valid_config_string = "XLite Config Found"
+xlite_not_valid_config_string = "XLite Config Not Found"
 xlite_daemon_running_string = "XLite-daemon Process running"
 xlite_daemon_not_running_string = "XLite-daemon Process not running"
-xlite_daemon_valid_config_string = "XLite-daemon Config Valid"
-xlite_daemon_not_valid_config_string = "XLite-daemon Config Invalid"
+xlite_daemon_valid_config_string = "XLite-daemon Config Found"
+xlite_daemon_not_valid_config_string = "XLite-daemon Config Not Found"
 xlite_reverse_proxy_not_running_string = "XLite-reverse-proxy Process not running"
 button_width = 120
 gui_width = 450
@@ -171,7 +188,7 @@ class BlocknetGUI(ctk.CTk):
         # self.root = ctk.CTk()
         self.title(app_title_string)
         # self.geometry("570x600")
-
+        Tooltip.CTkToolTip(self, message=tooltip_howtouse, delay=1, follow=True, border_width=2, justify="left")
         # Create frames for Blocknet Core/Block-dx/Xlite management
         self.blocknet_core_frame = ctk.CTkFrame(master=self)  # , borderwidth=2, relief="groove")
         self.blocknet_core_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
@@ -225,6 +242,8 @@ class BlocknetGUI(ctk.CTk):
                                                 width=gui_width, anchor="w")
         self.blocknet_core_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
+        Tooltip.CTkToolTip(self.blocknet_core_label, message=tooltip_blocknet_core_label_msg,
+                           delay=1.0, follow=True)
         # # Frame for Data Path label and entry
         # self.blocknet_data_path_frame = ctk.CTkFrame(self.blocknet_core_frame)
         # self.blocknet_data_path_frame.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="w")
@@ -271,7 +290,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_conf_status_checkbox.grid(row=4, column=0, columnspan=2, padx=10, pady=5, sticky="w")
 
         self.blocknet_rpc_connection_checkbox_state = ctk.BooleanVar()
-        self.blocknet_rpc_connection_checkbox_string_var = ctk.StringVar(value=inactive_rpc_string)
+        self.blocknet_rpc_connection_checkbox_string_var = ctk.StringVar(value=blocknet_inactive_rpc_string)
         self.blocknet_rpc_connection_checkbox = ctk.CTkCheckBox(self.blocknet_core_frame,
                                                                 textvariable=self.blocknet_rpc_connection_checkbox_string_var,
                                                                 variable=self.blocknet_rpc_connection_checkbox_state,
@@ -288,7 +307,7 @@ class BlocknetGUI(ctk.CTk):
 
         # Button for setting custom path
         self.blocknet_custom_path_button = ctk.CTkButton(self.blocknet_core_frame,
-                                                         text=set_custom_path_string,
+                                                         text=blocknet_set_custom_path_string,
                                                          command=self.open_custom_path_dialog,
                                                          width=button_width)
         self.blocknet_custom_path_button.grid(row=1, column=3, sticky="e")
@@ -314,6 +333,8 @@ class BlocknetGUI(ctk.CTk):
         self.block_dx_label = ctk.CTkLabel(self.block_dx_frame, text=blockdx_frame_title_string)
         self.block_dx_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
+        Tooltip.CTkToolTip(self.block_dx_label, message=tooltip_blockdx_label_msg,
+                           delay=1.0, follow=True)
         # Checkboxes
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
         self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value=blockdx_running_string)
@@ -352,6 +373,8 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_label = ctk.CTkLabel(self.xlite_frame, text=xlite_frame_title_string)
         self.xlite_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
+        Tooltip.CTkToolTip(self.xlite_label, message=tooltip_xlite_label_msg,
+                           delay=1.0, follow=True)
         # Checkboxes
         self.xlite_process_status_checkbox_state = ctk.BooleanVar()
         self.xlite_process_status_checkbox_string_var = ctk.StringVar(value=xlite_not_running_string)
@@ -415,7 +438,7 @@ class BlocknetGUI(ctk.CTk):
         # self.xlite_check_config_button.grid(row=1, column=1, sticky="e")
 
         # Create the Button widget with a text variable
-        self.xlite_store_password_button_string_var = ctk.StringVar(value=store_password_string)
+        self.xlite_store_password_button_string_var = ctk.StringVar(value=xlite_store_password_string)
         self.xlite_store_password_button = ctk.CTkButton(self.xlite_frame,
                                                          textvariable=self.xlite_store_password_button_string_var,
                                                          width=button_width)
@@ -646,7 +669,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_data_path_status_checkbox_state.set(exist)
 
         # blocknet_data_path_status_checkbox_string_var
-        var = "Valid Data Path" if exist else "No valid data path set"
+        var = blocknet_data_path_created_string if exist else blocknet_data_path_notfound_string
         self.blocknet_data_path_status_checkbox_string_var.set(var)
 
     def update_blocknet_rpc_connection_checkbox(self):
@@ -654,7 +677,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_rpc_connection_checkbox_state.set(self.blocknet_utility.valid_rpc)
 
         # blocknet_rpc_connection_checkbox_string_var
-        var = active_rpc_string if self.blocknet_utility.valid_rpc else inactive_rpc_string
+        var = blocknet_active_rpc_string if self.blocknet_utility.valid_rpc else blocknet_inactive_rpc_string
         self.blocknet_rpc_connection_checkbox_string_var.set(var)
 
     def update_blockdx_process_status_checkbox(self):
@@ -740,7 +763,7 @@ class BlocknetGUI(ctk.CTk):
 
     def update_xlite_store_password_button(self):
         # xlite_store_password_button
-        var = "Password Stored" if self.xlite_password else store_password_string
+        var = xlite_stored_password_string if self.xlite_password else xlite_store_password_string
         self.xlite_store_password_button_string_var.set(var)
         # self.xlite_store_password_button.configure(relief='raised' if not self.xlite_password else 'sunken')
 
@@ -927,6 +950,7 @@ def terminate_all_threads():
             logging.info(f"Terminating thread: {thread.name}")
             thread.join(timeout=1)  # Terminate thread
             logging.info(f"Thread {thread.name} terminated")
+
 
 def terminate_thread(thread):
     """Terminates a python thread from another thread."""
