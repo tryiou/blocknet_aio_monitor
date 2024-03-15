@@ -12,6 +12,7 @@ from tkinter import simpledialog
 import customtkinter as ctk
 import json
 import psutil
+import threading
 from threading import Thread, Event
 from cryptography.fernet import Fernet
 
@@ -42,25 +43,25 @@ close_string = "Close"
 check_config_string = "Check Config"
 store_password_string = "Store Password"
 set_custom_path_string = "Set Custom Path"
-blocknet_valid_config_string = "Blocknet Config valid"
-blocknet_not_valid_config_string = "Blocknet Config not valid, Click on Check Config"
+blocknet_valid_config_string = "Blocknet Config Valid"
+blocknet_not_valid_config_string = "Blocknet Config Invalid. Click Start to Initialize"
 active_rpc_string = "RPC Connection active"
 inactive_rpc_string = "RPC Connection inactive"
 blocknet_running_string = "Blocknet Process running"
 blocknet_not_running_string = "Blocknet Process not running"
-blockdx_running_string = " Block-DX Process running"
-blockdx_not_running_string = " Block-DX Process not running"
-blockdx_valid_config_string = " Block-DX Config valid"
-blockdx_not_valid_config_string = " Block-DX Config not valid, Click on Check Config"
-blockdx_missing_blocknet_config_string = " Block-DX need Blocknet configured first"
+blockdx_running_string = "Block-DX Process running"
+blockdx_not_running_string = "Block-DX Process not running"
+blockdx_valid_config_string = "Block-DX Config Valid"
+blockdx_not_valid_config_string = "Block-DX Config Invalid, Click Start to Initialize"
+blockdx_missing_blocknet_config_string = "Block-DX requires Blocknet RPC Connection"
 xlite_running_string = "XLite Process running"
 xlite_not_running_string = "XLite Process not running"
-xlite_valid_config_string = "XLite Config valid"
-xlite_not_valid_config_string = "XLite Config not valid"
+xlite_valid_config_string = "XLite Config Valid"
+xlite_not_valid_config_string = "XLite Config Invalid"
 xlite_daemon_running_string = "XLite-daemon Process running"
 xlite_daemon_not_running_string = "XLite-daemon Process not running"
-xlite_daemon_valid_config_string = "XLite-daemon Config valid"
-xlite_daemon_not_valid_config_string = "XLite-daemon Config not valid"
+xlite_daemon_valid_config_string = "XLite-daemon Config Valid"
+xlite_daemon_not_valid_config_string = "XLite-daemon Config Invalid"
 xlite_reverse_proxy_not_running_string = "XLite-reverse-proxy Process not running"
 button_width = 120
 gui_width = 450
@@ -70,6 +71,7 @@ class BlocknetGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        self.disable_daemons_conf_check = False
         self.is_blockdx_config_sync = None
         self.xlite_t2 = None
         self.xlite_t1 = None
@@ -97,7 +99,6 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_utility = BlocknetUtility(custom_path=custom_path)
         self.blockdx_utility = BlockdxUtility()
         self.xlite_utility = XliteUtility()
-
         # block-dx
         self.block_dx_label = None
         self.blockdx_check_config_button = None
@@ -152,8 +153,8 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_process_status_checkbox = None
         self.xlite_process_status_checkbox_state = None
         self.xlite_process_status_checkbox_string_var = None
-        self.xlite_refresh_button = None
-        self.xlite_refresh_button_string_var = None
+        self.xlite_check_config_button = None
+        self.xlite_check_config_button_string_var = None
         self.xlite_reverse_proxy_process_status_checkbox = None
         self.xlite_reverse_proxy_process_status_checkbox_state = None
         self.xlite_reverse_proxy_process_status_checkbox_string_var = None
@@ -168,9 +169,9 @@ class BlocknetGUI(ctk.CTk):
         self.time_disable_button = 3000
 
         # self.root = ctk.CTk()
-
         self.title(app_title_string)
         # self.geometry("570x600")
+
         # Create frames for Blocknet Core/Block-dx/Xlite management
         self.blocknet_core_frame = ctk.CTkFrame(master=self)  # , borderwidth=2, relief="groove")
         self.blocknet_core_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
@@ -200,7 +201,7 @@ class BlocknetGUI(ctk.CTk):
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))
         # sys.exit(1)
-        self.stop_bootstrap_thread()
+        # self.stop_bootstrap_thread()
         self.on_close()
 
     def stop_bootstrap_thread(self):
@@ -209,10 +210,13 @@ class BlocknetGUI(ctk.CTk):
             self.bootstrap_thread.join()
 
     def on_close(self):
-        self.blocknet_utility.running = False
-        self.blockdx_utility.running = False
-        self.stop_bootstrap_thread()
+        logging.info("Closing application...")
+        terminate_all_threads()
+        logging.info("Threads terminated.")
         self.destroy()
+        logging.info("Tkinter GUI destroyed.")
+        # Schedule forced exit after a 5-second timeout
+        threading.Timer(3, os._exit, args=(0,)).start()
 
     def setup_blocknet_core(self):
         # Add widgets for Blocknet Core management inside the blocknet_core_frame
@@ -298,11 +302,11 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_start_close_button.grid(row=2, column=3, sticky="e")
 
         # Button for checking config
-        self.blocknet_check_config_button = ctk.CTkButton(self.blocknet_core_frame,
-                                                          text=check_config_string,
-                                                          command=self.blocknet_check_config,
-                                                          width=button_width)
-        self.blocknet_check_config_button.grid(row=3, column=3, sticky="e")
+        # self.blocknet_check_config_button = ctk.CTkButton(self.blocknet_core_frame,
+        #                                                   text=check_config_string,
+        #                                                   command=self.blocknet_check_config,
+        #                                                   width=button_width)
+        # self.blocknet_check_config_button.grid(row=3, column=3, sticky="e")
 
     def setup_block_dx(self):
         # Add widgets for Block-dx management inside the block_dx_frame
@@ -336,10 +340,10 @@ class BlocknetGUI(ctk.CTk):
         self.blockdx_start_close_button.grid(row=0, column=1, sticky="e")
 
         # Button for checking config
-        self.blockdx_check_config_button = ctk.CTkButton(self.block_dx_frame, text=check_config_string,
-                                                         command=self.blockdx_check_config,
-                                                         width=button_width, state='disabled')
-        self.blockdx_check_config_button.grid(row=1, column=1, sticky="e")
+        # self.blockdx_check_config_button = ctk.CTkButton(self.block_dx_frame, text=check_config_string,
+        #                                                  command=self.blockdx_check_config,
+        #                                                  width=button_width, state='disabled')
+        # self.blockdx_check_config_button.grid(row=1, column=1, sticky="e")
 
         # Configure column 1 to expand
         self.block_dx_frame.grid_columnconfigure(1, weight=1)
@@ -404,11 +408,11 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_start_close_button.grid(row=0, column=1, sticky="e")
 
         # Button for refreshing Xlite config data
-        self.xlite_refresh_button_string_var = ctk.StringVar(value=check_config_string)
-        self.xlite_refresh_button = ctk.CTkButton(self.xlite_frame,
-                                                  textvariable=self.xlite_refresh_button_string_var,
-                                                  command=self.refresh_xlite_confs, width=button_width)
-        self.xlite_refresh_button.grid(row=1, column=1, sticky="e")
+        # self.xlite_check_config_button_string_var = ctk.StringVar(value=check_config_string)
+        # self.xlite_check_config_button = ctk.CTkButton(self.xlite_frame,
+        #                                                textvariable=self.xlite_check_config_button_string_var,
+        #                                                command=self.refresh_xlite_confs, width=button_width)
+        # self.xlite_check_config_button.grid(row=1, column=1, sticky="e")
 
         # Create the Button widget with a text variable
         self.xlite_store_password_button_string_var = ctk.StringVar(value=store_password_string)
@@ -416,7 +420,7 @@ class BlocknetGUI(ctk.CTk):
                                                          textvariable=self.xlite_store_password_button_string_var,
                                                          width=button_width)
 
-        self.xlite_store_password_button.grid(row=2, column=1, sticky="e")
+        self.xlite_store_password_button.grid(row=1, column=1, sticky="e")
         # Bind left-click event
         self.xlite_store_password_button.bind("<Button-1>",
                                               lambda event: self.xlite_store_password_button_mouse_click(event))
@@ -481,12 +485,17 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_utility.parse_xlite_daemon_conf()
 
     def blocknet_check_config(self):
-        disable_button(self.blocknet_check_config_button)
-        self.blocknet_utility.compare_and_update_local_conf()
-        enable_button(self.blocknet_check_config_button)
+        # disable_button(self.blocknet_check_config_button)
+        use_xlite = bool(self.xlite_utility.xlite_daemon_confs_local)
+        if use_xlite:
+            xlite_daemon_conf = self.xlite_utility.xlite_daemon_confs_local
+        else:
+            xlite_daemon_conf = None
+        self.blocknet_utility.compare_and_update_local_conf(xlite_daemon_conf)
+        # enable_button(self.blocknet_check_config_button)
 
     def blockdx_check_config(self):
-        disable_button(self.blockdx_check_config_button)
+        # disable_button(self.blockdx_check_config_button)
         # Get required data
         if bool(self.blocknet_utility.data_folder and self.blocknet_utility.blocknet_conf_local):
             xbridgeconfpath = os.path.normpath(os.path.join(self.blocknet_utility.data_folder, "xbridge.conf"))
@@ -494,7 +503,7 @@ class BlocknetGUI(ctk.CTk):
             rpc_user = self.blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcuser')
             rpc_password = self.blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcpassword')
             self.blockdx_utility.compare_and_update_local_conf(xbridgeconfpath, rpc_user, rpc_password)
-        enable_button(self.blockdx_check_config_button)
+        # enable_button(self.blockdx_check_config_button)
 
     def open_custom_path_dialog(self):
         custom_path = askdirectory(parent=self, title="Select Custom Path for Blocknet Core Datadir")
@@ -534,6 +543,7 @@ class BlocknetGUI(ctk.CTk):
             self.blocknet_t1 = Thread(target=self.blocknet_utility.close_blocknet)
             self.blocknet_t1.start()
         else:
+            self.blocknet_check_config()
             self.blocknet_t2 = Thread(target=self.blocknet_utility.start_blocknet)
             self.blocknet_t2.start()
         self.after(self.time_disable_button, self.enable_blocknet_start_button)
@@ -545,6 +555,7 @@ class BlocknetGUI(ctk.CTk):
             self.blockdx_t1 = Thread(target=self.blockdx_utility.close_blockdx)
             self.blockdx_t1.start()
         else:
+            self.blockdx_check_config()
             self.blockdx_t2 = Thread(target=self.blockdx_utility.start_blockdx)
             self.blockdx_t2.start()
         self.after(self.time_disable_button, self.enable_blockdx_start_button)
@@ -557,12 +568,15 @@ class BlocknetGUI(ctk.CTk):
             self.xlite_t1.start()
 
         else:
-            if self.xlite_password and self.xlite_utility.xlite_conf_local and self.xlite_utility.xlite_daemon_confs_local:
+            if self.xlite_password:
                 # Set the value of CC_WALLET_PASS using self.xlite_password
-                os.environ["CC_WALLET_PASS"] = self.xlite_password
-                # Set the value of CC_WALLET_AUTOLOGIN to 'true'
-                os.environ["CC_WALLET_AUTOLOGIN"] = 'true'
-            self.xlite_t2 = Thread(target=self.xlite_utility.start_xlite)
+                # os.environ["CC_WALLET_PASS"] = self.xlite_password
+                # # Set the value of CC_WALLET_AUTOLOGIN to 'true'
+                # os.environ["CC_WALLET_AUTOLOGIN"] = 'true'
+                env_vars = [{"CC_WALLET_PASS": self.xlite_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
+            else:
+                env_vars = []
+            self.xlite_t2 = Thread(target=lambda: self.xlite_utility.start_xlite(env_vars=env_vars))
             self.xlite_t2.start()
         self.after(self.time_disable_button, self.enable_xlite_start_button)
 
@@ -588,12 +602,12 @@ class BlocknetGUI(ctk.CTk):
             close_string if self.blocknet_process_running else start_string)
         self.blocknet_start_close_button_string_var.set(var)
 
-        conf_exist_and_parsed = bool(
-            self.blocknet_utility.blocknet_conf_local and self.blocknet_utility.xbridge_conf_local)
-
-        enabled = (not self.blocknet_utility.downloading_bin and not self.disable_start_blocknet_button and
-                   not self.blocknet_utility.checking_bootstrap and conf_exist_and_parsed or self.blocknet_process_running)
-
+        # conf_exist_and_parsed = bool(
+        #     self.blocknet_utility.blocknet_conf_local and self.blocknet_utility.xbridge_conf_local)
+        # conf_exist_and_parsed or
+        enabled = (not self.blocknet_utility.downloading_bin and
+                   not self.disable_start_blocknet_button and
+                   not self.blocknet_utility.checking_bootstrap)
         # logging.debug(
         #     f"blocknet_utility.downloading_bin: {self.blocknet_utility.downloading_bin}"
         #     f", self.disable_start_blocknet_button: {self.disable_start_blocknet_button}, enabled: {enabled}"
@@ -661,10 +675,11 @@ class BlocknetGUI(ctk.CTk):
         # blockdx_start_close_button self.is_blockdx_config_sync
         # enabled = (self.blockdx_process_running and not self.disable_start_blockdx_button) or (
         #         not self.blockdx_utility.downloading_bin and self.blocknet_utility.valid_rpc and not self.disable_start_blockdx_button)
-        enabled = ((self.blockdx_process_running or not self.blockdx_utility.downloading_bin) and
-                   self.blocknet_utility.valid_rpc and
-                   not self.disable_start_blockdx_button and
-                   self.is_blockdx_config_sync)
+        #  and
+        #                    self.is_blockdx_config_sync
+        enabled = (self.blockdx_process_running or (not self.blockdx_utility.downloading_bin and
+                                                    self.blocknet_utility.valid_rpc) and
+                   not self.disable_start_blockdx_button)
 
         self.blockdx_start_close_button.configure(state='normal' if enabled else 'disabled')
 
@@ -674,7 +689,13 @@ class BlocknetGUI(ctk.CTk):
         # blocknet_conf_is_valid = (os.path.exists(xbridgeconfpath) and rpc_password and rpc_user)
 
         valid_core_setup = bool(self.blocknet_utility.data_folder) and bool(self.blocknet_utility.blocknet_conf_local)
-        self.blockdx_check_config_button.configure(state='normal' if valid_core_setup else 'disabled')
+        # self.blockdx_check_config_button.configure(state='normal' if valid_core_setup else 'disabled')
+        if valid_core_setup and self.blocknet_utility.valid_rpc:
+            var = blockdx_valid_config_string if self.is_blockdx_config_sync else blockdx_not_valid_config_string
+            self.blockdx_valid_config_checkbox_string_var.set(var)
+        else:
+            self.blockdx_valid_config_checkbox_string_var.set(blockdx_missing_blocknet_config_string)
+
         if valid_core_setup:
             xbridgeconfpath = os.path.join(self.blocknet_utility.data_folder, "xbridge.conf")
             rpc_user = self.blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcuser')
@@ -691,16 +712,11 @@ class BlocknetGUI(ctk.CTk):
                     blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets', [])
             )
 
-            # blockdx_valid_config_checkbox_string_var
-            self.blockdx_valid_config_checkbox_state.set(self.is_blockdx_config_sync)
-            var = blockdx_valid_config_string if self.is_blockdx_config_sync else blockdx_not_valid_config_string
-            self.blockdx_valid_config_checkbox_string_var.set(var)
-        else:
-            # blockdx_check_config_button
-            self.blockdx_valid_config_checkbox_state.set(False)
+            self.blockdx_valid_config_checkbox_state.set(
+                (self.is_blockdx_config_sync and self.blocknet_utility.valid_rpc))
 
-            # blockdx_valid_config_checkbox_string_var
-            self.blockdx_valid_config_checkbox_string_var.set(blockdx_missing_blocknet_config_string)
+        else:
+            self.blockdx_valid_config_checkbox_state.set(False)
 
     def update_xlite_process_status_checkbox(self):
         # xlite_process_status_checkbox_state
@@ -769,7 +785,18 @@ class BlocknetGUI(ctk.CTk):
         self.update_blockdx_start_close_button()
         self.update_blockdx_config_button_checkbox()
 
+    def detect_new_xlite_install_and_add_to_xbridge(self):
+        if not self.disable_daemons_conf_check and self.xlite_utility.valid_coins_rpc:
+            self.blocknet_utility.check_xbridge_conf(self.xlite_utility.xlite_daemon_confs_local)
+            if self.blocknet_process_running and self.blocknet_utility.valid_rpc:
+                logging.debug("dxloadxbridgeConf")
+                self.blocknet_utility.blocknet_rpc.send_rpc_request("dxloadxbridgeConf")
+            self.disable_daemons_conf_check = True
+        if self.disable_daemons_conf_check and not self.xlite_utility.valid_coins_rpc:
+            self.disable_daemons_conf_check = False
+
     async def update_status_xlite(self):
+        self.detect_new_xlite_install_and_add_to_xbridge()
         self.update_xlite_process_status_checkbox()
         self.update_xlite_start_close_button()
         self.update_xlite_store_password_button()
@@ -893,6 +920,14 @@ def load_cfg_json():
         return None
 
 
+def terminate_all_threads():
+    logging.info("Terminating all threads...")
+    for thread in threading.enumerate():
+        if thread != threading.current_thread():
+            logging.info(f"Terminating thread: {thread.name}")
+            thread.join(timeout=1)  # Terminate thread
+            logging.info(f"Thread {thread.name} terminated")
+
 def terminate_thread(thread):
     """Terminates a python thread from another thread."""
     if not thread.is_alive():
@@ -989,8 +1024,19 @@ def run_gui():
     app = BlocknetGUI()
     try:
         app.mainloop()
-    except:
-        sys.exit(0)
+    except KeyboardInterrupt:
+        print("GUI execution terminated by user.")
+        # app.on_close()
+        # sys.exit(0)
+    except Exception as e:
+        # Log the error to a file
+        logging.basicConfig(filename='gui_errors.log', level=logging.ERROR,
+                            format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.error("An error occurred: %s", e)
+
+        # Print a user-friendly error message
+        print("An unexpected error occurred. Please check the log file 'gui_errors.log' for more information.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
