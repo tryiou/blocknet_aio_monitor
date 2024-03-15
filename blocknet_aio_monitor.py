@@ -1066,7 +1066,7 @@ def run_gui():
 
         # Print a user-friendly error message
         print("An unexpected error occurred. Please check the log file 'gui_errors.log' for more information.")
-        sys.exit(1)
+        app.on_close()
 
 
 if __name__ == "__main__":
