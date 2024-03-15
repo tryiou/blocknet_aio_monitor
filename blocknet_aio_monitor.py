@@ -199,9 +199,12 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_frame = ctk.CTkFrame(master=self)
         self.xlite_frame.grid(row=2, column=0, padx=10, pady=5, sticky="nsew")
 
-        CTkToolTip.CTkToolTip(self.blocknet_core_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.block_dx_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.xlite_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2, justify="left")
+        CTkToolTip.CTkToolTip(self.blocknet_core_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2,
+                              justify="left")
+        CTkToolTip.CTkToolTip(self.block_dx_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2,
+                              justify="left")
+        CTkToolTip.CTkToolTip(self.xlite_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2,
+                              justify="left")
         # Call functions to setup management sections
         self.setup_blocknet_core()
         self.setup_block_dx()
@@ -246,7 +249,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_core_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
         CTkToolTip.CTkToolTip(self.blocknet_core_label, message=tooltip_blocknet_core_label_msg,
-                           delay=1.0, follow=True)
+                              delay=1.0, border_width=2, follow=True)
         # # Frame for Data Path label and entry
         # self.blocknet_data_path_frame = ctk.CTkFrame(self.blocknet_core_frame)
         # self.blocknet_data_path_frame.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="w")
@@ -337,7 +340,7 @@ class BlocknetGUI(ctk.CTk):
         self.block_dx_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
         CTkToolTip.CTkToolTip(self.block_dx_label, message=tooltip_blockdx_label_msg,
-                           delay=1.0, follow=True)
+                              delay=1.0, border_width=2, follow=True)
         # Checkboxes
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
         self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value=blockdx_running_string)
@@ -377,7 +380,7 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
 
         CTkToolTip.CTkToolTip(self.xlite_label, message=tooltip_xlite_label_msg,
-                           delay=1.0, follow=True)
+                              delay=1.0, border_width=2, follow=True)
         # Checkboxes
         self.xlite_process_status_checkbox_state = ctk.BooleanVar()
         self.xlite_process_status_checkbox_string_var = ctk.StringVar(value=xlite_not_running_string)
