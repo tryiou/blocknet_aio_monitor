@@ -189,7 +189,6 @@ class BlocknetGUI(ctk.CTk):
         # self.root = ctk.CTk()
         self.title(app_title_string)
         # self.geometry("570x600")
-        CTkToolTip.CTkToolTip(self, message=tooltip_howtouse, delay=1, follow=True, border_width=2, justify="left")
         # Create frames for Blocknet Core/Block-dx/Xlite management
         self.blocknet_core_frame = ctk.CTkFrame(master=self)  # , borderwidth=2, relief="groove")
         self.blocknet_core_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
@@ -200,6 +199,9 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_frame = ctk.CTkFrame(master=self)
         self.xlite_frame.grid(row=2, column=0, padx=10, pady=5, sticky="nsew")
 
+        CTkToolTip.CTkToolTip(self.blocknet_core_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2, justify="left")
+        CTkToolTip.CTkToolTip(self.block_dx_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2, justify="left")
+        CTkToolTip.CTkToolTip(self.xlite_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2, justify="left")
         # Call functions to setup management sections
         self.setup_blocknet_core()
         self.setup_block_dx()
