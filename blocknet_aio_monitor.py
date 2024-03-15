@@ -12,6 +12,7 @@ from tkinter import simpledialog
 import customtkinter as ctk
 import json
 import psutil
+import threading
 from threading import Thread, Event
 from cryptography.fernet import Fernet
 
@@ -200,7 +201,7 @@ class BlocknetGUI(ctk.CTk):
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))
         # sys.exit(1)
-        self.stop_bootstrap_thread()
+        # self.stop_bootstrap_thread()
         self.on_close()
 
     def stop_bootstrap_thread(self):
@@ -209,11 +210,13 @@ class BlocknetGUI(ctk.CTk):
             self.bootstrap_thread.join()
 
     def on_close(self):
-        self.blocknet_utility.running = False
-        self.blockdx_utility.running = False
-        self.xlite_utility.running = False
-        self.stop_bootstrap_thread()
+        logging.info("Closing application...")
+        terminate_all_threads()
+        logging.info("Threads terminated.")
         self.destroy()
+        logging.info("Tkinter GUI destroyed.")
+        # Schedule forced exit after a 5-second timeout
+        threading.Timer(3, os._exit, args=(0,)).start()
 
     def setup_blocknet_core(self):
         # Add widgets for Blocknet Core management inside the blocknet_core_frame
@@ -916,6 +919,14 @@ def load_cfg_json():
         logging.info(f"Configuration file '{filename}' not found.")
         return None
 
+
+def terminate_all_threads():
+    logging.info("Terminating all threads...")
+    for thread in threading.enumerate():
+        if thread != threading.current_thread():
+            logging.info(f"Terminating thread: {thread.name}")
+            thread.join(timeout=1)  # Terminate thread
+            logging.info(f"Thread {thread.name} terminated")
 
 def terminate_thread(thread):
     """Terminates a python thread from another thread."""
