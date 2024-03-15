@@ -1056,7 +1056,7 @@ def run_gui():
         app.mainloop()
     except KeyboardInterrupt:
         print("GUI execution terminated by user.")
-        # app.on_close()
+        app.on_close()
         # sys.exit(0)
     except Exception as e:
         # Log the error to a file
