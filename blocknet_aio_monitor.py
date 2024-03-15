@@ -35,8 +35,8 @@ xlite_daemon_bin = xlite_daemon_bin_name.get((system, machine))
 blockdx_bin = blockdx_bin_name.get(system, None)
 xlite_bin = xlite_bin_name.get(system, None)
 
-app_title_string = "Blocknet AIO monitor"
 # Define the gui strings
+app_title_string = "Blocknet AIO monitor"
 tooltip_howtouse = (f"{app_title_string}\n"
                     "HOW TO USE:\n"
                     "1/ (Optional) Set a custom path for the Blocknet core chain directory, or use the default path.\n"
@@ -55,8 +55,6 @@ xlite_frame_title_string = "XLite Management:"
 start_string = "Start"
 close_string = "Close"
 check_config_string = "Check Config"
-xlite_store_password_string = "Store Password"
-xlite_stored_password_string = "Password Stored"
 blocknet_set_custom_path_string = "Set Custom Path"
 blocknet_valid_config_string = "Blocknet Config Found"
 blocknet_not_valid_config_string = "Blocknet Config Not Found. Click Start to Initialize"
@@ -80,6 +78,9 @@ xlite_daemon_not_running_string = "XLite-daemon Process not running"
 xlite_daemon_valid_config_string = "XLite-daemon Config Found"
 xlite_daemon_not_valid_config_string = "XLite-daemon Config Not Found"
 xlite_reverse_proxy_not_running_string = "XLite-reverse-proxy Process not running"
+xlite_store_password_string = "Store Password"
+xlite_stored_password_string = "Password Stored"
+
 button_width = 120
 gui_width = 450
 
