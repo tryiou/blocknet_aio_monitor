@@ -97,14 +97,14 @@ class BlocknetUtility:
         self.start_async_tasks()
 
     def start_async_tasks(self):
-        def async_loop():
+        def blocknet_async_loop():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(
                 asyncio.gather(self.check_blocknet_rpc()))  # self.check_blocknet_process(),
             loop.close()
 
-        thread = threading.Thread(target=async_loop)
+        thread = threading.Thread(target=blocknet_async_loop)
         thread.start()
 
     async def check_blocknet_rpc(self):
