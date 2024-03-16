@@ -27,8 +27,6 @@ if system == "Darwin":
 
 class XliteRPCClient:
     def __init__(self, rpc_user, rpc_password, rpc_port):
-        if system == "Darwin":
-            self.dmg_mount_path = f"/Volumes/{volume_name}"
         self.rpc_user = rpc_user
         self.rpc_password = rpc_password
         self.rpc_port = rpc_port
@@ -68,7 +66,8 @@ class XliteRPCClient:
 
 class XliteUtility:
     def __init__(self):
-        self.dmg_mount_path = None
+        if system == "Darwin":
+            self.dmg_mount_path = f"/Volumes/{volume_name}"
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
         self.coins_rpc = {}
