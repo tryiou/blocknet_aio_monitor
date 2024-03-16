@@ -8,11 +8,10 @@ import shutil
 import signal
 import time
 from tkinter.filedialog import askdirectory
-# from tktooltip import ToolTip
 import CTkToolTip
 import customtkinter as ctk
-from custom_tk_mods.ctkInputDialogMod import CTkInputDialog
-from custom_tk_mods.ctkCheckBox import CTkCheckBox
+import custom_tk_mods.ctkInputDialogMod as ctkInputDialogMod
+import custom_tk_mods.ctkCheckBox as ctkCheckBox
 import json
 import psutil
 import threading
@@ -271,17 +270,17 @@ class BlocknetGUI(ctk.CTk):
                                                                width=width,
                                                                state='disabled')
 
-        self.bins_blocknet_found_checkbox = CTkCheckBox(self.bins_download_frame,
+        self.bins_blocknet_found_checkbox = ctkCheckBox.CTkCheckBox(self.bins_download_frame,
                                                         text='',
                                                         variable=self.blocknet_bin_installed_boolvar,
                                                         state='disabled',
                                                         corner_radius=25, )
-        self.bins_blockdx_found_checkbox = CTkCheckBox(self.bins_download_frame,
+        self.bins_blockdx_found_checkbox = ctkCheckBox.CTkCheckBox(self.bins_download_frame,
                                                        text='',
                                                        variable=self.blockdx_bin_installed_boolvar,
                                                        state='disabled',
                                                        corner_radius=25)
-        self.bins_xlite_found_checkbox = CTkCheckBox(self.bins_download_frame,
+        self.bins_xlite_found_checkbox = ctkCheckBox.CTkCheckBox(self.bins_download_frame,
                                                      text='',
                                                      variable=self.xlite_bin_installed_boolvar,
                                                      state='disabled',
@@ -702,7 +701,7 @@ class BlocknetGUI(ctk.CTk):
             # ask_user_pass
             # store_salted_pass
             logging.info("Left click detected")
-            password = CTkInputDialog(title="Store XLite Password", text="Enter XLite password:", show='*').get_input()
+            password = ctkInputDialogMod.CTkInputDialog(title="Store XLite Password", text="Enter XLite password:", show='*').get_input()
             # password = simpledialog.askstring("Store XLite Password","Enter XLite password:" , show='*')
             if password:
                 encryption_key = generate_key()
