@@ -211,10 +211,8 @@ class XliteUtility:
             xlite_exe = os.path.join(local_path, xlite_bin_path[system], xlite_bin_name[system])
 
         if not os.path.exists(xlite_exe):
-            self.downloading_bin = True
             logging.info(f"Xlite executable not found at {xlite_exe}. Downloading...")
-            download_xlite_bin()
-            self.downloading_bin = False
+            self.download_xlite_bin()
 
         try:
             if system == "Darwin":
@@ -306,29 +304,30 @@ class XliteUtility:
             except Exception as e:
                 logging.error(f"Error: {e}")
 
+    def download_xlite_bin(self):
+        self.downloading_bin = True
+        url = xlite_releases_urls.get((system, machine))
+        local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
+        if url is None:
+            raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
-def download_xlite_bin():
-    url = xlite_releases_urls.get((system, machine))
-    local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-    if url is None:
-        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
-
-    response = requests.get(url)
-    if response.status_code == 200:
-        # Extract the archive from memory
-        if url.endswith(".zip"):
-            with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                local_path = os.path.join(local_path, xlite_bin_path[system])
-                zip_ref.extractall(local_path)
-        elif url.endswith(".tar.gz"):
-            with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
-                tar.extractall(local_path)
-        elif url.endswith(".dmg"):
-            local_file_path = os.path.join(local_path, os.path.basename(url))
-            with open(local_file_path, "wb") as f:
-                f.write(response.content)
-            print("DMG file saved successfully.")
+        response = requests.get(url)
+        if response.status_code == 200:
+            # Extract the archive from memory
+            if url.endswith(".zip"):
+                with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
+                    local_path = os.path.join(local_path, xlite_bin_path[system])
+                    zip_ref.extractall(local_path)
+            elif url.endswith(".tar.gz"):
+                with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
+                    tar.extractall(local_path)
+            elif url.endswith(".dmg"):
+                local_file_path = os.path.join(local_path, os.path.basename(url))
+                with open(local_file_path, "wb") as f:
+                    f.write(response.content)
+                print("DMG file saved successfully.")
+            else:
+                print("Unsupported archive format.")
         else:
-            print("Unsupported archive format.")
-    else:
-        print("Failed to download the Xlite binary.")
+            print("Failed to download the Xlite binary.")
+        self.downloading_bin = False

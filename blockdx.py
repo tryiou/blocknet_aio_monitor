@@ -111,10 +111,10 @@ class BlockdxUtility:
             blockdx_exe = os.path.join(local_path, blockdx_bin_path[system], blockdx_bin_name[system])
 
         if not os.path.exists(blockdx_exe):
-            self.downloading_bin = True
+            # self.downloading_bin = True
             logging.info(f"Blockdx executable not found at {blockdx_exe}. Downloading...")
-            download_blockdx_bin()
-            self.downloading_bin = False
+            self.download_blockdx_bin()
+            # self.downloading_bin = False
 
         try:
             # Start the BLOCK-DX process using subprocess
@@ -136,10 +136,10 @@ class BlockdxUtility:
                 logging.info(
                     f"volume_name: {volume_name}, mount_path: {mount_path}, full_path: {full_path}")
                 self.blockdx_process = subprocess.Popen([full_path],
-                                                      stdout=subprocess.PIPE,
-                                                      stderr=subprocess.PIPE,
-                                                      stdin=subprocess.PIPE,
-                                                      start_new_session=True)
+                                                        stdout=subprocess.PIPE,
+                                                        stderr=subprocess.PIPE,
+                                                        stdin=subprocess.PIPE,
+                                                        start_new_session=True)
             else:
                 self.blockdx_process = subprocess.Popen([blockdx_exe],
                                                         stdout=subprocess.PIPE,
@@ -208,18 +208,37 @@ class BlockdxUtility:
             except Exception as e:
                 logging.error(f"Error: {e}")
 
+    def download_blockdx_bin(self):
+        self.downloading_bin = True
+        url = blockdx_releases_urls.get((system, machine))
+        local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
+        if url is None:
+            raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
-@contextmanager
-def change_directory(directory):
-    # Save the current working directory
-    saved_directory = os.getcwd()
-    try:
-        # Change the directory
-        os.chdir(directory)
-        yield
-    finally:
-        # Restore the original working directory
-        os.chdir(saved_directory)
+        response = requests.get(url)
+        if response.status_code == 200:
+            # Extract the archive from memory
+            if url.endswith(".zip"):
+                with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
+                    # Assuming blockdx_bin_path is a dictionary
+                    # if isinstance(blockdx_bin_path[system], list):
+                    # local_path = os.path.join(local_path, blockdx_bin_path[system][0])
+                    # else:
+                    local_path = os.path.join(local_path, blockdx_bin_path[system])
+                    zip_ref.extractall(local_path)
+            elif url.endswith(".tar.gz"):
+                with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
+                    tar.extractall(local_path)
+            elif url.endswith(".dmg"):
+                local_file_path = os.path.join(local_path, os.path.basename(url))
+                with open(local_file_path, "wb") as f:
+                    f.write(response.content)
+                print("DMG file saved successfully.")
+            else:
+                print("Unsupported archive format.")
+        else:
+            print("Failed to download the Blockdx binary.")
+        self.downloading_bin = False
 
 
 def get_blockdx_data_folder():
@@ -228,37 +247,6 @@ def get_blockdx_data_folder():
         return os.path.expandvars(os.path.expanduser(path))
     else:
         raise ValueError("Unsupported system")
-
-
-def download_blockdx_bin():
-    url = blockdx_releases_urls.get((system, machine))
-    local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-    if url is None:
-        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
-
-    response = requests.get(url)
-    if response.status_code == 200:
-        # Extract the archive from memory
-        if url.endswith(".zip"):
-            with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                # Assuming blockdx_bin_path is a dictionary
-                # if isinstance(blockdx_bin_path[system], list):
-                # local_path = os.path.join(local_path, blockdx_bin_path[system][0])
-                # else:
-                local_path = os.path.join(local_path, blockdx_bin_path[system])
-                zip_ref.extractall(local_path)
-        elif url.endswith(".tar.gz"):
-            with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
-                tar.extractall(local_path)
-        elif url.endswith(".dmg"):
-            local_file_path = os.path.join(local_path, os.path.basename(url))
-            with open(local_file_path, "wb") as f:
-                f.write(response.content)
-            print("DMG file saved successfully.")
-        else:
-            print("Unsupported archive format.")
-    else:
-        print("Failed to download the Blockdx binary.")
 
 
 async def main():

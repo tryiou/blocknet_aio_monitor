@@ -150,10 +150,8 @@ class BlocknetUtility:
         blocknet_exe = os.path.join(aio_data_path, *blocknet_bin_path, blocknet_bin)
 
         if not os.path.exists(blocknet_exe):
-            self.downloading_bin = True
             logging.info(f"Blocknet executable not found at {blocknet_exe}. Downloading...")
-            download_blocknet_bin()
-            self.downloading_bin = False
+            self.download_blocknet_bin()
         try:
             # Start the Blocknet process using subprocess with custom data folder argument
             self.blocknet_process = subprocess.Popen([blocknet_exe, f"-datadir={self.data_folder}"],
@@ -516,6 +514,27 @@ class BlocknetUtility:
         finally:
             self.checking_bootstrap = False
 
+    def download_blocknet_bin(self):
+        self.downloading_bin = True
+        url = blocknet_releases_urls.get((system, machine))
+        if url is None:
+            raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+
+        response = requests.get(url)
+        if response.status_code == 200:
+            # Extract the archive from memory
+            if url.endswith(".zip"):
+                with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
+                    zip_ref.extractall(aio_data_path)
+            elif url.endswith(".tar.gz"):
+                with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
+                    tar.extractall(aio_data_path)
+            else:
+                print("Unsupported archive format.")
+        else:
+            print("Failed to download the Blocknet binary.")
+        self.downloading_bin = False
+
 
 def get_remote_file_size(url):
     """
@@ -524,26 +543,6 @@ def get_remote_file_size(url):
     r = requests.head(url)
     r.raise_for_status()
     return int(r.headers.get('content-length', 0))
-
-
-def download_blocknet_bin():
-    url = blocknet_releases_urls.get((system, machine))
-    if url is None:
-        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
-
-    response = requests.get(url)
-    if response.status_code == 200:
-        # Extract the archive from memory
-        if url.endswith(".zip"):
-            with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                zip_ref.extractall(aio_data_path)
-        elif url.endswith(".tar.gz"):
-            with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
-                tar.extractall(aio_data_path)
-        else:
-            print("Unsupported archive format.")
-    else:
-        print("Failed to download the Blocknet binary.")
 
 
 def get_pid(name):
