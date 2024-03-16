@@ -21,10 +21,16 @@ logging.basicConfig(level=logging.DEBUG)
 
 system = platform.system()
 machine = platform.machine()
+url = blockdx_releases_urls.get((system, machine))
+if system == "Darwin":
+    volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
 
 
 class BlockdxUtility:
     def __init__(self):
+        if system == "Darwin":
+            self.dmg_mount_path = f"/Volumes/{volume_name}"
+        self.binary_percent_download = None
         self.process_running = None
         self.blockdx_process = None
         self.blockdx_conf_local = None
@@ -96,6 +102,16 @@ class BlockdxUtility:
         else:
             logging.info("No changes detected in Blockdx config.")
 
+    def unmount_dmg(self):
+        if os.path.ismount(self.dmg_mount_path):
+            try:
+                subprocess.run(["hdiutil", "detach", self.dmg_mount_path], check=True)
+                logging.info("DMG unmounted successfully.")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error: Failed to unmount DMG: {e}")
+        else:
+            logging.error("Error: DMG is not mounted.")
+
     def start_blockdx(self, retry_limit=3, retry_count=0):
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blockdx.")
@@ -104,7 +120,7 @@ class BlockdxUtility:
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
         if system == "Darwin":
-            url = blockdx_releases_urls.get((system, machine))
+
             blockdx_dmg_name = os.path.basename(url)
             blockdx_exe = os.path.join(local_path, blockdx_dmg_name)
         else:
@@ -120,21 +136,16 @@ class BlockdxUtility:
             # Start the BLOCK-DX process using subprocess
             if system == "Darwin":
                 # mac mod
-                # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
-                volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
-                # https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg
-                # volume_name = url.split('/')[-2].replace('-', ' ')
-                # Path to the application inside the DMG file
-                mount_path = f"/Volumes/{volume_name}"
+
                 # Check if the volume is already mounted
-                if not os.path.ismount(mount_path):
+                if not os.path.ismount(self.dmg_mount_path):
                     # Mount the DMG file
                     os.system(f'hdiutil attach "{blockdx_exe}"')
                 else:
                     logging.info("Volume is already mounted.")
-                full_path = os.path.join(mount_path, *blockdx_bin_name[system])
+                full_path = os.path.join(self.dmg_mount_path, *blockdx_bin_name[system])
                 logging.info(
-                    f"volume_name: {volume_name}, mount_path: {mount_path}, full_path: {full_path}")
+                    f"volume_name: {volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 self.blockdx_process = subprocess.Popen([full_path],
                                                         stdout=subprocess.PIPE,
                                                         stderr=subprocess.PIPE,
@@ -215,29 +226,37 @@ class BlockdxUtility:
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
-        response = requests.get(url)
+        response = requests.get(url, stream=True)  # Stream the response content
+        response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
-            # Extract the archive from memory
+            remote_size = int(response.headers.get('Content-Length', 0))
+            print(remote_size)
+            local_file_path = os.path.join(local_path, os.path.basename(url))
+            bytes_downloaded = 0
+            total = remote_size
+            with open(local_file_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
+                    if chunk:  # Filter out keep-alive new chunks
+                        f.write(chunk)
+                        bytes_downloaded += len(chunk)
+                        self.binary_percent_download = (bytes_downloaded / total) * 100
+            self.binary_percent_download = None
+            # Extract the archive
             if url.endswith(".zip"):
-                with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                    # Assuming blockdx_bin_path is a dictionary
-                    # if isinstance(blockdx_bin_path[system], list):
-                    # local_path = os.path.join(local_path, blockdx_bin_path[system][0])
-                    # else:
+                with zipfile.ZipFile(local_file_path, "r") as zip_ref:
                     local_path = os.path.join(local_path, blockdx_bin_path[system])
                     zip_ref.extractall(local_path)
+                logging.info("Zip file extracted successfully.")
+                os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
-                with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
+                with tarfile.open(local_file_path, "r:gz") as tar:
                     tar.extractall(local_path)
+                logging.info("Tar.gz file extracted successfully.")
+                os.remove(local_file_path)
             elif url.endswith(".dmg"):
-                local_file_path = os.path.join(local_path, os.path.basename(url))
-                with open(local_file_path, "wb") as f:
-                    f.write(response.content)
-                print("DMG file saved successfully.")
-            else:
-                print("Unsupported archive format.")
+                logging.info("DMG file saved successfully.")
         else:
-            print("Failed to download the Blockdx binary.")
+            logging.error("Failed to download the Blockdx binary.")
         self.downloading_bin = False
 
 

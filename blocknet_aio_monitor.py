@@ -36,8 +36,8 @@ blockdx_bin = blockdx_bin_name.get(system, None)
 xlite_bin = xlite_bin_name.get(system, None)
 aio_folder = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path[system]))
 blocknet_release_url = blocknet_releases_urls.get((system, machine))
-blockdx_release_url=blockdx_releases_urls.get((system, machine))
-xlite_release_url=xlite_releases_urls.get((system, machine))
+blockdx_release_url = blockdx_releases_urls.get((system, machine))
+xlite_release_url = xlite_releases_urls.get((system, machine))
 
 # Define the gui strings
 app_title_string = "Blocknet AIO monitor"
@@ -229,10 +229,6 @@ class BlocknetGUI(ctk.CTk):
         # Update status for UI elements
         # Update process & pids for both Blocknet Core and Block-dx
 
-        # self.bootstrap_thread = Thread(target=self.blocknet_utility.download_bootstrap)
-        # self.bootstrap_thread.daemon = True
-        # self.bootstrap_thread.start()
-
         self.update_status_thread = Thread(target=self.update_status)
         self.update_status_thread.daemon = True
         self.update_status_thread.start()
@@ -271,20 +267,20 @@ class BlocknetGUI(ctk.CTk):
                                                                state='disabled')
 
         self.bins_blocknet_found_checkbox = ctkCheckBox.CTkCheckBox(self.bins_download_frame,
-                                                        text='',
-                                                        variable=self.blocknet_bin_installed_boolvar,
-                                                        state='disabled',
-                                                        corner_radius=25, )
+                                                                    text='',
+                                                                    variable=self.blocknet_bin_installed_boolvar,
+                                                                    state='disabled',
+                                                                    corner_radius=25, )
         self.bins_blockdx_found_checkbox = ctkCheckBox.CTkCheckBox(self.bins_download_frame,
-                                                       text='',
-                                                       variable=self.blockdx_bin_installed_boolvar,
-                                                       state='disabled',
-                                                       corner_radius=25)
+                                                                   text='',
+                                                                   variable=self.blockdx_bin_installed_boolvar,
+                                                                   state='disabled',
+                                                                   corner_radius=25)
         self.bins_xlite_found_checkbox = ctkCheckBox.CTkCheckBox(self.bins_download_frame,
-                                                     text='',
-                                                     variable=self.xlite_bin_installed_boolvar,
-                                                     state='disabled',
-                                                     corner_radius=25)
+                                                                 text='',
+                                                                 variable=self.xlite_bin_installed_boolvar,
+                                                                 state='disabled',
+                                                                 corner_radius=25)
         button_width = 85
         self.bins_install_blocknet_string_var = ctk.StringVar(value='Install')
         self.bins_install_blocknet_button = ctk.CTkButton(self.bins_download_frame,
@@ -292,7 +288,8 @@ class BlocknetGUI(ctk.CTk):
                                                           command=self.download_blocknet_command,
                                                           textvariable=self.bins_install_blocknet_string_var,
                                                           width=button_width)
-        CTkToolTip.CTkToolTip(self.bins_install_blocknet_button, message=blocknet_release_url, delay=1, follow=True, border_width=2,
+        CTkToolTip.CTkToolTip(self.bins_install_blocknet_button, message=blocknet_release_url, delay=1, follow=True,
+                              border_width=2,
                               justify="left")
         self.bins_install_blockdx_string_var = ctk.StringVar(value='Install')
         self.bins_install_blockdx_button = ctk.CTkButton(self.bins_download_frame,
@@ -300,7 +297,8 @@ class BlocknetGUI(ctk.CTk):
                                                          command=self.download_blockdx_command,
                                                          textvariable=self.bins_install_blockdx_string_var,
                                                          width=button_width)
-        CTkToolTip.CTkToolTip(self.bins_install_blockdx_button, message=blockdx_release_url, delay=1, follow=True, border_width=2,
+        CTkToolTip.CTkToolTip(self.bins_install_blockdx_button, message=blockdx_release_url, delay=1, follow=True,
+                              border_width=2,
                               justify="left")
         self.bins_install_xlite_string_var = ctk.StringVar(value='Install')
         self.bins_install_xlite_button = ctk.CTkButton(self.bins_download_frame,
@@ -308,7 +306,8 @@ class BlocknetGUI(ctk.CTk):
                                                        command=self.download_xlite_command,
                                                        textvariable=self.bins_install_xlite_string_var,
                                                        width=button_width)
-        CTkToolTip.CTkToolTip(self.bins_install_xlite_button, message=xlite_release_url, delay=1, follow=True, border_width=2,
+        CTkToolTip.CTkToolTip(self.bins_install_xlite_button, message=xlite_release_url, delay=1, follow=True,
+                              border_width=2,
                               justify="left")
 
         self.bins_delete_blocknet_button = ctk.CTkButton(self.bins_download_frame,
@@ -417,9 +416,13 @@ class BlocknetGUI(ctk.CTk):
         # logging.info(
         #     f"blocknet_condition: {blocknet_condition}, blockdx_condition: {blockdx_condition}, xlite_condition: {xlite_condition}")
 
-        var_blocknet = "Downloading" if self.blocknet_utility.downloading_bin else "Install"
-        var_blockdx = "Downloading" if self.blockdx_utility.downloading_bin else "Install"
-        var_xlite = "Downloading" if self.xlite_utility.downloading_bin else "Install"
+        var_blocknet = f"DL" if self.blocknet_utility.downloading_bin else "Install"
+        percent_buff = self.blockdx_utility.binary_percent_download
+        percent_string = str(int(percent_buff)) if percent_buff else ""
+        # percent = str(self.blockdx_utility.binary_percent_download) if self.blockdx_utility.binary_percent_download is not None else ""
+
+        var_blockdx = f"DL {percent_string}%" if self.blockdx_utility.downloading_bin else "Install"
+        var_xlite = f"DL" if self.xlite_utility.downloading_bin else "Install"
         self.bins_install_blocknet_string_var.set(var_blocknet)
         self.bins_install_blockdx_string_var.set(var_blockdx)
         self.bins_install_xlite_string_var.set(var_xlite)
@@ -452,8 +455,6 @@ class BlocknetGUI(ctk.CTk):
 
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))
-        # sys.exit(1)
-        # self.stop_bootstrap_thread()
         self.on_close()
 
     def stop_bootstrap_thread(self):
@@ -701,7 +702,8 @@ class BlocknetGUI(ctk.CTk):
             # ask_user_pass
             # store_salted_pass
             logging.info("Left click detected")
-            password = ctkInputDialogMod.CTkInputDialog(title="Store XLite Password", text="Enter XLite password:", show='*').get_input()
+            password = ctkInputDialogMod.CTkInputDialog(title="Store XLite Password", text="Enter XLite password:",
+                                                        show='*').get_input()
             # password = simpledialog.askstring("Store XLite Password","Enter XLite password:" , show='*')
             if password:
                 encryption_key = generate_key()
@@ -806,6 +808,8 @@ class BlocknetGUI(ctk.CTk):
                         shutil.rmtree(item_path)
 
     def delete_blockdx_command(self):
+        if system == 'Darwin':
+            self.blockdx_utility.unmount_dmg()
         blockdx_pruned_version = self.blockdx_version[0].replace('v', '')
         for item in os.listdir(aio_folder):
             item_path = os.path.join(aio_folder, item)
@@ -816,6 +820,8 @@ class BlocknetGUI(ctk.CTk):
                         shutil.rmtree(item_path)
 
     def delete_xlite_command(self):
+        if system == 'Darwin':
+            self.xlite_utility.unmount_dmg()
         xlite_pruned_version = self.xlite_version[0].replace('v', '')
         for item in os.listdir(aio_folder):
             item_path = os.path.join(aio_folder, item)

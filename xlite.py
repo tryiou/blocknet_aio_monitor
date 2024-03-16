@@ -20,9 +20,15 @@ logging.basicConfig(level=logging.DEBUG)
 system = platform.system()
 machine = platform.machine()
 
+url = xlite_releases_urls.get((system, machine))
+if system == "Darwin":
+    volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
+
 
 class XliteRPCClient:
     def __init__(self, rpc_user, rpc_password, rpc_port):
+        if system == "Darwin":
+            self.dmg_mount_path = f"/Volumes/{volume_name}"
         self.rpc_user = rpc_user
         self.rpc_password = rpc_password
         self.rpc_port = rpc_port
@@ -62,6 +68,7 @@ class XliteRPCClient:
 
 class XliteUtility:
     def __init__(self):
+        self.dmg_mount_path = None
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
         self.coins_rpc = {}
@@ -204,7 +211,6 @@ class XliteUtility:
         local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
         if system == "Darwin":
-            url = xlite_releases_urls.get((system, machine))
             xlite_dmg_name = os.path.basename(url)
             xlite_exe = os.path.join(local_path, xlite_dmg_name)
         else:
@@ -218,18 +224,17 @@ class XliteUtility:
             if system == "Darwin":
                 # mac mod
                 # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
-                volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
                 # Path to the application inside the DMG file
-                mount_path = f"/Volumes/{volume_name}"
+
                 # Check if the volume is already mounted
-                if not os.path.ismount(mount_path):
+                if not os.path.ismount(self.dmg_mount_path):
                     # Mount the DMG file
                     os.system(f'hdiutil attach "{xlite_exe}"')
                 else:
                     logging.info("Volume is already mounted.")
-                full_path = os.path.join(mount_path, *xlite_bin_name[system])
+                full_path = os.path.join(self.dmg_mount_path, *xlite_bin_name[system])
                 logging.info(
-                    f"volume_name: {volume_name}, mount_path: {mount_path}, full_path: {full_path}")
+                    f"volume_name: {volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 self.xlite_process = subprocess.Popen([full_path],
                                                       stdout=subprocess.PIPE,
                                                       stderr=subprocess.PIPE,
@@ -331,3 +336,13 @@ class XliteUtility:
         else:
             print("Failed to download the Xlite binary.")
         self.downloading_bin = False
+
+    def unmount_dmg(self):
+        if os.path.ismount(self.dmg_mount_path):
+            try:
+                subprocess.run(["hdiutil", "detach", self.dmg_mount_path], check=True)
+                logging.info("DMG unmounted successfully.")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Error: Failed to unmount DMG: {e}")
+        else:
+            logging.error("Error: DMG is not mounted.")
