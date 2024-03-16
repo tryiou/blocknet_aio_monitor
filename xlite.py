@@ -126,7 +126,7 @@ class XliteUtility:
             await asyncio.sleep(5)
 
     def start_async_tasks(self):
-        def async_loop():
+        def xlite_async_loop():
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(
@@ -138,7 +138,7 @@ class XliteUtility:
             )
             loop.close()
 
-        thread = threading.Thread(target=async_loop)
+        thread = threading.Thread(target=xlite_async_loop)
         thread.start()
 
     def parse_xlite_conf(self):
