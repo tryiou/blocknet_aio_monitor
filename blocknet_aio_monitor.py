@@ -418,10 +418,10 @@ class BlocknetGUI(ctk.CTk):
 
         var_blocknet = f"DL" if self.blocknet_utility.downloading_bin else "Install"
         percent_buff = self.blockdx_utility.binary_percent_download
-        percent_string = str(int(percent_buff)) if percent_buff else ""
-        # percent = str(self.blockdx_utility.binary_percent_download) if self.blockdx_utility.binary_percent_download is not None else ""
 
-        var_blockdx = f"DL {percent_string}%" if self.blockdx_utility.downloading_bin else "Install"
+        dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
+        var_blockdx = f"{dl_string}" if self.blockdx_utility.downloading_bin else "Install"
+
         var_xlite = f"DL" if self.xlite_utility.downloading_bin else "Install"
         self.bins_install_blocknet_string_var.set(var_blocknet)
         self.bins_install_blockdx_string_var.set(var_blockdx)
