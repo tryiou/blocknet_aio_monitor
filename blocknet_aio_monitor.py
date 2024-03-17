@@ -44,6 +44,7 @@ class BlocknetGUI(ctk.CTk):
         self.is_blockdx_config_sync = None
 
         # threads
+        self.update_status_thread = None
         self.blocknet_t1 = None
         self.blocknet_t2 = None
         self.xlite_t2 = None
