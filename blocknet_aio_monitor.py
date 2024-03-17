@@ -411,7 +411,6 @@ class BlocknetGUI(ctk.CTk):
         self.bins_last_aio_folder_check_time = time.time()
 
     async def update_bins_buttons(self):
-        aio_folder = ""  # assuming aio_folder is defined elsewhere
         blocknet_boolvar = self.blocknet_bin_installed_boolvar.get()
         blockdx_boolvar = self.blockdx_bin_installed_boolvar.get()
         xlite_boolvar = self.xlite_bin_installed_boolvar.get()
@@ -439,6 +438,7 @@ class BlocknetGUI(ctk.CTk):
         if blockdx_boolvar:
             var_blockdx = "Delete"
             blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
+            # print(blockdx_folder)
             configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_folder)
             if self.blockdx_process_running or self.blockdx_utility.downloading_bin:
                 disable_button(self.bins_install_delete_blockdx_button)
