@@ -121,10 +121,6 @@ class BlockdxUtility:
             logging.error("Retry limit exceeded. Unable to start Blockdx.")
             return
 
-
-
-
-
         if not os.path.exists(self.blockdx_exe):
             # self.downloading_bin = True
             logging.info(f"Blockdx executable not found at {self.blockdx_exe}. Downloading...")
@@ -225,15 +221,17 @@ class BlockdxUtility:
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
-
-        response = requests.get(url, stream=True)  # Stream the response content
+        # Set timeout values in seconds
+        connection_timeout = 10
+        read_timeout = 30
+        response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
-            remote_size = int(response.headers.get('Content-Length', 0))
+            remote_file_size = int(response.headers.get('Content-Length', 0))
             local_file_path = os.path.join(aio_path, os.path.basename(url))
-            logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_size/1024)} kb")
+            logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
             bytes_downloaded = 0
-            total = remote_size
+            total = remote_file_size
             with open(local_file_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
                     if chunk:  # Filter out keep-alive new chunks
@@ -241,6 +239,14 @@ class BlockdxUtility:
                         bytes_downloaded += len(chunk)
                         self.binary_percent_download = (bytes_downloaded / total) * 100
             self.binary_percent_download = None
+
+            local_file_size = os.path.getsize(local_file_path)
+            if local_file_size != remote_file_size:
+                os.remove(local_file_path)
+                raise ValueError(f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
+
+            logging.info(f"{os.path.basename(url)} downloaded successfully.")
+
             # Extract the archive
             if url.endswith(".zip"):
                 with zipfile.ZipFile(local_file_path, "r") as zip_ref:

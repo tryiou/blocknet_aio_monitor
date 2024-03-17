@@ -17,7 +17,7 @@ class CTkCheckBox(CTkBaseClass):
 
     def __init__(self,
                  master: Any,
-                 width: int = 45,
+                 width: int = 40,
                  height: int = 24,
                  checkbox_width: int = 24,
                  checkbox_height: int = 24,
