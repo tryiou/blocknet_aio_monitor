@@ -59,29 +59,30 @@ blockdx_frame_title_string = " Block-DX Management:"
 xlite_frame_title_string = "XLite Management:"
 start_string = "Start"
 close_string = "Close"
+download_string = "Download"
 check_config_string = "Check Config"
 blocknet_set_custom_path_string = "Set Custom Path"
-blocknet_valid_config_string = "Blocknet Config Found"
-blocknet_not_valid_config_string = "Blocknet Config Not Found.\nClick Start to Initialize"
-blocknet_active_rpc_string = "RPC Connection active"
-blocknet_inactive_rpc_string = "RPC Connection inactive"
-blocknet_data_path_created_string = "Data Path folder created"
-blocknet_data_path_notfound_string = "Data path folder not\ncreated"
-blocknet_running_string = "Blocknet Process running"
-blocknet_not_running_string = "Blocknet Process not\nrunning"
-blockdx_running_string = "Block-DX Process running"
-blockdx_not_running_string = "Block-DX Process not\nrunning"
-blockdx_valid_config_string = "Block-DX Config Found\n& Blocknet RPC Active"
-blockdx_not_valid_config_string = "Block-DX Config Not Found.\nClick Start to Initialize"
-blockdx_missing_blocknet_config_string = "Block-DX need active\nBlocknet RPC"
-xlite_running_string = "XLite Process running"
-xlite_not_running_string = "XLite Process not running"
-xlite_valid_config_string = "XLite Config Found"
-xlite_not_valid_config_string = "XLite Config Not Found"
-xlite_daemon_running_string = "XLite-daemon Process running"
+blocknet_valid_config_string = "Blocknet Config\nFound"
+blocknet_not_valid_config_string = "Blocknet Config\nNot Found. Click Start to Initialize"
+blocknet_active_rpc_string = "RPC Connection\nActive"
+blocknet_inactive_rpc_string = "RPC Connection\nInactive"
+blocknet_data_path_created_string = "Data Path folder\ncreated"
+blocknet_data_path_notfound_string = "Data path folder\nnot created"
+blocknet_running_string = "Blocknet Process\nrunning"
+blocknet_not_running_string = "Blocknet Process\nnot running"
+blockdx_running_string = "Block-DX Process\nrunning"
+blockdx_not_running_string = "Block-DX Process\nnot running"
+blockdx_valid_config_string = "Block-DX Config\nFound & Blocknet RPC Active"
+blockdx_not_valid_config_string = "Block-DX Config\nNot Found. Click Start to Initialize"
+blockdx_missing_blocknet_config_string = "Block-DX need\nactive Blocknet RPC"
+xlite_running_string = "XLite Process\nrunning"
+xlite_not_running_string = "XLite Process\nnot running"
+xlite_valid_config_string = "XLite Config\nFound"
+xlite_not_valid_config_string = "XLite Config\nNot Found"
+xlite_daemon_running_string = "XLite-daemon Process\nrunning"
 xlite_daemon_not_running_string = "XLite-daemon Process\nnot running"
-xlite_daemon_valid_config_string = "XLite-daemon Config Found"
-xlite_daemon_not_valid_config_string = "XLite-daemon Config Not\nFound"
+xlite_daemon_valid_config_string = "XLite-daemon Config\nFound"
+xlite_daemon_not_valid_config_string = "XLite-daemon Config\nNot Found"
 xlite_reverse_proxy_not_running_string = "XLite-reverse-proxy\nProcess not running"
 xlite_store_password_string = "Store Password"
 xlite_stored_password_string = "Password Stored"
@@ -94,6 +95,9 @@ class BlocknetGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        self.blocknet_data_path_entry_string_var = None
+        self.blockdx_title_frame = None
+        self.xlite_title_frame = None
         self.last_process_check_time = None
         self.bins_install_delete_blocknet_button = None
         self.bins_install_delete_blockdx_button = None
@@ -132,7 +136,7 @@ class BlocknetGUI(ctk.CTk):
         self.blockdx_utility = BlockdxUtility()
         self.xlite_utility = XliteUtility()
         # block-dx
-        self.block_dx_label = None
+        self.blockdx_label = None
         self.blockdx_check_config_button = None
         self.blockdx_process_running = False
         self.blockdx_process_status_checkbox = None
@@ -225,7 +229,7 @@ class BlocknetGUI(ctk.CTk):
         # Call functions to setup management sections
         self.setup_bin()
         self.setup_blocknet_core()
-        self.setup_block_dx()
+        self.setup_blockdx()
         self.setup_xlite()
         # Update status for UI elements
         # Update process & pids for both Blocknet Core and Block-dx
@@ -282,7 +286,7 @@ class BlocknetGUI(ctk.CTk):
                                                                     variable=self.xlite_bin_installed_boolvar,
                                                                     state='disabled',
                                                                     corner_radius=25)
-        button_width = 85
+        button_width = 75
         self.bins_install_delete_blocknet_string_var = ctk.StringVar(value='')
         self.bins_install_delete_blocknet_button = ctk.CTkButton(self.bins_download_frame,
                                                                  state='normal',
@@ -294,7 +298,7 @@ class BlocknetGUI(ctk.CTk):
                                                                           follow=True,
                                                                           border_width=2,
                                                                           justify="left")
-        self.bins_install_delete_blockdx_string_var = ctk.StringVar(value='Install')
+        self.bins_install_delete_blockdx_string_var = ctk.StringVar(value='')
         self.bins_install_delete_blockdx_button = ctk.CTkButton(self.bins_download_frame,
                                                                 state='normal',
                                                                 command=self.install_delete_blockdx_command,
@@ -305,7 +309,7 @@ class BlocknetGUI(ctk.CTk):
                                                                          follow=True,
                                                                          border_width=2,
                                                                          justify="left")
-        self.bins_install_delete_xlite_string_var = ctk.StringVar(value='Install')
+        self.bins_install_delete_xlite_string_var = ctk.StringVar(value='')
         self.bins_install_delete_xlite_button = ctk.CTkButton(self.bins_download_frame,
                                                               state='normal',
                                                               command=self.install_delete_xlite_command,
@@ -315,29 +319,29 @@ class BlocknetGUI(ctk.CTk):
                                                                        message=xlite_release_url, delay=1, follow=True,
                                                                        border_width=2,
                                                                        justify="left")
+        #
+        # self.bins_delete_blocknet_button = ctk.CTkButton(self.bins_download_frame,
+        #                                                  command=self.delete_blocknet_command,
+        #                                                  text='Delete',
+        #                                                  state='normal',
+        #                                                  width=button_width - 20)
+        # self.bins_delete_blockdx_button = ctk.CTkButton(self.bins_download_frame,
+        #                                                 command=self.delete_blockdx_command,
+        #                                                 text='Delete', state='normal',
+        #                                                 width=button_width - 20)
+        # self.bins_delete_xlite_button = ctk.CTkButton(self.bins_download_frame,
+        #                                               command=self.delete_xlite_command,
+        #                                               text='Delete',
+        #                                               state='normal',
+        #                                               width=button_width - 20)
 
-        self.bins_delete_blocknet_button = ctk.CTkButton(self.bins_download_frame,
-                                                         command=self.delete_blocknet_command,
-                                                         text='Delete',
-                                                         state='normal',
-                                                         width=button_width - 20)
-        self.bins_delete_blockdx_button = ctk.CTkButton(self.bins_download_frame,
-                                                        command=self.delete_blockdx_command,
-                                                        text='Delete', state='normal',
-                                                        width=button_width - 20)
-        self.bins_delete_xlite_button = ctk.CTkButton(self.bins_download_frame,
-                                                      command=self.delete_xlite_command,
-                                                      text='Delete',
-                                                      state='normal',
-                                                      width=button_width - 20)
-
-        self.blocknet_start_close_button_string_var = ctk.StringVar(value=start_string)
+        self.blocknet_start_close_button_string_var = ctk.StringVar(value='')
         self.blocknet_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                          textvariable=self.blocknet_start_close_button_string_var,
                                                          command=self.start_or_close_blocknet,
                                                          width=button_width)
 
-        self.xlite_start_close_button_string_var = ctk.StringVar(value=start_string)
+        self.xlite_start_close_button_string_var = ctk.StringVar(value='')
         self.xlite_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                       textvariable=self.xlite_start_close_button_string_var,
                                                       command=self.start_or_close_xlite,
@@ -357,21 +361,21 @@ class BlocknetGUI(ctk.CTk):
         self.bins_xlite_found_checkbox.grid(row=x + 3, column=y + 2, padx=5, pady=(2, 5), sticky=sticky)
         self.bins_found_label.grid(row=x, column=y + 2, sticky='w')
         button_sticky = 'e'
-        self.bins_install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=4, sticky=button_sticky)
-        self.bins_install_delete_blockdx_button.grid(row=x + 2, column=y + 3, padx=4, sticky=button_sticky)
-        self.bins_install_delete_xlite_button.grid(row=x + 3, column=y + 3, padx=4, pady=(2, 5), sticky=button_sticky)
+        self.bins_install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=8, sticky=button_sticky)
+        self.bins_install_delete_blockdx_button.grid(row=x + 2, column=y + 3, padx=8, sticky=button_sticky)
+        self.bins_install_delete_xlite_button.grid(row=x + 3, column=y + 3, padx=8, pady=(2, 5), sticky=button_sticky)
         # self.bins_delete_blocknet_button.grid(row=x + 1, column=y + 4, padx=0, sticky=button_sticky)
         # self.bins_delete_blockdx_button.grid(row=x + 2, column=y + 4, padx=0, sticky=button_sticky)
         # self.bins_delete_xlite_button.grid(row=x + 3, column=y + 4, padx=0, pady=(2, 5), sticky=button_sticky)
-        self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=4, sticky=button_sticky)
+        self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=8, sticky=button_sticky)
         # Button for starting or closing Block-dx
-        self.blockdx_start_close_button_string_var = ctk.StringVar(value=start_string)
+        self.blockdx_start_close_button_string_var = ctk.StringVar(value='')
         self.blockdx_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                         textvariable=self.blockdx_start_close_button_string_var,
                                                         command=self.start_or_close_blockdx, width=button_width)
-        self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=4, sticky=button_sticky)
+        self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=8, sticky=button_sticky)
         # Button for starting or closing Xlite
-        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=4, pady=(2, 5), sticky=button_sticky)
+        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=8, pady=(2, 5), sticky=button_sticky)
 
     async def bins_check_aio_folder(self):
         blocknet_pruned_version = self.blocknet_version[0].replace('v', '')
@@ -429,7 +433,7 @@ class BlocknetGUI(ctk.CTk):
             configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_release_url)
             percent_buff = self.blocknet_utility.binary_percent_download
             dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
-            var_blocknet = dl_string if self.blocknet_utility.downloading_bin else "Install"
+            var_blocknet = dl_string if self.blocknet_utility.downloading_bin else download_string
             if self.blocknet_utility.downloading_bin:
                 disable_button(self.bins_install_delete_blocknet_button)
             else:
@@ -448,7 +452,7 @@ class BlocknetGUI(ctk.CTk):
             configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_release_url)
             percent_buff = self.blockdx_utility.binary_percent_download
             dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
-            var_blockdx = dl_string if self.blockdx_utility.downloading_bin else "Install"
+            var_blockdx = dl_string if self.blockdx_utility.downloading_bin else download_string
             if self.blockdx_utility.downloading_bin:
                 disable_button(self.bins_install_delete_blockdx_button)
             else:
@@ -466,7 +470,7 @@ class BlocknetGUI(ctk.CTk):
             configure_tooltip_text(self.bins_install_delete_xlite_tooltip, xlite_release_url)
             percent_buff = self.xlite_utility.binary_percent_download
             dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
-            var_xlite = dl_string if self.xlite_utility.downloading_bin else "Install"
+            var_xlite = dl_string if self.xlite_utility.downloading_bin else download_string
             if self.xlite_utility.downloading_bin:
                 disable_button(self.bins_install_delete_xlite_button)
             else:
@@ -489,7 +493,7 @@ class BlocknetGUI(ctk.CTk):
             configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_release_url)
             percent_buff = self.blocknet_utility.binary_percent_download
             dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
-            var_blocknet = f"{dl_string}" if self.blocknet_utility.downloading_bin else "Install"
+            var_blocknet = f"{dl_string}" if self.blocknet_utility.downloading_bin else download_string
 
         if blockdx_boolvar:
             var_blockdx = "Delete"
@@ -499,7 +503,7 @@ class BlocknetGUI(ctk.CTk):
             configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_release_url)
             percent_buff = self.blockdx_utility.binary_percent_download
             dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
-            var_blockdx = f"{dl_string}" if self.blockdx_utility.downloading_bin else "Install"
+            var_blockdx = f"{dl_string}" if self.blockdx_utility.downloading_bin else download_string
 
         if xlite_boolvar:
             var_xlite = "Delete"
@@ -509,7 +513,7 @@ class BlocknetGUI(ctk.CTk):
             configure_tooltip_text(self.bins_install_delete_xlite_tooltip, xlite_release_url)
             percent_buff = self.xlite_utility.binary_percent_download
             dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
-            var_xlite = f"{dl_string}" if self.xlite_utility.downloading_bin else "Install"
+            var_xlite = f"{dl_string}" if self.xlite_utility.downloading_bin else download_string
         self.bins_install_delete_blocknet_string_var.set(var_blocknet)
         self.bins_install_delete_blockdx_string_var.set(var_blockdx)
         self.bins_install_delete_xlite_string_var.set(var_xlite)
@@ -608,7 +612,7 @@ class BlocknetGUI(ctk.CTk):
                                                          text=blocknet_set_custom_path_string,
                                                          command=self.open_custom_path_dialog,
                                                          width=button_width)
-        self.blocknet_custom_path_button.grid(row=1, column=3, sticky="e")
+        self.blocknet_custom_path_button.grid(row=1, column=3,padx=2, pady=2,  sticky="e")
         # Configure column to resize automatically
         # self.blocknet_core_frame.columnconfigure(1, weight=1)
 
@@ -618,7 +622,7 @@ class BlocknetGUI(ctk.CTk):
                                                                 textvariable=self.blocknet_download_bootstrap_string_var,
                                                                 command=self.download_bootstrap_command,
                                                                 width=button_width)
-        self.blocknet_download_bootstrap_button.grid(row=0, column=3, sticky="e")
+        self.blocknet_download_bootstrap_button.grid(row=0, column=3,padx=2, pady=2, sticky="e")
 
         # Checkboxes
         self.blocknet_data_path_status_checkbox_state = ctk.BooleanVar()
@@ -629,11 +633,11 @@ class BlocknetGUI(ctk.CTk):
                                                                              variable=self.blocknet_data_path_status_checkbox_state,
                                                                              state='disabled',
                                                                              corner_radius=25,
-                                                                             width=185)  # , disabledforeground='black')
+                                                                             width=165)  # , disabledforeground='black')
         self.blocknet_data_path_status_checkbox.grid(row=2, column=0, padx=10, pady=5, sticky="w")
 
         self.blocknet_process_status_checkbox_state = ctk.BooleanVar()
-        self.blocknet_process_status_checkbox_string_var = ctk.StringVar(value=blocknet_running_string)
+        self.blocknet_process_status_checkbox_string_var = ctk.StringVar(value='')
         self.blocknet_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.blocknet_core_frame,
                                                                            textvariable=self.blocknet_process_status_checkbox_string_var,
                                                                            variable=self.blocknet_process_status_checkbox_state,
@@ -642,7 +646,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_process_status_checkbox.grid(row=3, column=0, padx=10, pady=5, sticky="w")
 
         self.blocknet_conf_status_checkbox_state = ctk.BooleanVar()
-        self.blocknet_conf_status_checkbox_string_var = ctk.StringVar(value=blocknet_valid_config_string)
+        self.blocknet_conf_status_checkbox_string_var = ctk.StringVar(value='')
         self.blocknet_conf_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.blocknet_core_frame,
                                                                         textvariable=self.blocknet_conf_status_checkbox_string_var,
                                                                         variable=self.blocknet_conf_status_checkbox_state,
@@ -651,7 +655,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_conf_status_checkbox.grid(row=2, column=1, padx=10, pady=5, sticky="w")
 
         self.blocknet_rpc_connection_checkbox_state = ctk.BooleanVar()
-        self.blocknet_rpc_connection_checkbox_string_var = ctk.StringVar(value=blocknet_inactive_rpc_string)
+        self.blocknet_rpc_connection_checkbox_string_var = ctk.StringVar(value='')
         self.blocknet_rpc_connection_checkbox = ctkCheckBoxMod.CTkCheckBox(self.blocknet_core_frame,
                                                                            textvariable=self.blocknet_rpc_connection_checkbox_string_var,
                                                                            variable=self.blocknet_rpc_connection_checkbox_state,
@@ -668,41 +672,43 @@ class BlocknetGUI(ctk.CTk):
         #                                                   width=button_width)
         # self.blocknet_check_config_button.grid(row=3, column=3, sticky="e")
 
-    def setup_block_dx(self):
+    def setup_blockdx(self):
         self.blockdx_title_frame = ctk.CTkFrame(self.blockdx_frame)
         self.blockdx_title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
-        # Add widgets for Block-dx management inside the block_dx_frame
+        # Add widgets for Block-dx management inside the blockdx_frame
         # Label for Block-dx frame
         width = 470
-        self.block_dx_label = ctk.CTkLabel(self.blockdx_title_frame, text=blockdx_frame_title_string, width=width,
+        self.blockdx_label = ctk.CTkLabel(self.blockdx_title_frame, text=blockdx_frame_title_string, width=width,
                                            anchor='w')
-        self.block_dx_label.grid(row=0, column=0, padx=5, pady=0)
+        self.blockdx_label.grid(row=0, column=0, padx=5, pady=0)
 
-        CTkToolTip.CTkToolTip(self.block_dx_label, message=tooltip_blockdx_label_msg,
+        # CTkToolTip.CTkToolTip(self.blockdx_title_frame, message=tooltip_blockdx_label_msg,
+        #                       delay=1.0, border_width=2, follow=True)
+        CTkToolTip.CTkToolTip(self.blockdx_label, message=tooltip_blockdx_label_msg,
                               delay=1.0, border_width=2, follow=True)
         # Checkboxes
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
-        self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value=blockdx_running_string)
+        self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value='')
         self.blockdx_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.blockdx_frame,
                                                                           textvariable=self.blockdx_process_status_checkbox_string_var,
                                                                           variable=self.blockdx_process_status_checkbox_state,
                                                                           corner_radius=25,
                                                                           state='disabled')  # , disabledforeground='black')
         # self.blockdx_process_status_checkbox.configure(wraplength=400)
-        self.blockdx_process_status_checkbox.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.blockdx_process_status_checkbox.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
 
         self.blockdx_valid_config_checkbox_state = ctk.BooleanVar()
-        self.blockdx_valid_config_checkbox_string_var = ctk.StringVar(value=blockdx_valid_config_string)
+        self.blockdx_valid_config_checkbox_string_var = ctk.StringVar(value='')
         self.blockdx_valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(self.blockdx_frame,
                                                                         textvariable=self.blockdx_valid_config_checkbox_string_var,
                                                                         variable=self.blockdx_valid_config_checkbox_state,
                                                                         corner_radius=25,
                                                                         state='disabled',
-                                                                        width=200)  # , disabledforeground='black')
-        self.blockdx_valid_config_checkbox.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+                                                                        width=190)  # , disabledforeground='black')
+        self.blockdx_valid_config_checkbox.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
 
         # Button for checking config
-        # self.blockdx_check_config_button = ctk.CTkButton(self.block_dx_frame, text=check_config_string,
+        # self.blockdx_check_config_button = ctk.CTkButton(self.blockdx_frame, text=check_config_string,
         #                                                  command=self.blockdx_check_config,
         #                                                  width=button_width, state='disabled')
         # self.blockdx_check_config_button.grid(row=1, column=1, sticky="e")
@@ -721,7 +727,7 @@ class BlocknetGUI(ctk.CTk):
                               delay=1.0, border_width=2, follow=True)
         # Checkboxes
         self.xlite_process_status_checkbox_state = ctk.BooleanVar()
-        self.xlite_process_status_checkbox_string_var = ctk.StringVar(value=xlite_not_running_string)
+        self.xlite_process_status_checkbox_string_var = ctk.StringVar(value='')
         self.xlite_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.xlite_frame,
                                                                         textvariable=self.xlite_process_status_checkbox_string_var,
                                                                         variable=self.xlite_process_status_checkbox_state,
@@ -731,7 +737,7 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_process_status_checkbox.grid(row=1, column=0, padx=10, pady=5, sticky="w")
 
         self.xlite_daemon_process_status_checkbox_state = ctk.BooleanVar()
-        self.xlite_daemon_process_status_checkbox_string_var = ctk.StringVar(value=xlite_daemon_not_running_string)
+        self.xlite_daemon_process_status_checkbox_string_var = ctk.StringVar(value='')
         self.xlite_daemon_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.xlite_frame,
                                                                                textvariable=self.xlite_daemon_process_status_checkbox_string_var,
                                                                                variable=self.xlite_daemon_process_status_checkbox_state,
@@ -753,24 +759,24 @@ class BlocknetGUI(ctk.CTk):
         #                                                       sticky="w")
 
         self.xlite_valid_config_checkbox_state = ctk.BooleanVar()
-        self.xlite_valid_config_checkbox_string_var = ctk.StringVar(value=xlite_not_valid_config_string)
+        self.xlite_valid_config_checkbox_string_var = ctk.StringVar(value='')
         self.xlite_valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(self.xlite_frame,
                                                                       textvariable=self.xlite_valid_config_checkbox_string_var,
                                                                       variable=self.xlite_valid_config_checkbox_state,
                                                                       corner_radius=25,
                                                                       state='disabled')  # , disabledforeground='black')
         # self.xlite_valid_config_checkbox.configure(wraplength=400)
-        self.xlite_valid_config_checkbox.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+        self.xlite_valid_config_checkbox.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
 
         self.xlite_daemon_valid_config_checkbox_state = ctk.BooleanVar()
-        self.xlite_daemon_valid_config_checkbox_string_var = ctk.StringVar(value=xlite_daemon_not_valid_config_string)
+        self.xlite_daemon_valid_config_checkbox_string_var = ctk.StringVar(value='')
         self.xlite_daemon_valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(self.xlite_frame,
                                                                              textvariable=self.xlite_daemon_valid_config_checkbox_string_var,
                                                                              variable=self.xlite_daemon_valid_config_checkbox_state,
                                                                              corner_radius=25,
                                                                              state='disabled')  # , disabledforeground='black')
         # self.xlite_daemon_valid_config_checkbox.configure(wraplength=400)
-        self.xlite_daemon_valid_config_checkbox.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+        self.xlite_daemon_valid_config_checkbox.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
 
         # Button for refreshing Xlite config data
         # self.xlite_check_config_button_string_var = ctk.StringVar(value=check_config_string)
@@ -780,12 +786,12 @@ class BlocknetGUI(ctk.CTk):
         # self.xlite_check_config_button.grid(row=1, column=1, sticky="e")
 
         # Create the Button widget with a text variable
-        self.xlite_store_password_button_string_var = ctk.StringVar(value=xlite_store_password_string)
+        self.xlite_store_password_button_string_var = ctk.StringVar(value='')
         self.xlite_store_password_button = ctk.CTkButton(self.xlite_title_frame,
                                                          textvariable=self.xlite_store_password_button_string_var,
                                                          width=button_width)
 
-        self.xlite_store_password_button.grid(row=0, column=3, sticky="e")
+        self.xlite_store_password_button.grid(row=0, column=3,padx=2, pady=2,  sticky="e")
         # Bind left-click event
         self.xlite_store_password_button.bind("<Button-1>",
                                               lambda event: self.xlite_store_password_button_mouse_click(event))
