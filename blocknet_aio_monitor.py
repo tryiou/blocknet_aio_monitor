@@ -416,12 +416,17 @@ class BlocknetGUI(ctk.CTk):
         threading.Timer(interval=1, function=os._exit, args=(0,)).start()
 
     def setup_bin(self):
+        self.bin_title_frame = ctk.CTkFrame(self.bins_download_frame)
+        self.bin_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky="ew")
+        self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=240,
+                                              anchor='w')
+        self.bins_header_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
+        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:",anchor='s')
+        self.bins_found_label.grid(row=0, column=4, sticky='ew')
         # Creating labels
-        self.bins_header_label = ctk.CTkLabel(self.bins_download_frame, text="Binaries Control panel:")
         self.bins_blocknet_label = ctk.CTkLabel(self.bins_download_frame, text="Blocknet Core:")
         self.bins_blockdx_label = ctk.CTkLabel(self.bins_download_frame, text="Block-DX:")
         self.bins_xlite_label = ctk.CTkLabel(self.bins_download_frame, text="Xlite:")
-        self.bins_found_label = ctk.CTkLabel(self.bins_download_frame, text="Found:")
         self.blocknet_bin_installed_boolvar = ctk.BooleanVar(value=False)
         self.blockdx_bin_installed_boolvar = ctk.BooleanVar(value=False)
         self.xlite_bin_installed_boolvar = ctk.BooleanVar(value=False)
@@ -491,19 +496,20 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                          textvariable=self.blocknet_start_close_button_string_var,
                                                          command=self.start_or_close_blocknet,
-                                                         width=width)
+                                                         width=width+12)
         self.blockdx_start_close_button_string_var = ctk.StringVar(value='')
         self.blockdx_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                         textvariable=self.blockdx_start_close_button_string_var,
-                                                        command=self.start_or_close_blockdx, width=width)
+                                                        command=self.start_or_close_blockdx,
+                                                        width=width+12)
         self.xlite_start_close_button_string_var = ctk.StringVar(value='')
         self.xlite_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                       textvariable=self.xlite_start_close_button_string_var,
                                                       command=self.start_or_close_xlite,
-                                                      width=width)
+                                                      width=width+12)
         x = 0
         y = 0
-        self.bins_header_label.grid(row=x, column=y, columnspan=2, padx=5, pady=0, sticky="w")
+
         self.bins_blocknet_label.grid(row=x + 1, column=y, padx=5, pady=2, sticky="e")
         self.bins_blockdx_label.grid(row=x + 2, column=y, padx=5, pady=2, sticky="e")
         self.bins_xlite_label.grid(row=x + 3, column=y, padx=5, pady=(2, 5), sticky="e")
@@ -514,16 +520,15 @@ class BlocknetGUI(ctk.CTk):
         self.bins_blocknet_found_checkbox.grid(row=x + 1, column=y + 2, padx=5, sticky=sticky)
         self.bins_blockdx_found_checkbox.grid(row=x + 2, column=y + 2, padx=5, sticky=sticky)
         self.bins_xlite_found_checkbox.grid(row=x + 3, column=y + 2, padx=5, pady=(2, 5), sticky=sticky)
-        self.bins_found_label.grid(row=x, column=y + 2, sticky='w')
         button_sticky = 'e'
         self.bins_install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=8, sticky=button_sticky)
         self.bins_install_delete_blockdx_button.grid(row=x + 2, column=y + 3, padx=8, sticky=button_sticky)
         self.bins_install_delete_xlite_button.grid(row=x + 3, column=y + 3, padx=8, pady=(2, 5), sticky=button_sticky)
-        self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=8, sticky=button_sticky)
+        self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=(8,2), sticky='ew')
         # Button for starting or closing Block-dx
-        self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=8, sticky=button_sticky)
+        self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=(8,2), sticky='ew')
         # Button for starting or closing Xlite
-        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=8, pady=(2, 5), sticky=button_sticky)
+        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=(8,2), pady=(2, 5), sticky='ew')
 
     def setup_blocknet_core(self):
         # Frame for Data Path label and entry
@@ -794,7 +799,7 @@ class BlocknetGUI(ctk.CTk):
     def open_custom_path_dialog(self):
         # ctk.filedialog.askdirectory()
         custom_path = ctk.filedialog.askdirectory(parent=self, title="Select Custom Path for Blocknet Core Datadir",
-                                                   mustexist=False)
+                                                  mustexist=False)
         if custom_path:
             self.on_custom_path_set(custom_path)
 
