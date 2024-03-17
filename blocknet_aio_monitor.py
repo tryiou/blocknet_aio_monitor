@@ -1189,7 +1189,7 @@ class BlocknetGUI(ctk.CTk):
         return False
 
     async def coroutine_check_processes(self):
-        start_time = time.time()
+        # start_time = time.time()
         # Check Blocknet process
         if self.blocknet_utility.blocknet_process is not None:
             process_status = self.blocknet_utility.blocknet_process.poll()
