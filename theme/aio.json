@@ -6,7 +6,10 @@
     ]
   },
   "CTkToplevel": {
-    "fg_color": "transparent"
+    "fg_color": [
+      "gray95",
+      "gray10"
+    ]
   },
   "CTkFrame": {
     "corner_radius": 6,
