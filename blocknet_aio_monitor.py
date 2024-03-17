@@ -12,6 +12,8 @@ import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import json
 import psutil
 import threading
+import PIL
+import PIL._tkinter_finder
 from threading import Thread
 from cryptography.fernet import Fernet
 
@@ -26,7 +28,8 @@ from globals_variables import *
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
-
+pil_logger = logging.getLogger('PIL')
+pil_logger.setLevel(logging.WARNING)
 button_width = 120
 gui_width = 400
 
@@ -415,31 +418,35 @@ class BlocknetGUI(ctk.CTk):
         # Schedule forced exit after a 5-second timeout
         threading.Timer(interval=1, function=os._exit, args=(0,)).start()
 
-    def switch_theme_command(self, value):
+    def switch_theme_command(self):
         actual = ctk.get_appearance_mode()
-        if value == "Dark":
-            new_theme = "Dark"
-            # self.bins_button_switch_theme.configure(hover_color=)
-        else:
+        if actual == "Dark":
             new_theme = "Light"
-        print(actual, new_theme)
+        else:
+            new_theme = "Dark"
         ctk.set_appearance_mode(new_theme)
+        print(actual, new_theme)
 
     def setup_bin(self):
         self.bin_title_frame = ctk.CTkFrame(self.bins_download_frame)
         self.bin_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky="ew")
-        self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=240,
+        self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=175,
                                               anchor='w')
-        self.bins_header_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
-        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s', width=145)
+        self.bins_header_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="nw")
+        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s', width=220)
         self.bins_found_label.grid(row=0, column=4, pady=5, sticky='ew')
-        selected_theme = ctk.StringVar(value=ctk.get_appearance_mode())
-        self.bins_button_switch_theme = ctk.CTkSegmentedButton(self.bin_title_frame,
-                                                               values=["Dark", "Light"],
-                                                               command=self.switch_theme_command,
-                                                               variable=selected_theme,
-                                                               corner_radius=5)
-        self.bins_button_switch_theme.grid(row=0, column=5, padx=5, pady=5, sticky='w')
+        # os.path.join(aio_folder, "img", "dark.png")
+        resize = (65, 30)
+
+        self.theme_img = ctk.CTkImage(
+            light_image=PIL.Image.open(os.path.join(os.getcwd(), "img", "light.png")).resize(resize, PIL.Image.LANCZOS),
+            dark_image=PIL.Image.open(os.path.join(os.getcwd(), "img", "dark.png")).resize(resize, PIL.Image.LANCZOS),
+            size=resize)
+        bg_color = self.bin_title_frame.cget('fg_color')
+        self.bins_button_switch_theme = ctk.CTkButton(self.bin_title_frame,
+                                                      image=self.theme_img, command=self.switch_theme_command, text='',
+                                                      fg_color=bg_color, hover=False,width=50)
+        self.bins_button_switch_theme.grid(row=0, column=5, padx=2, pady=2, sticky='ew')
         # Creating labels
         self.bins_blocknet_label = ctk.CTkLabel(self.bins_download_frame, text="Blocknet Core:")
         self.bins_blockdx_label = ctk.CTkLabel(self.bins_download_frame, text="Block-DX:")
