@@ -415,14 +415,31 @@ class BlocknetGUI(ctk.CTk):
         # Schedule forced exit after a 5-second timeout
         threading.Timer(interval=1, function=os._exit, args=(0,)).start()
 
+    def switch_theme_command(self, value):
+        actual = ctk.get_appearance_mode()
+        if value == "Dark":
+            new_theme = "Dark"
+            # self.bins_button_switch_theme.configure(hover_color=)
+        else:
+            new_theme = "Light"
+        print(actual, new_theme)
+        ctk.set_appearance_mode(new_theme)
+
     def setup_bin(self):
         self.bin_title_frame = ctk.CTkFrame(self.bins_download_frame)
         self.bin_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky="ew")
         self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=240,
                                               anchor='w')
         self.bins_header_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="w")
-        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s')
+        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s', width=240)
         self.bins_found_label.grid(row=0, column=4, pady=5, sticky='ew')
+        selected_theme = ctk.StringVar(value=ctk.get_appearance_mode())
+        self.bins_button_switch_theme = ctk.CTkSegmentedButton(self.bin_title_frame,
+                                                               values=["Dark", "Light"],
+                                                               command=self.switch_theme_command,
+                                                               variable=selected_theme,
+                                                               corner_radius=5)
+        self.bins_button_switch_theme.grid(row=0, column=6, padx=5, pady=5, sticky='w')
         # Creating labels
         self.bins_blocknet_label = ctk.CTkLabel(self.bins_download_frame, text="Blocknet Core:")
         self.bins_blockdx_label = ctk.CTkLabel(self.bins_download_frame, text="Block-DX:")
