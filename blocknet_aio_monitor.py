@@ -34,7 +34,6 @@ gui_width = 400
 class BlocknetGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
-
         self.blocknet_version = [blocknet_release_url.split('/')[7]]
         self.blockdx_version = [blockdx_release_url.split('/')[7]]
         self.xlite_version = [xlite_release_url.split('/')[7]]
@@ -44,6 +43,9 @@ class BlocknetGUI(ctk.CTk):
         self.is_blockdx_config_sync = None
 
         # threads
+        self.download_xlite_thread = None
+        self.download_blockdx_thread = None
+        self.download_blocknet_thread = None
         self.update_status_thread = None
         self.blocknet_t1 = None
         self.blocknet_t2 = None
@@ -72,78 +74,72 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_utility = XliteUtility()
 
         # binaries frame
+        self.bins_install_delete_xlite_string_var = None
+        self.bins_install_delete_blockdx_string_var = None
+        self.bins_install_delete_blocknet_string_var = None
+        self.xlite_bin_installed_boolvar = None
+        self.blockdx_bin_installed_boolvar = None
+        self.blocknet_bin_installed_boolvar = None
+        self.bins_found_label = None
+        self.bins_xlite_label = None
+        self.bins_blockdx_label = None
+        self.bins_blocknet_label = None
+        self.bins_header_label = None
+        self.bins_install_delete_xlite_tooltip = None
+        self.bins_install_delete_blockdx_tooltip = None
+        self.bins_install_delete_blocknet_tooltip = None
         self.bins_xlite_found_checkbox = None
         self.bins_blockdx_found_checkbox = None
         self.bins_blocknet_found_checkbox = None
         self.bins_xlite_version_optionmenu = None
         self.bins_blockdx_version_optionmenu = None
         self.bins_blocknet_version_optionmenu = None
-        self.bins_found_label = None
-        self.bins_xlite_label = None
-        self.bins_blockdx_label = None
-        self.bins_blocknet_label = None
-        self.bins_header_label = None
         self.bins_install_delete_blocknet_button = None
         self.bins_install_delete_blockdx_button = None
         self.bins_install_delete_xlite_button = None
         self.bins_last_aio_folder_check_time = None
-        self.xlite_bin_installed_boolvar = None
-        self.blockdx_bin_installed_boolvar = None
-        self.blocknet_bin_installed_boolvar = None
-
-        # block-dx
-        self.blockdx_title_frame = None
-        self.blockdx_label = None
-        self.blockdx_check_config_button = None
-        self.blockdx_process_running = False
-        self.blockdx_process_status_checkbox = None
-        self.blockdx_process_status_checkbox_state = None
-        self.blockdx_process_status_checkbox_string_var = None
-        self.blockdx_start_close_button = None
-        self.blockdx_start_close_button_string_var = None
-        self.blockdx_valid_config_checkbox = None
-        self.blockdx_valid_config_checkbox_string_var = None
-        self.blockdx_valid_config_checkbox_state = None
-        self.disable_start_blockdx_button = False
-        self.disable_start_blocknet_button = False
 
         # blocknet
         self.blocknet_download_bootstrap_button = None
         self.blocknet_download_bootstrap_string_var = None
         self.blocknet_data_path_entry_string_var = None
+        self.blocknet_conf_status_checkbox_string_var = None
+        self.blocknet_start_close_button_string_var = None
+        self.blocknet_data_path_status_checkbox_string_var = None
+        self.blocknet_process_status_checkbox_string_var = None
+        self.blocknet_rpc_connection_checkbox_string_var = None
+        self.blocknet_core_label = None
         self.blocknet_check_config_button = None
+        self.blocknet_custom_path_button = None
+        self.blocknet_start_close_button = None
         self.blocknet_conf_status_checkbox = None
         self.blocknet_conf_status_checkbox_state = None
-        self.blocknet_conf_status_checkbox_string_var = None
-        self.blocknet_core_label = None
-        self.blocknet_custom_path_button = None
-        self.blocknet_title_frame = None
         self.blocknet_data_path_entry = None
         self.blocknet_data_path_label = None
         self.blocknet_data_path_status_checkbox = None
         self.blocknet_data_path_status_checkbox_state = None
-        self.blocknet_data_path_status_checkbox_string_var = None
         self.blocknet_process_running = False
         self.blocknet_process_status_checkbox = None
         self.blocknet_process_status_checkbox_state = None
-        self.blocknet_process_status_checkbox_string_var = None
         self.blocknet_rpc_connection_checkbox = None
         self.blocknet_rpc_connection_checkbox_state = None
-        self.blocknet_rpc_connection_checkbox_string_var = None
-        self.blocknet_start_close_button = None
-        self.blocknet_start_close_button_string_var = None
 
-        # xlite-daemon
-        self.xlite_daemon_process_running = False
-        self.xlite_daemon_process_status_checkbox = None
-        self.xlite_daemon_process_status_checkbox_state = None
-        self.xlite_daemon_process_status_checkbox_string_var = None
-        self.xlite_daemon_valid_config_checkbox = None
-        self.xlite_daemon_valid_config_checkbox_state = None
-        self.xlite_daemon_valid_config_checkbox_string_var = None
+        # block-dx
+        self.blockdx_process_status_checkbox_string_var = None
+        self.blockdx_start_close_button_string_var = None
+        self.blockdx_valid_config_checkbox_string_var = None
+        self.blockdx_label = None
+        self.blockdx_check_config_button = None
+        self.blockdx_start_close_button = None
+        self.disable_start_blockdx_button = False
+        self.disable_start_blocknet_button = False
+        self.blockdx_process_status_checkbox = None
+        self.blockdx_process_status_checkbox_state = None
+        self.blockdx_valid_config_checkbox = None
+        self.blockdx_valid_config_checkbox_state = None
+        self.blockdx_process_running = False
 
         # xlite
-        self.xlite_title_frame = None
         self.disable_start_xlite_button = False
         self.xlite_label = None
         self.xlite_process_running = False
@@ -162,14 +158,25 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_valid_config_checkbox = None
         self.xlite_valid_config_checkbox_state = None
         self.xlite_valid_config_checkbox_string_var = None
+        # xlite-daemon
+        self.xlite_daemon_process_running = False
+        self.xlite_daemon_process_status_checkbox = None
+        self.xlite_daemon_process_status_checkbox_state = None
+        self.xlite_daemon_process_status_checkbox_string_var = None
+        self.xlite_daemon_valid_config_checkbox = None
+        self.xlite_daemon_valid_config_checkbox_state = None
+        self.xlite_daemon_valid_config_checkbox_string_var = None
 
         self.time_disable_button = 3000
 
         # frames
-        self.xlite_frame = None
-        self.blockdx_frame = None
-        self.blocknet_core_frame = None
         self.bins_download_frame = None
+        self.blocknet_core_frame = None
+        self.blocknet_title_frame = None
+        self.blockdx_frame = None
+        self.blockdx_title_frame = None
+        self.xlite_frame = None
+        self.xlite_title_frame = None
 
         self.init_setup()
 
@@ -256,8 +263,6 @@ class BlocknetGUI(ctk.CTk):
         blocknet_boolvar = self.blocknet_bin_installed_boolvar.get()
         blockdx_boolvar = self.blockdx_bin_installed_boolvar.get()
         xlite_boolvar = self.xlite_bin_installed_boolvar.get()
-
-        percent_buff = 0
 
         if blocknet_boolvar:
             var_blocknet = "Delete"
