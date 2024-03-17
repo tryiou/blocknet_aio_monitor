@@ -172,8 +172,6 @@ class BlocknetGUI(ctk.CTk):
 
         self.init_setup()
 
-
-
     def init_setup(self):
         self.title(app_title_string)
         self.resizable(False, False)
