@@ -21,3 +21,8 @@ if system == "Darwin":
 xlite_url = xlite_releases_urls.get((system, machine))
 if system == "Darwin":
     xlite_volume_name = ' '.join(os.path.splitext(os.path.basename(xlite_url))[0].split('-')[:-1])
+
+
+
+DIRPATH = os.path.dirname(os.path.abspath(__file__))
+themepath = os.path.join(DIRPATH, "theme", "aio.json")

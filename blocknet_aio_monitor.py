@@ -30,6 +30,10 @@ asyncio_logger.setLevel(logging.WARNING)
 button_width = 120
 gui_width = 400
 
+# ctk.set_appearance_mode("system")
+# ctk.set_default_color_theme("dark-blue")
+ctk.set_default_color_theme(themepath)
+
 
 class BlocknetGUI(ctk.CTk):
     def __init__(self):
@@ -750,7 +754,8 @@ class BlocknetGUI(ctk.CTk):
             # store_salted_pass
             logging.info("Left click detected")
             password = ctkInputDialogMod.CTkInputDialog(title="Store XLite Password", text="Enter XLite password:",
-                                                        show='*').get_input()
+                                                        show='*', fg_color="#0f2742",
+                                                        entry_text_color="#123149").get_input()
             # password = simpledialog.askstring("Store XLite Password","Enter XLite password:" , show='*')
             if password:
                 encryption_key = generate_key()
@@ -787,7 +792,9 @@ class BlocknetGUI(ctk.CTk):
             self.blockdx_utility.compare_and_update_local_conf(xbridgeconfpath, rpc_user, rpc_password)
 
     def open_custom_path_dialog(self):
-        custom_path = ctk.filedialog.askopenfilename(parent=self, title="Select Custom Path for Blocknet Core Datadir")
+        # ctk.filedialog.askdirectory()
+        custom_path = ctk.filedialog.askdirectory(parent=self, title="Select Custom Path for Blocknet Core Datadir",
+                                                   mustexist=False)
         if custom_path:
             self.on_custom_path_set(custom_path)
 
