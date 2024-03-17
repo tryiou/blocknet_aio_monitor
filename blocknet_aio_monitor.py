@@ -800,14 +800,7 @@ class BlocknetGUI(ctk.CTk):
 
     def on_custom_path_set(self, custom_path):
         self.blocknet_utility.set_custom_data_path(custom_path)
-        self.blocknet_data_path_entry.configure(state='normal')
-        self.blocknet_data_path_entry.delete(0, 'end')
-        self.blocknet_data_path_entry.insert(0, custom_path)
-        self.blocknet_data_path_entry.configure(state='readonly')
-
-        # Adjust the width of the Entry widget based on the length of the text
-        text_length = len(custom_path)
-        self.blocknet_data_path_entry.configure(width=text_length)
+        self.blocknet_data_path_entry_string_var.set(self.blocknet_utility.data_folder)
         save_cfg_json('custom_path', custom_path)
 
     def enable_blocknet_start_button(self):
