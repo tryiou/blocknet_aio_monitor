@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 system = platform.system()
 machine = platform.machine()
-
+aio_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 url = xlite_releases_urls.get((system, machine))
 if system == "Darwin":
     volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
@@ -67,7 +67,11 @@ class XliteRPCClient:
 class XliteUtility:
     def __init__(self):
         if system == "Darwin":
+            self.xlite_exe = os.path.join(aio_path, os.path.basename(url))
             self.dmg_mount_path = f"/Volumes/{volume_name}"
+        else:
+            self.xlite_exe = os.path.join(aio_path, xlite_bin_path[system], xlite_bin_name[system])
+        self.binary_percent_download = None
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
         self.coins_rpc = {}
@@ -207,16 +211,12 @@ class XliteUtility:
             logging.error("Retry limit exceeded. Unable to start Xlite.")
             return
 
-        local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
-        if system == "Darwin":
-            xlite_dmg_name = os.path.basename(url)
-            xlite_exe = os.path.join(local_path, xlite_dmg_name)
-        else:
-            xlite_exe = os.path.join(local_path, xlite_bin_path[system], xlite_bin_name[system])
 
-        if not os.path.exists(xlite_exe):
-            logging.info(f"Xlite executable not found at {xlite_exe}. Downloading...")
+
+
+        if not os.path.exists(self.xlite_exe):
+            logging.info(f"Xlite executable not found at {self.xlite_exe}. Downloading...")
             self.download_xlite_bin()
 
         try:
@@ -228,7 +228,7 @@ class XliteUtility:
                 # Check if the volume is already mounted
                 if not os.path.ismount(self.dmg_mount_path):
                     # Mount the DMG file
-                    os.system(f'hdiutil attach "{xlite_exe}"')
+                    os.system(f'hdiutil attach "{self.xlite_exe}"')
                 else:
                     logging.info("Volume is already mounted.")
                 full_path = os.path.join(self.dmg_mount_path, *xlite_bin_name[system])
@@ -241,7 +241,7 @@ class XliteUtility:
                                                       start_new_session=True)
             else:
                 # Start the Blocknet process using subprocess
-                self.xlite_process = subprocess.Popen([xlite_exe],
+                self.xlite_process = subprocess.Popen([self.xlite_exe],
                                                       stdout=subprocess.PIPE,
                                                       stderr=subprocess.PIPE,
                                                       stdin=subprocess.PIPE,
@@ -251,7 +251,7 @@ class XliteUtility:
                 time.sleep(1)  # Wait for 1 second before checking again
 
             pid = self.xlite_process.pid
-            logging.info(f"Started Xlite process with PID {pid}: {xlite_exe}")
+            logging.info(f"Started Xlite process with PID {pid}: {self.xlite_exe}")
         except Exception as e:
             logging.error(f"Error: {e}")
 
@@ -311,27 +311,39 @@ class XliteUtility:
     def download_xlite_bin(self):
         self.downloading_bin = True
         url = xlite_releases_urls.get((system, machine))
-        local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
-        response = requests.get(url)
+        response = requests.get(url, stream=True)  # Stream the response content
+        response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
+            remote_size = int(response.headers.get('Content-Length', 0))
+            local_file_path = os.path.join(aio_path, os.path.basename(url))
+            bytes_downloaded = 0
+            total = remote_size
+            with open(local_file_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
+                    if chunk:  # Filter out keep-alive new chunks
+                        f.write(chunk)
+                        bytes_downloaded += len(chunk)
+                        self.binary_percent_download = (bytes_downloaded / total) * 100
+                        # print(self.binary_percent_download)
+            self.binary_percent_download = None
             # Extract the archive from memory
+            # Extract the archive
             if url.endswith(".zip"):
-                with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                    local_path = os.path.join(local_path, xlite_bin_path[system])
+                with zipfile.ZipFile(local_file_path, "r") as zip_ref:
+                    local_path = os.path.join(aio_path, xlite_bin_path[system])
                     zip_ref.extractall(local_path)
+                logging.info("Zip file extracted successfully.")
+                os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
-                with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
-                    tar.extractall(local_path)
+                with tarfile.open(local_file_path, "r:gz") as tar:
+                    tar.extractall(aio_path)
+                logging.info("Tar.gz file extracted successfully.")
+                os.remove(local_file_path)
             elif url.endswith(".dmg"):
-                local_file_path = os.path.join(local_path, os.path.basename(url))
-                with open(local_file_path, "wb") as f:
-                    f.write(response.content)
-                print("DMG file saved successfully.")
-            else:
-                print("Unsupported archive format.")
+                logging.info("DMG file saved successfully.")
         else:
             print("Failed to download the Xlite binary.")
         self.downloading_bin = False

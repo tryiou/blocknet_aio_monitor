@@ -23,7 +23,8 @@ from blocknet_core import BlocknetUtility
 from xlite import XliteUtility
 
 from conf_data import blockdx_selectedWallets_blocknet, aio_blocknet_data_path, blocknet_bin_name, blockdx_bin_name, \
-    xlite_bin_name, xlite_daemon_bin_name, blocknet_releases_urls, blockdx_releases_urls, xlite_releases_urls
+    xlite_bin_name, xlite_daemon_bin_name, blocknet_releases_urls, blockdx_releases_urls, xlite_releases_urls, \
+    blockdx_bin_path, blocknet_bin_path, xlite_bin_path
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
@@ -94,9 +95,9 @@ class BlocknetGUI(ctk.CTk):
         super().__init__()
 
         self.last_process_check_time = None
-        self.bins_install_blocknet_button = None
-        self.bins_install_blockdx_button = None
-        self.bins_install_xlite_button = None
+        self.bins_install_delete_blocknet_button = None
+        self.bins_install_delete_blockdx_button = None
+        self.bins_install_delete_xlite_button = None
         self.bins_last_aio_folder_check_time = None
         self.blocknet_version = [blocknet_release_url.split('/')[7]]
         self.blockdx_version = [blockdx_release_url.split('/')[7]]
@@ -282,33 +283,38 @@ class BlocknetGUI(ctk.CTk):
                                                                  state='disabled',
                                                                  corner_radius=25)
         button_width = 85
-        self.bins_install_blocknet_string_var = ctk.StringVar(value='Install')
-        self.bins_install_blocknet_button = ctk.CTkButton(self.bins_download_frame,
-                                                          state='normal',
-                                                          command=self.download_blocknet_command,
-                                                          textvariable=self.bins_install_blocknet_string_var,
-                                                          width=button_width)
-        CTkToolTip.CTkToolTip(self.bins_install_blocknet_button, message=blocknet_release_url, delay=1, follow=True,
-                              border_width=2,
-                              justify="left")
-        self.bins_install_blockdx_string_var = ctk.StringVar(value='Install')
-        self.bins_install_blockdx_button = ctk.CTkButton(self.bins_download_frame,
-                                                         state='normal',
-                                                         command=self.download_blockdx_command,
-                                                         textvariable=self.bins_install_blockdx_string_var,
-                                                         width=button_width)
-        CTkToolTip.CTkToolTip(self.bins_install_blockdx_button, message=blockdx_release_url, delay=1, follow=True,
-                              border_width=2,
-                              justify="left")
-        self.bins_install_xlite_string_var = ctk.StringVar(value='Install')
-        self.bins_install_xlite_button = ctk.CTkButton(self.bins_download_frame,
-                                                       state='normal',
-                                                       command=self.download_xlite_command,
-                                                       textvariable=self.bins_install_xlite_string_var,
-                                                       width=button_width)
-        CTkToolTip.CTkToolTip(self.bins_install_xlite_button, message=xlite_release_url, delay=1, follow=True,
-                              border_width=2,
-                              justify="left")
+        self.bins_install_delete_blocknet_string_var = ctk.StringVar(value='')
+        self.bins_install_delete_blocknet_button = ctk.CTkButton(self.bins_download_frame,
+                                                                 state='normal',
+                                                                 command=self.install_delete_blocknet_command,
+                                                                 textvariable=self.bins_install_delete_blocknet_string_var,
+                                                                 width=button_width)
+        self.bins_install_delete_blocknet_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_blocknet_button,
+                                                                          message='', delay=1,
+                                                                          follow=True,
+                                                                          border_width=2,
+                                                                          justify="left")
+        self.bins_install_delete_blockdx_string_var = ctk.StringVar(value='Install')
+        self.bins_install_delete_blockdx_button = ctk.CTkButton(self.bins_download_frame,
+                                                                state='normal',
+                                                                command=self.install_delete_blockdx_command,
+                                                                textvariable=self.bins_install_delete_blockdx_string_var,
+                                                                width=button_width)
+        self.bins_install_delete_blockdx_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_blockdx_button,
+                                                                         message=blockdx_release_url, delay=1,
+                                                                         follow=True,
+                                                                         border_width=2,
+                                                                         justify="left")
+        self.bins_install_delete_xlite_string_var = ctk.StringVar(value='Install')
+        self.bins_install_delete_xlite_button = ctk.CTkButton(self.bins_download_frame,
+                                                              state='normal',
+                                                              command=self.install_delete_xlite_command,
+                                                              textvariable=self.bins_install_delete_xlite_string_var,
+                                                              width=button_width)
+        self.bins_install_delete_xlite_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_xlite_button,
+                                                                       message=xlite_release_url, delay=1, follow=True,
+                                                                       border_width=2,
+                                                                       justify="left")
 
         self.bins_delete_blocknet_button = ctk.CTkButton(self.bins_download_frame,
                                                          command=self.delete_blocknet_command,
@@ -351,21 +357,21 @@ class BlocknetGUI(ctk.CTk):
         self.bins_xlite_found_checkbox.grid(row=x + 3, column=y + 2, padx=5, pady=(2, 5), sticky=sticky)
         self.bins_found_label.grid(row=x, column=y + 2, sticky='w')
         button_sticky = 'e'
-        self.bins_install_blocknet_button.grid(row=x + 1, column=y + 3, padx=4, sticky=button_sticky)
-        self.bins_install_blockdx_button.grid(row=x + 2, column=y + 3, padx=4, sticky=button_sticky)
-        self.bins_install_xlite_button.grid(row=x + 3, column=y + 3, padx=4, pady=(2, 5), sticky=button_sticky)
-        self.bins_delete_blocknet_button.grid(row=x + 1, column=y + 4, padx=0, sticky=button_sticky)
-        self.bins_delete_blockdx_button.grid(row=x + 2, column=y + 4, padx=0, sticky=button_sticky)
-        self.bins_delete_xlite_button.grid(row=x + 3, column=y + 4, padx=0, pady=(2, 5), sticky=button_sticky)
-        self.blocknet_start_close_button.grid(row=x + 1, column=y + 5, padx=4, sticky=button_sticky)
+        self.bins_install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=4, sticky=button_sticky)
+        self.bins_install_delete_blockdx_button.grid(row=x + 2, column=y + 3, padx=4, sticky=button_sticky)
+        self.bins_install_delete_xlite_button.grid(row=x + 3, column=y + 3, padx=4, pady=(2, 5), sticky=button_sticky)
+        # self.bins_delete_blocknet_button.grid(row=x + 1, column=y + 4, padx=0, sticky=button_sticky)
+        # self.bins_delete_blockdx_button.grid(row=x + 2, column=y + 4, padx=0, sticky=button_sticky)
+        # self.bins_delete_xlite_button.grid(row=x + 3, column=y + 4, padx=0, pady=(2, 5), sticky=button_sticky)
+        self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=4, sticky=button_sticky)
         # Button for starting or closing Block-dx
         self.blockdx_start_close_button_string_var = ctk.StringVar(value=start_string)
         self.blockdx_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                         textvariable=self.blockdx_start_close_button_string_var,
                                                         command=self.start_or_close_blockdx, width=button_width)
-        self.blockdx_start_close_button.grid(row=x + 2, column=y + 5, padx=4, sticky=button_sticky)
+        self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=4, sticky=button_sticky)
         # Button for starting or closing Xlite
-        self.xlite_start_close_button.grid(row=x + 3, column=y + 5, padx=4, pady=(2, 5), sticky=button_sticky)
+        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=4, pady=(2, 5), sticky=button_sticky)
 
     async def bins_check_aio_folder(self):
         blocknet_pruned_version = self.blocknet_version[0].replace('v', '')
@@ -410,48 +416,88 @@ class BlocknetGUI(ctk.CTk):
         xlite_boolvar = self.xlite_bin_installed_boolvar.get()
         # logging.info(
         #     f"blocknet_boolvar:{blocknet_boolvar}, blockdx_boolvar: {blockdx_boolvar}, xlite_boolvar: {xlite_boolvar}")
-        blocknet_condition = (self.blocknet_process_running or self.blocknet_utility.downloading_bin)
-        blockdx_condition = (self.blockdx_process_running or self.blockdx_utility.downloading_bin)
-        xlite_condition = (self.xlite_process_running or self.xlite_utility.downloading_bin)
         # logging.info(
         #     f"blocknet_condition: {blocknet_condition}, blockdx_condition: {blockdx_condition}, xlite_condition: {xlite_condition}")
 
-        var_blocknet = f"DL" if self.blocknet_utility.downloading_bin else "Install"
-        percent_buff = self.blockdx_utility.binary_percent_download
+        if blocknet_boolvar:
+            var_blocknet = "Delete"
+            blocknet_folder = os.path.join(aio_folder, blocknet_bin_path[0])
+            configure_tooltip_text(self.bins_install_delete_blocknet_tooltip,blocknet_folder )
+        else:
+            configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_release_url)
+            percent_buff = self.blocknet_utility.binary_percent_download
+            dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
+            var_blocknet = f"{dl_string}" if self.blocknet_utility.downloading_bin else "Install"
 
-        dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
-        var_blockdx = f"{dl_string}" if self.blockdx_utility.downloading_bin else "Install"
+        if blockdx_boolvar:
+            var_blockdx = "Delete"
+            blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
+            configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_folder)
+        else:
+            configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_release_url)
+            percent_buff = self.blockdx_utility.binary_percent_download
+            dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
+            var_blockdx = f"{dl_string}" if self.blockdx_utility.downloading_bin else "Install"
 
-        var_xlite = f"DL" if self.xlite_utility.downloading_bin else "Install"
-        self.bins_install_blocknet_string_var.set(var_blocknet)
-        self.bins_install_blockdx_string_var.set(var_blockdx)
-        self.bins_install_xlite_string_var.set(var_xlite)
+        if xlite_boolvar:
+            var_xlite = "Delete"
+            folder = os.path.join(aio_folder, xlite_bin_path.get(system))
+            configure_tooltip_text(self.bins_install_delete_xlite_tooltip, folder)
+        else:
+            configure_tooltip_text(self.bins_install_delete_xlite_tooltip, xlite_release_url)
+            percent_buff = self.xlite_utility.binary_percent_download
+            dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
+            var_xlite = f"{dl_string}" if self.xlite_utility.downloading_bin else "Install"
+        self.bins_install_delete_blocknet_string_var.set(var_blocknet)
+        self.bins_install_delete_blockdx_string_var.set(var_blockdx)
+        self.bins_install_delete_xlite_string_var.set(var_xlite)
 
-        if blocknet_boolvar or blocknet_condition:
-            disable_button(self.bins_install_blocknet_button)
+        if blocknet_boolvar:
+            if self.blocknet_process_running:
+                disable_button(self.bins_install_delete_blocknet_button)
+            else:
+                enable_button(self.bins_install_delete_blocknet_button)
         else:
-            enable_button(self.bins_install_blocknet_button)
-        if blockdx_boolvar or blockdx_condition:
-            disable_button(self.bins_install_blockdx_button)
-        else:
-            enable_button(self.bins_install_blockdx_button)
-        if xlite_boolvar or xlite_condition:
-            disable_button(self.bins_install_xlite_button)
-        else:
-            enable_button(self.bins_install_xlite_button)
+            if self.blocknet_utility.downloading_bin:
+                disable_button(self.bins_install_delete_blocknet_button)
+            else:
+                enable_button(self.bins_install_delete_blocknet_button)
 
-        if not blocknet_boolvar or blocknet_condition:
-            disable_button(self.bins_delete_blocknet_button)
+        if blockdx_boolvar:
+            if self.blockdx_process_running:
+                disable_button(self.bins_install_delete_blockdx_button)
+            else:
+                enable_button(self.bins_install_delete_blockdx_button)
+            # disable_button(self.bins_install_delete_blocknet_button)
         else:
-            enable_button(self.bins_delete_blocknet_button)
-        if not blockdx_boolvar or blockdx_condition:
-            disable_button(self.bins_delete_blockdx_button)
+            if self.blockdx_utility.downloading_bin:
+                disable_button(self.bins_install_delete_blockdx_button)
+            else:
+                enable_button(self.bins_install_delete_blockdx_button)
+
+        if xlite_boolvar:
+            if self.xlite_process_running:
+                disable_button(self.bins_install_delete_xlite_button)
+            else:
+                enable_button(self.bins_install_delete_xlite_button)
         else:
-            enable_button(self.bins_delete_blockdx_button)
-        if not xlite_boolvar or xlite_condition:
-            disable_button(self.bins_delete_xlite_button)
-        else:
-            enable_button(self.bins_delete_xlite_button)
+            if self.xlite_utility.downloading_bin:
+                disable_button(self.bins_install_delete_xlite_button)
+            else:
+                enable_button(self.bins_install_delete_xlite_button)
+
+        # if not blocknet_boolvar or blocknet_condition:
+        #     disable_button(self.bins_delete_blocknet_button)
+        # else:
+        #     enable_button(self.bins_delete_blocknet_button)
+        # if not blockdx_boolvar or blockdx_condition:
+        #     disable_button(self.bins_delete_blockdx_button)
+        # else:
+        #     enable_button(self.bins_delete_blockdx_button)
+        # if not xlite_boolvar or xlite_condition:
+        #     disable_button(self.bins_delete_xlite_button)
+        # else:
+        #     enable_button(self.bins_delete_xlite_button)
 
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))
@@ -778,20 +824,41 @@ class BlocknetGUI(ctk.CTk):
         self.bootstrap_thread.daemon = True
         self.bootstrap_thread.start()
 
+    def install_delete_blocknet_command(self):
+        blocknet_boolvar = self.blocknet_bin_installed_boolvar.get()
+        if blocknet_boolvar:
+            self.delete_blocknet_command()
+        else:
+            self.download_blocknet_command()
+
+    def install_delete_blockdx_command(self):
+        blockdx_boolvar = self.blockdx_bin_installed_boolvar.get()
+        if blockdx_boolvar:
+            self.delete_blockdx_command()
+        else:
+            self.download_blockdx_command()
+
+    def install_delete_xlite_command(self):
+        xlite_boolvar = self.xlite_bin_installed_boolvar.get()
+        if xlite_boolvar:
+            self.delete_xlite_command()
+        else:
+            self.download_xlite_command()
+
     def download_blocknet_command(self):
-        disable_button(self.bins_install_blocknet_button)
+        disable_button(self.bins_install_delete_blocknet_button)
         self.download_blocknet_thread = Thread(target=self.blocknet_utility.download_blocknet_bin)
         self.download_blocknet_thread.daemon = True
         self.download_blocknet_thread.start()
 
     def download_blockdx_command(self):
-        disable_button(self.bins_install_blockdx_button)
+        disable_button(self.bins_install_delete_blockdx_button)
         self.download_blockdx_thread = Thread(target=self.blockdx_utility.download_blockdx_bin)
         self.download_blockdx_thread.daemon = True
         self.download_blockdx_thread.start()
 
     def download_xlite_command(self):
-        disable_button(self.bins_install_xlite_button)
+        disable_button(self.bins_install_delete_xlite_button)
         self.download_xlite_thread = Thread(target=self.xlite_utility.download_xlite_bin)
         self.download_xlite_thread.daemon = True
         self.download_xlite_thread.start()
@@ -885,7 +952,7 @@ class BlocknetGUI(ctk.CTk):
             disable_button(self.blocknet_download_bootstrap_button)
         if bootstrap_download_in_progress:
             if self.blocknet_utility.bootstrap_percent_download:
-                var = f"Progress: {self.blocknet_utility.bootstrap_percent_download:.2f}%"
+                var = f"Progress: {self.blocknet_utility.bootstrap_percent_download:.1f}%"
             else:
                 var = "Loading"
         else:
@@ -1118,7 +1185,7 @@ class BlocknetGUI(ctk.CTk):
                 self.update_status_xlite(),
                 self.update_bins_buttons()
             ]
-            if self.bins_should_check_aio_folder(max_delay=5):
+            if self.bins_should_check_aio_folder(max_delay=3.33):
                 coroutines.append(self.bins_check_aio_folder())
             if self.should_check_processes(max_delay=3.33):
                 coroutines.append(self.check_processes())
@@ -1225,6 +1292,11 @@ class BlocknetGUI(ctk.CTk):
     #
     #     # Schedule the next update
     #     self.after(3333, self.update_processes)
+
+
+def configure_tooltip_text(tooltip, msg):
+    if tooltip.get() != msg:
+        tooltip.configure(message=msg)
 
 
 def boolvar_to_button_state(boolvar):

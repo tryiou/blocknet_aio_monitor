@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.DEBUG)
 system = platform.system()
 machine = platform.machine()
 url = blockdx_releases_urls.get((system, machine))
+aio_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 if system == "Darwin":
     volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
 
@@ -30,6 +31,9 @@ class BlockdxUtility:
     def __init__(self):
         if system == "Darwin":
             self.dmg_mount_path = f"/Volumes/{volume_name}"
+            self.blockdx_exe = os.path.join(aio_path, os.path.basename(url))
+        else:
+            self.blockdx_exe = os.path.join(aio_path, blockdx_bin_path[system], blockdx_bin_name[system])
         self.binary_percent_download = None
         self.process_running = None
         self.blockdx_process = None
@@ -117,18 +121,13 @@ class BlockdxUtility:
             logging.error("Retry limit exceeded. Unable to start Blockdx.")
             return
 
-        local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
-        if system == "Darwin":
 
-            blockdx_dmg_name = os.path.basename(url)
-            blockdx_exe = os.path.join(local_path, blockdx_dmg_name)
-        else:
-            blockdx_exe = os.path.join(local_path, blockdx_bin_path[system], blockdx_bin_name[system])
 
-        if not os.path.exists(blockdx_exe):
+
+        if not os.path.exists(self.blockdx_exe):
             # self.downloading_bin = True
-            logging.info(f"Blockdx executable not found at {blockdx_exe}. Downloading...")
+            logging.info(f"Blockdx executable not found at {self.blockdx_exe}. Downloading...")
             self.download_blockdx_bin()
             # self.downloading_bin = False
 
@@ -140,7 +139,7 @@ class BlockdxUtility:
                 # Check if the volume is already mounted
                 if not os.path.ismount(self.dmg_mount_path):
                     # Mount the DMG file
-                    os.system(f'hdiutil attach "{blockdx_exe}"')
+                    os.system(f'hdiutil attach "{self.blockdx_exe}"')
                 else:
                     logging.info("Volume is already mounted.")
                 full_path = os.path.join(self.dmg_mount_path, *blockdx_bin_name[system])
@@ -152,7 +151,7 @@ class BlockdxUtility:
                                                         stdin=subprocess.PIPE,
                                                         start_new_session=True)
             else:
-                self.blockdx_process = subprocess.Popen([blockdx_exe],
+                self.blockdx_process = subprocess.Popen([self.blockdx_exe],
                                                         stdout=subprocess.PIPE,
                                                         stderr=subprocess.PIPE,
                                                         stdin=subprocess.PIPE,
@@ -162,7 +161,7 @@ class BlockdxUtility:
                 time.sleep(1)  # Wait for 1 second before checking again
 
             pid = self.blockdx_process.pid
-            logging.info(f"Started Blockdx process with PID {pid}: {blockdx_exe}")
+            logging.info(f"Started Blockdx process with PID {pid}: {self.blockdx_exe}")
         except Exception as e:
             logging.error(f"Error: {e}")
 
@@ -230,7 +229,7 @@ class BlockdxUtility:
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
             remote_size = int(response.headers.get('Content-Length', 0))
-            print(remote_size)
+            # print(remote_size)
             local_file_path = os.path.join(local_path, os.path.basename(url))
             bytes_downloaded = 0
             total = remote_size

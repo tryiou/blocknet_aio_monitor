@@ -74,6 +74,8 @@ class BlocknetRPCClient:
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
+        self.blocknet_exe = os.path.join(aio_data_path, *blocknet_bin_path, blocknet_bin)
+        self.binary_percent_download = None
         self.parsed_wallet_confs = {}
         self.parsed_xbridge_confs = {}
         self.checking_bootstrap = False
@@ -147,19 +149,18 @@ class BlocknetUtility:
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blocknet.")
             return
-        blocknet_exe = os.path.join(aio_data_path, *blocknet_bin_path, blocknet_bin)
 
-        if not os.path.exists(blocknet_exe):
-            logging.info(f"Blocknet executable not found at {blocknet_exe}. Downloading...")
+        if not os.path.exists(self.blocknet_exe):
+            logging.info(f"Blocknet executable not found at {self.blocknet_exe}. Downloading...")
             self.download_blocknet_bin()
         try:
             # Start the Blocknet process using subprocess with custom data folder argument
-            self.blocknet_process = subprocess.Popen([blocknet_exe, f"-datadir={self.data_folder}"],
+            self.blocknet_process = subprocess.Popen([self.blocknet_exe, f"-datadir={self.data_folder}"],
                                                      stdout=subprocess.PIPE,
                                                      stderr=subprocess.PIPE,
                                                      stdin=subprocess.PIPE,
                                                      start_new_session=True)
-            logging.info(f"Started Blocknet process: {blocknet_exe} with data directory: {self.data_folder}")
+            logging.info(f"Started Blocknet process: {self.blocknet_exe} with data directory: {self.data_folder}")
         except Exception as e:
             logging.error(f"Error: {e}")
 
@@ -520,17 +521,31 @@ class BlocknetUtility:
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {system} {machine}")
 
-        response = requests.get(url)
+        # response = requests.get(url)
+        response = requests.get(url, stream=True)  # Stream the response content
         if response.status_code == 200:
+            remote_size = int(response.headers.get('Content-Length', 0))
+            local_file_path = os.path.join(aio_data_path, os.path.basename(url))
+            bytes_downloaded = 0
+            total = remote_size
+            with open(local_file_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
+                    if chunk:  # Filter out keep-alive new chunks
+                        f.write(chunk)
+                        bytes_downloaded += len(chunk)
+                        self.binary_percent_download = (bytes_downloaded / total) * 100
+            self.binary_percent_download = None
             # Extract the archive from memory
             if url.endswith(".zip"):
-                with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
+                with zipfile.ZipFile(local_file_path, "r") as zip_ref:
                     zip_ref.extractall(aio_data_path)
+                logging.info("Zip file extracted successfully.")
+                os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
-                with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
+                with tarfile.open(local_file_path, "r:gz") as tar:
                     tar.extractall(aio_data_path)
-            else:
-                print("Unsupported archive format.")
+                logging.info("Tar.gz file extracted successfully.")
+                os.remove(local_file_path)
         else:
             print("Failed to download the Blocknet binary.")
         self.downloading_bin = False
