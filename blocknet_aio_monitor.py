@@ -425,7 +425,7 @@ class BlocknetGUI(ctk.CTk):
         else:
             new_theme = "Dark"
         ctk.set_appearance_mode(new_theme)
-        print(actual, new_theme)
+        # print(actual, new_theme)
 
     def setup_bin(self):
         self.bin_title_frame = ctk.CTkFrame(self.bins_download_frame)
