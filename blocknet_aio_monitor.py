@@ -7,7 +7,7 @@ import platform
 import shutil
 import signal
 import time
-from tkinter.filedialog import askdirectory
+# from tkinter.filedialog import askdirectory
 import CTkToolTip
 import customtkinter as ctk
 import custom_tk_mods.ctkInputDialogMod as ctkInputDialogMod
@@ -411,13 +411,75 @@ class BlocknetGUI(ctk.CTk):
         self.bins_last_aio_folder_check_time = time.time()
 
     async def update_bins_buttons(self):
+        aio_folder = ""  # assuming aio_folder is defined elsewhere
         blocknet_boolvar = self.blocknet_bin_installed_boolvar.get()
         blockdx_boolvar = self.blockdx_bin_installed_boolvar.get()
         xlite_boolvar = self.xlite_bin_installed_boolvar.get()
-        # logging.info(
-        #     f"blocknet_boolvar:{blocknet_boolvar}, blockdx_boolvar: {blockdx_boolvar}, xlite_boolvar: {xlite_boolvar}")
-        # logging.info(
-        #     f"blocknet_condition: {blocknet_condition}, blockdx_condition: {blockdx_condition}, xlite_condition: {xlite_condition}")
+
+        percent_buff = 0
+
+        if blocknet_boolvar:
+            var_blocknet = "Delete"
+            blocknet_folder = os.path.join(aio_folder, blocknet_bin_path[0])
+            configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_folder)
+            if self.blocknet_process_running or self.blocknet_utility.downloading_bin:
+                disable_button(self.bins_install_delete_blocknet_button)
+            else:
+                enable_button(self.bins_install_delete_blocknet_button)
+        else:
+            configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_release_url)
+            percent_buff = self.blocknet_utility.binary_percent_download
+            dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
+            var_blocknet = dl_string if self.blocknet_utility.downloading_bin else "Install"
+            if self.blocknet_utility.downloading_bin:
+                disable_button(self.bins_install_delete_blocknet_button)
+            else:
+                enable_button(self.bins_install_delete_blocknet_button)
+
+        if blockdx_boolvar:
+            var_blockdx = "Delete"
+            blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
+            configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_folder)
+            if self.blockdx_process_running or self.blockdx_utility.downloading_bin:
+                disable_button(self.bins_install_delete_blockdx_button)
+            else:
+                enable_button(self.bins_install_delete_blockdx_button)
+        else:
+            configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_release_url)
+            percent_buff = self.blockdx_utility.binary_percent_download
+            dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
+            var_blockdx = dl_string if self.blockdx_utility.downloading_bin else "Install"
+            if self.blockdx_utility.downloading_bin:
+                disable_button(self.bins_install_delete_blockdx_button)
+            else:
+                enable_button(self.bins_install_delete_blockdx_button)
+
+        if xlite_boolvar:
+            var_xlite = "Delete"
+            folder = os.path.join(aio_folder, xlite_bin_path.get(system))
+            configure_tooltip_text(self.bins_install_delete_xlite_tooltip, folder)
+            if self.xlite_process_running or self.xlite_utility.downloading_bin:
+                disable_button(self.bins_install_delete_xlite_button)
+            else:
+                enable_button(self.bins_install_delete_xlite_button)
+        else:
+            configure_tooltip_text(self.bins_install_delete_xlite_tooltip, xlite_release_url)
+            percent_buff = self.xlite_utility.binary_percent_download
+            dl_string = f"DL: {str(int(percent_buff))}%" if percent_buff else "DL"
+            var_xlite = dl_string if self.xlite_utility.downloading_bin else "Install"
+            if self.xlite_utility.downloading_bin:
+                disable_button(self.bins_install_delete_xlite_button)
+            else:
+                enable_button(self.bins_install_delete_xlite_button)
+
+        self.bins_install_delete_blocknet_string_var.set(var_blocknet)
+        self.bins_install_delete_blockdx_string_var.set(var_blockdx)
+        self.bins_install_delete_xlite_string_var.set(var_xlite)
+
+    async def update_bins_buttons_o(self):
+        blocknet_boolvar = self.blocknet_bin_installed_boolvar.get()
+        blockdx_boolvar = self.blockdx_bin_installed_boolvar.get()
+        xlite_boolvar = self.xlite_bin_installed_boolvar.get()
 
         if blocknet_boolvar:
             var_blocknet = "Delete"
@@ -485,19 +547,6 @@ class BlocknetGUI(ctk.CTk):
                 disable_button(self.bins_install_delete_xlite_button)
             else:
                 enable_button(self.bins_install_delete_xlite_button)
-
-        # if not blocknet_boolvar or blocknet_condition:
-        #     disable_button(self.bins_delete_blocknet_button)
-        # else:
-        #     enable_button(self.bins_delete_blocknet_button)
-        # if not blockdx_boolvar or blockdx_condition:
-        #     disable_button(self.bins_delete_blockdx_button)
-        # else:
-        #     enable_button(self.bins_delete_blockdx_button)
-        # if not xlite_boolvar or xlite_condition:
-        #     disable_button(self.bins_delete_xlite_button)
-        # else:
-        #     enable_button(self.bins_delete_xlite_button)
 
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))
@@ -793,7 +842,7 @@ class BlocknetGUI(ctk.CTk):
         # enable_button(self.blockdx_check_config_button)
 
     def open_custom_path_dialog(self):
-        custom_path = askdirectory(parent=self, title="Select Custom Path for Blocknet Core Datadir")
+        custom_path = ctk.filedialog.askopenfilename(parent=self, title="Select Custom Path for Blocknet Core Datadir")
         if custom_path:
             self.on_custom_path_set(custom_path)
 

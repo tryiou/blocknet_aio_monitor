@@ -319,6 +319,7 @@ class XliteUtility:
         if response.status_code == 200:
             remote_size = int(response.headers.get('Content-Length', 0))
             local_file_path = os.path.join(aio_path, os.path.basename(url))
+            logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_size/1024)} kb")
             bytes_downloaded = 0
             total = remote_size
             with open(local_file_path, "wb") as f:

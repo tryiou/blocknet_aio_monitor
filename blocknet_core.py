@@ -473,20 +473,21 @@ class BlocknetUtility:
 
         try:
             if need_to_download:
-                logging.info("Downloading Blocknet bootstrap...")
+                local_file_size = os.path.getsize(temp_file_path)
                 with open(temp_file_path, 'wb') as f:
 
                     r = requests.get(blocknet_bootstrap_url, stream=True)
                     r.raise_for_status()
-                    bytes_downloaded = 0
+
                     total = remote_file_size
-                    for chunk in r.iter_content(chunk_size=8192 * 2):
+                    logging.info(f"Downloading {blocknet_bootstrap_url} to {local_file_size}, remote size: {int(total / 1024)} kb")
+                    bytes_downloaded = 0
+                    for chunk in r.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)
                             bytes_downloaded += len(chunk)
                             self.bootstrap_percent_download = (bytes_downloaded / total) * 100
                 self.bootstrap_percent_download = None
-                local_file_size = os.path.getsize(temp_file_path)
                 if local_file_size != remote_file_size:
                     raise ValueError("Downloaded bootstrap file size doesn't match the expected size.")
                 logging.info("Bootstrap downloaded successfully.")
@@ -526,6 +527,7 @@ class BlocknetUtility:
         if response.status_code == 200:
             remote_size = int(response.headers.get('Content-Length', 0))
             local_file_path = os.path.join(aio_data_path, os.path.basename(url))
+            logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_size/1024)} kb")
             bytes_downloaded = 0
             total = remote_size
             with open(local_file_path, "wb") as f:

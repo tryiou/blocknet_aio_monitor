@@ -221,16 +221,17 @@ class BlockdxUtility:
     def download_blockdx_bin(self):
         self.downloading_bin = True
         url = blockdx_releases_urls.get((system, machine))
-        local_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
+
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+
 
         response = requests.get(url, stream=True)  # Stream the response content
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
             remote_size = int(response.headers.get('Content-Length', 0))
-            # print(remote_size)
-            local_file_path = os.path.join(local_path, os.path.basename(url))
+            local_file_path = os.path.join(aio_path, os.path.basename(url))
+            logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_size/1024)} kb")
             bytes_downloaded = 0
             total = remote_size
             with open(local_file_path, "wb") as f:
@@ -243,13 +244,13 @@ class BlockdxUtility:
             # Extract the archive
             if url.endswith(".zip"):
                 with zipfile.ZipFile(local_file_path, "r") as zip_ref:
-                    local_path = os.path.join(local_path, blockdx_bin_path[system])
+                    local_path = os.path.join(aio_path, blockdx_bin_path[system])
                     zip_ref.extractall(local_path)
                 logging.info("Zip file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
                 with tarfile.open(local_file_path, "r:gz") as tar:
-                    tar.extractall(local_path)
+                    tar.extractall(aio_path)
                 logging.info("Tar.gz file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".dmg"):
