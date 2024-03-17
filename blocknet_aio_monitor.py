@@ -2,12 +2,9 @@ import asyncio
 import ctypes
 # import cProfile
 import logging
-import os
-import platform
 import shutil
 import signal
 import time
-# from tkinter.filedialog import askdirectory
 import CTkToolTip
 import customtkinter as ctk
 import custom_tk_mods.ctkInputDialogMod as ctkInputDialogMod
@@ -22,70 +19,13 @@ from blockdx import BlockdxUtility
 from blocknet_core import BlocknetUtility
 from xlite import XliteUtility
 
-from conf_data import blockdx_selectedWallets_blocknet, aio_blocknet_data_path, blocknet_bin_name, blockdx_bin_name, \
-    xlite_bin_name, xlite_daemon_bin_name, blocknet_releases_urls, blockdx_releases_urls, xlite_releases_urls, \
-    blockdx_bin_path, blocknet_bin_path, xlite_bin_path
+from conf_data import (blockdx_selectedWallets_blocknet, blockdx_bin_path, blocknet_bin_path, xlite_bin_path)
+
+from widgets_strings import *
+from globals_variables import *
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
-
-system = platform.system()
-machine = platform.machine()
-blocknet_bin = blocknet_bin_name.get(system, None)
-xlite_daemon_bin = xlite_daemon_bin_name.get((system, machine))
-blockdx_bin = blockdx_bin_name.get(system, None)
-xlite_bin = xlite_bin_name.get(system, None)
-aio_folder = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path[system]))
-blocknet_release_url = blocknet_releases_urls.get((system, machine))
-blockdx_release_url = blockdx_releases_urls.get((system, machine))
-xlite_release_url = xlite_releases_urls.get((system, machine))
-
-# Define the gui strings
-app_title_string = "Blocknet AIO monitor"
-tooltip_howtouse = (f"{app_title_string}\n"
-                    "HOW TO USE:\n"
-                    "1/ (Optional) Set a custom path for the Blocknet core chain directory, or use the default path.\n"
-                    "2/ (Optional) Obtain the bootstrap for a faster initial synchronization of the Core wallet.\n"
-                    "3/ Start Blocknet Core, wait for it to synchronize with the network, and unlock it.\n"
-                    "4/ Start Block-DX.\n"
-                    "5/ Start Xlite, create a wallet, and carefully backup the mnemonic.")
-
-tooltip_blocknet_core_label_msg = "Blocknet Core is used to connect Xbridge to P2P network and expose it locally"
-tooltip_blockdx_label_msg = "Block-DX is a GUI for Xbridge API"
-tooltip_xlite_label_msg = "The XLite wallet allows you to manage a variety of digital assets in a single, noncustodial, lightweight, decentralized wallet. Compatible with Xbridge"
-
-blocknet_frame_title_string = "Blocknet Core Management:"
-blockdx_frame_title_string = " Block-DX Management:"
-xlite_frame_title_string = "XLite Management:"
-start_string = "Start"
-close_string = "Close"
-download_string = "Download"
-check_config_string = "Check Config"
-blocknet_set_custom_path_string = "Set Custom Path"
-blocknet_valid_config_string = "Blocknet Config\nFound"
-blocknet_not_valid_config_string = "Blocknet Config\nNot Found. Click Start to Initialize"
-blocknet_active_rpc_string = "RPC Connection\nActive"
-blocknet_inactive_rpc_string = "RPC Connection\nInactive"
-blocknet_data_path_created_string = "Data Path folder\ncreated"
-blocknet_data_path_notfound_string = "Data path folder\nnot created"
-blocknet_running_string = "Blocknet Process\nrunning"
-blocknet_not_running_string = "Blocknet Process\nnot running"
-blockdx_running_string = "Block-DX Process\nrunning"
-blockdx_not_running_string = "Block-DX Process\nnot running"
-blockdx_valid_config_string = "Block-DX Config\nFound & Blocknet RPC Active"
-blockdx_not_valid_config_string = "Block-DX Config\nNot Found. Click Start to Initialize"
-blockdx_missing_blocknet_config_string = "Block-DX need\nactive Blocknet RPC"
-xlite_running_string = "XLite Process\nrunning"
-xlite_not_running_string = "XLite Process\nnot running"
-xlite_valid_config_string = "XLite Config\nFound"
-xlite_not_valid_config_string = "XLite Config\nNot Found"
-xlite_daemon_running_string = "XLite-daemon Process\nrunning"
-xlite_daemon_not_running_string = "XLite-daemon Process\nnot running"
-xlite_daemon_valid_config_string = "XLite-daemon Config\nFound"
-xlite_daemon_not_valid_config_string = "XLite-daemon Config\nNot Found"
-xlite_reverse_proxy_not_running_string = "XLite-reverse-proxy\nProcess not running"
-xlite_store_password_string = "Store Password"
-xlite_stored_password_string = "Password Stored"
 
 button_width = 120
 gui_width = 400
@@ -436,7 +376,6 @@ class BlocknetGUI(ctk.CTk):
         if blockdx_boolvar:
             var_blockdx = "Delete"
             blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
-            # print(blockdx_folder)
             configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_folder)
             if self.blockdx_process_running or self.blockdx_utility.downloading_bin:
                 disable_button(self.bins_install_delete_blockdx_button)
@@ -581,11 +520,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_data_path_label = ctk.CTkLabel(self.blocknet_data_path_frame, text="Data Path: ")
         self.blocknet_data_path_label.grid(row=1, column=0, padx=5, pady=5, sticky="w")
 
-        # Entry for Data Path
-        text_length = len(self.blocknet_utility.data_folder)
-        # Calculate the width required for the text, ensuring a maximum of 250 characters
         width = 275
-        print(text_length, width)
         self.blocknet_data_path_entry_string_var = ctk.StringVar(value=self.blocknet_utility.data_folder)
         self.blocknet_data_path_entry = ctk.CTkEntry(self.blocknet_data_path_frame,
                                                      textvariable=self.blocknet_data_path_entry_string_var,

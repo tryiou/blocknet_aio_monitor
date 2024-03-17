@@ -1,39 +1,27 @@
-import io
-import platform
 import tarfile
 import zipfile
 import asyncio
 import psutil
 import requests
 import logging
-import os
 import subprocess
 import time
 import json
 import copy
-from contextlib import contextmanager
-import shutil
 
-from conf_data import blockdx_releases_urls, aio_blocknet_data_path, blockdx_bin_path, blockdx_default_paths, \
-    blockdx_selectedWallets_blocknet, blockdx_base_conf, blockdx_bin_name
+from conf_data import (blockdx_bin_path, blockdx_default_paths, blockdx_selectedWallets_blocknet, blockdx_base_conf)
+from globals_variables import *
 
 logging.basicConfig(level=logging.DEBUG)
-
-system = platform.system()
-machine = platform.machine()
-url = blockdx_releases_urls.get((system, machine))
-aio_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-if system == "Darwin":
-    volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
 
 
 class BlockdxUtility:
     def __init__(self):
         if system == "Darwin":
-            self.dmg_mount_path = f"/Volumes/{volume_name}"
-            self.blockdx_exe = os.path.join(aio_path, os.path.basename(url))
+            self.dmg_mount_path = f"/Volumes/{blockdx_volume_name}"
+            self.blockdx_exe = os.path.join(aio_folder, os.path.basename(blockdx_url))
         else:
-            self.blockdx_exe = os.path.join(aio_path, blockdx_bin_path[system], blockdx_bin_name[system])
+            self.blockdx_exe = os.path.join(aio_folder, blockdx_bin_path[system], blockdx_bin_name[system])
         self.binary_percent_download = None
         self.process_running = None
         self.blockdx_process = None
@@ -140,7 +128,7 @@ class BlockdxUtility:
                     logging.info("Volume is already mounted.")
                 full_path = os.path.join(self.dmg_mount_path, *blockdx_bin_name[system])
                 logging.info(
-                    f"volume_name: {volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
+                    f"volume_name: {blockdx_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 self.blockdx_process = subprocess.Popen([full_path],
                                                         stdout=subprocess.PIPE,
                                                         stderr=subprocess.PIPE,
@@ -228,7 +216,7 @@ class BlockdxUtility:
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
             remote_file_size = int(response.headers.get('Content-Length', 0))
-            local_file_path = os.path.join(aio_path, os.path.basename(url))
+            local_file_path = os.path.join(aio_folder, os.path.basename(url))
             logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
             bytes_downloaded = 0
             total = remote_file_size
@@ -243,20 +231,21 @@ class BlockdxUtility:
             local_file_size = os.path.getsize(local_file_path)
             if local_file_size != remote_file_size:
                 os.remove(local_file_path)
-                raise ValueError(f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
+                raise ValueError(
+                    f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
 
             logging.info(f"{os.path.basename(url)} downloaded successfully.")
 
             # Extract the archive
             if url.endswith(".zip"):
                 with zipfile.ZipFile(local_file_path, "r") as zip_ref:
-                    local_path = os.path.join(aio_path, blockdx_bin_path[system])
+                    local_path = os.path.join(aio_folder, blockdx_bin_path[system])
                     zip_ref.extractall(local_path)
                 logging.info("Zip file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
                 with tarfile.open(local_file_path, "r:gz") as tar:
-                    tar.extractall(aio_path)
+                    tar.extractall(aio_folder)
                 logging.info("Tar.gz file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".dmg"):

@@ -3,22 +3,19 @@ import shutil
 import threading
 import logging
 import subprocess
-import os
-import platform
-
 import psutil
 import requests
 import random
 import string
 import json
-import io
 import zipfile
 import tarfile
 from subprocess import check_output
 
-from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf, \
-    blocknet_bin_name, blocknet_bin_path, blocknet_releases_urls, blocknet_bootstrap_url, nodes_to_add, \
-    remote_xbridge_conf_url, remote_manifest_url, remote_blockchain_configuration_repo
+from conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
+                       blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
+                       remote_blockchain_configuration_repo)
+from globals_variables import *
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -26,11 +23,6 @@ logging.basicConfig(level=logging.DEBUG)
 # Disable log entries from the urllib3 module (used by requests)
 urllib3_logger = logging.getLogger('urllib3')
 urllib3_logger.setLevel(logging.WARNING)
-
-system = platform.system()
-machine = platform.machine()
-blocknet_bin = blocknet_bin_name.get(system, None)
-aio_data_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
 
 class BlocknetRPCClient:
@@ -74,7 +66,7 @@ class BlocknetRPCClient:
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
-        self.blocknet_exe = os.path.join(aio_data_path, *blocknet_bin_path, blocknet_bin)
+        self.blocknet_exe = os.path.join(aio_folder, *blocknet_bin_path, blocknet_bin)
         self.binary_percent_download = None
         self.parsed_wallet_confs = {}
         self.parsed_xbridge_confs = {}
@@ -449,14 +441,14 @@ class BlocknetUtility:
         if not self.data_folder:
             logging.error("No valid data folder provided to install bootstrap")
             return None
-        if not aio_data_path:
+        if not aio_folder:
             logging.error("No path provided for temporary storage")
             return None
 
         self.create_data_folder()
         self.checking_bootstrap = True
         filename = "Blocknet.zip"
-        local_file_path = os.path.join(aio_data_path, filename)
+        local_file_path = os.path.join(aio_folder, filename)
         remote_file_size = get_remote_file_size(blocknet_bootstrap_url)
         # Check if the file already exists on disk
         need_to_download = True
@@ -537,7 +529,7 @@ class BlocknetUtility:
         response.raise_for_status()
         if response.status_code == 200:
             remote_file_size = int(response.headers.get('Content-Length', 0))
-            local_file_path = os.path.join(aio_data_path, os.path.basename(url))
+            local_file_path = os.path.join(aio_folder, os.path.basename(url))
             logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
             bytes_downloaded = 0
             with open(local_file_path, "wb") as f:
@@ -551,18 +543,19 @@ class BlocknetUtility:
             local_file_size = os.path.getsize(local_file_path)
             if local_file_size != remote_file_size:
                 os.remove(local_file_path)
-                raise ValueError(f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
+                raise ValueError(
+                    f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
 
             logging.info(f"{os.path.basename(url)} downloaded successfully.")
 
             if url.endswith(".zip"):
                 with zipfile.ZipFile(local_file_path, "r") as zip_ref:
-                    zip_ref.extractall(aio_data_path)
+                    zip_ref.extractall(aio_folder)
                 logging.info("Zip file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
                 with tarfile.open(local_file_path, "r:gz") as tar:
-                    tar.extractall(aio_data_path)
+                    tar.extractall(aio_folder)
                 logging.info("Tar.gz file extracted successfully.")
                 os.remove(local_file_path)
         else:
@@ -624,7 +617,7 @@ def save_conf_to_file(conf_data, file_path):
 
 def retrieve_remote_conf(remote_url, subfolder, expected_filename):
     folder = "xb_conf"
-    local_conf_file = os.path.join(aio_data_path, folder, subfolder, expected_filename)
+    local_conf_file = os.path.join(aio_folder, folder, subfolder, expected_filename)
 
     if os.path.exists(local_conf_file):
         try:
@@ -669,7 +662,7 @@ def retrieve_xb_manifest():
     # remote_manifest_url
     folder = "xb_conf"
     filename = os.path.basename(remote_manifest_url)
-    local_manifest_file = os.path.join(aio_data_path, folder, filename)
+    local_manifest_file = os.path.join(aio_folder, folder, filename)
 
     if os.path.exists(local_manifest_file):
         try:

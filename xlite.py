@@ -1,28 +1,17 @@
 import asyncio
-import io
-import platform
 import tarfile
 import threading
 import zipfile
 import psutil
 import requests
 import logging
-import os
 import subprocess
 import time
 import json
-from contextlib import contextmanager
-from conf_data import (xlite_releases_urls, xlite_bin_path, xlite_bin_name, aio_blocknet_data_path,
-                       xlite_default_paths, xlite_daemon_default_paths)
+from conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths)
+from globals_variables import *
 
 logging.basicConfig(level=logging.DEBUG)
-
-system = platform.system()
-machine = platform.machine()
-aio_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
-url = xlite_releases_urls.get((system, machine))
-if system == "Darwin":
-    volume_name = ' '.join(os.path.splitext(os.path.basename(url))[0].split('-')[:-1])
 
 
 class XliteRPCClient:
@@ -67,10 +56,10 @@ class XliteRPCClient:
 class XliteUtility:
     def __init__(self):
         if system == "Darwin":
-            self.xlite_exe = os.path.join(aio_path, os.path.basename(url))
-            self.dmg_mount_path = f"/Volumes/{volume_name}"
+            self.xlite_exe = os.path.join(aio_folder, os.path.basename(xlite_url))
+            self.dmg_mount_path = f"/Volumes/{xlite_volume_name}"
         else:
-            self.xlite_exe = os.path.join(aio_path, xlite_bin_path[system], xlite_bin_name[system])
+            self.xlite_exe = os.path.join(aio_folder, xlite_bin_path[system], xlite_bin_name[system])
         self.binary_percent_download = None
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
@@ -229,7 +218,7 @@ class XliteUtility:
                     logging.info("Volume is already mounted.")
                 full_path = os.path.join(self.dmg_mount_path, *xlite_bin_name[system])
                 logging.info(
-                    f"volume_name: {volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
+                    f"volume_name: {xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 self.xlite_process = subprocess.Popen([full_path],
                                                       stdout=subprocess.PIPE,
                                                       stderr=subprocess.PIPE,
@@ -317,7 +306,7 @@ class XliteUtility:
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
             remote_file_size = int(response.headers.get('Content-Length', 0))
-            local_file_path = os.path.join(aio_path, os.path.basename(url))
+            local_file_path = os.path.join(aio_folder, os.path.basename(url))
             logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
             bytes_downloaded = 0
             with open(local_file_path, "wb") as f:
@@ -332,20 +321,21 @@ class XliteUtility:
             local_file_size = os.path.getsize(local_file_path)
             if local_file_size != remote_file_size:
                 os.remove(local_file_path)
-                raise ValueError(f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
+                raise ValueError(
+                    f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
 
             logging.info(f"{os.path.basename(url)} downloaded successfully.")
 
             # Extract the archive
             if url.endswith(".zip"):
                 with zipfile.ZipFile(local_file_path, "r") as zip_ref:
-                    local_path = os.path.join(aio_path, xlite_bin_path[system])
+                    local_path = os.path.join(aio_folder, xlite_bin_path[system])
                     zip_ref.extractall(local_path)
                 logging.info("Zip file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
                 with tarfile.open(local_file_path, "r:gz") as tar:
-                    tar.extractall(aio_path)
+                    tar.extractall(aio_folder)
                 logging.info("Tar.gz file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".dmg"):
