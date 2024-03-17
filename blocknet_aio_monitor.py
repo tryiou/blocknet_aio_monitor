@@ -207,16 +207,14 @@ class BlocknetGUI(ctk.CTk):
         signal.signal(signal.SIGTERM, self.handle_signal)
 
     def set_howtouse_tooltip(self):
-        # fg_color="#0f2742",
-        #                                                         entry_text_color="#123149"
         CTkToolTip.CTkToolTip(self.blocknet_core_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2,
-                              justify="left",bg_color="#0f2742")
+                              justify="left")
         CTkToolTip.CTkToolTip(self.blockdx_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2,
-                              justify="left",bg_color="#0f2742")
+                              justify="left")
         CTkToolTip.CTkToolTip(self.xlite_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2,
-                              justify="left",bg_color="#0f2742")
+                              justify="left")
         CTkToolTip.CTkToolTip(self.bins_download_frame, message=tooltip_howtouse, delay=1, follow=True, border_width=2,
-                              justify="left",bg_color="#0f2742")
+                              justify="left")
 
     def init_frames(self):
         self.bins_download_frame = ctk.CTkFrame(master=self)
@@ -467,7 +465,7 @@ class BlocknetGUI(ctk.CTk):
                                                                           message='', delay=1,
                                                                           follow=True,
                                                                           border_width=2,
-                                                                          justify="left",bg_color="#0f2742")
+                                                                          justify="left")
         self.bins_install_delete_blockdx_string_var = ctk.StringVar(value='')
         self.bins_install_delete_blockdx_button = ctk.CTkButton(self.bins_download_frame,
                                                                 state='normal',
@@ -478,7 +476,7 @@ class BlocknetGUI(ctk.CTk):
                                                                          message=blockdx_release_url, delay=1,
                                                                          follow=True,
                                                                          border_width=2,
-                                                                         justify="left",bg_color="#0f2742")
+                                                                         justify="left")
         self.bins_install_delete_xlite_string_var = ctk.StringVar(value='')
         self.bins_install_delete_xlite_button = ctk.CTkButton(self.bins_download_frame,
                                                               state='normal',
@@ -488,7 +486,7 @@ class BlocknetGUI(ctk.CTk):
         self.bins_install_delete_xlite_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_xlite_button,
                                                                        message=xlite_release_url, delay=1, follow=True,
                                                                        border_width=2,
-                                                                       justify="left",bg_color="#0f2742")
+                                                                       justify="left")
         self.blocknet_start_close_button_string_var = ctk.StringVar(value='')
         self.blocknet_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                          textvariable=self.blocknet_start_close_button_string_var,
@@ -539,7 +537,7 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_core_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0)
 
         CTkToolTip.CTkToolTip(self.blocknet_core_label, message=tooltip_blocknet_core_label_msg,
-                              delay=1.0, border_width=2, follow=True,bg_color="#0f2742")
+                              delay=1.0, border_width=2, follow=True)
 
         # Label for Data Path
         self.blocknet_data_path_label = ctk.CTkLabel(self.blocknet_title_frame, text="Data Path: ")
@@ -625,7 +623,7 @@ class BlocknetGUI(ctk.CTk):
         self.blockdx_label.grid(row=0, column=0, padx=5, pady=0)
 
         CTkToolTip.CTkToolTip(self.blockdx_label, message=tooltip_blockdx_label_msg,
-                              delay=1.0, border_width=2, follow=True,bg_color="#0f2742")
+                              delay=1.0, border_width=2, follow=True)
         # Checkboxes
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
         self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value='')
@@ -660,7 +658,7 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0)
 
         CTkToolTip.CTkToolTip(self.xlite_label, message=tooltip_xlite_label_msg,
-                              delay=1.0, border_width=2, follow=True,bg_color="#0f2742")
+                              delay=1.0, border_width=2, follow=True)
         # Checkboxes
         self.xlite_process_status_checkbox_state = ctk.BooleanVar()
         self.xlite_process_status_checkbox_string_var = ctk.StringVar(value='')
