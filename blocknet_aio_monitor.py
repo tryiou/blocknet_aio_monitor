@@ -13,7 +13,6 @@ import json
 import psutil
 import threading
 import PIL
-import PIL._tkinter_finder
 from threading import Thread
 from cryptography.fernet import Fernet
 
