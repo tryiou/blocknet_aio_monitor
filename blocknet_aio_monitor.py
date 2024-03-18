@@ -52,7 +52,7 @@ class BlocknetGUI(ctk.CTk):
         self.download_xlite_thread = None
         self.download_blockdx_thread = None
         self.download_blocknet_thread = None
-        self.update_status_thread = None
+        self.update_status_gui_thread = None
         self.blocknet_t1 = None
         self.blocknet_t2 = None
         self.xlite_t2 = None
@@ -209,9 +209,14 @@ class BlocknetGUI(ctk.CTk):
         # self.setup_xlite()
         # Update status for UI elements
         # Update process & pids for Blocknet Core, Block-DX & XLite
-        self.update_status_thread = Thread(target=self.update_status)
-        self.update_status_thread.daemon = True
-        self.update_status_thread.start()
+        self.update_status_gui_thread = Thread(target=self.update_status_gui)
+        self.update_status_gui_thread.daemon = True
+        self.update_status_gui_thread.start()
+
+        self.update_status_process_folder_thread = Thread(target=self.update_status_process_folder)
+        self.update_status_process_folder_thread.daemon = True
+        self.update_status_process_folder_thread.start()
+
         # Bind the close event to the on_close method
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         signal.signal(signal.SIGINT, self.handle_signal)
@@ -1156,6 +1161,68 @@ class BlocknetGUI(ctk.CTk):
         self.update_blockdx_start_close_button()
         self.update_blockdx_config_button_checkbox()
 
+    async def coroutine_update_status_xlite(self):
+        self.detect_new_xlite_install_and_add_to_xbridge()
+        self.update_xlite_process_status_checkbox()
+        self.update_xlite_start_close_button()
+        self.update_xlite_store_password_button()
+        self.update_xlite_daemon_process_status()
+        self.update_xlite_valid_config_checkbox()
+        self.update_xlite_daemon_valid_config_checkbox()
+
+    def update_status_gui(self):
+        async def run_coroutine(coroutine_func, delay=1):
+            while True:
+                await coroutine_func()
+                await asyncio.sleep(delay)
+
+        # Define a separate async function to run all coroutines
+        async def run_all_coroutines():
+            await asyncio.gather(
+                run_coroutine(self.coroutine_update_status_blocknet_core),
+                run_coroutine(self.coroutine_update_status_blockdx),
+                run_coroutine(self.coroutine_update_status_xlite),
+                run_coroutine(self.coroutine_update_bins_buttons)
+            )
+
+        # Run all coroutines within the asyncio event loop
+        asyncio.run(run_all_coroutines())
+
+    def update_status_process_folder(self):
+        async def run_coroutine(coroutine_func, delay=1):
+            while True:
+                await coroutine_func()
+                await asyncio.sleep(delay)
+
+        # Define a separate async function to run all coroutines
+        async def run_all_coroutines():
+            await asyncio.gather(
+                run_coroutine(self.coroutine_bins_check_aio_folder, delay=2),
+                run_coroutine(self.coroutine_check_processes, delay=2)
+            )
+
+        # Run all coroutines within the asyncio event loop
+        asyncio.run(run_all_coroutines())
+
+    # def update_status_old(self):
+    #     # Define an async function to run the coroutines concurrently
+    #     async def update_status_async():
+    #         coroutines = [
+    #             self.coroutine_update_status_blocknet_core(),
+    #             self.coroutine_update_status_blockdx(),
+    #             self.coroutine_update_status_xlite(),
+    #             self.coroutine_update_bins_buttons(),
+    #             self.coroutine_bins_check_aio_folder(),
+    #             self.coroutine_check_processes()
+    #         ]
+    #
+    #         await asyncio.gather(*coroutines)
+    #
+    #     # Run the async function using asyncio.run() to execute the coroutines
+    #     asyncio.run(update_status_async())
+    #     # Schedule the next update
+    #     self.after(1000, self.update_status)
+
     def detect_new_xlite_install_and_add_to_xbridge(self):
         # logging.info(f"detect_new_xlite_install_and_add_to_xbridge, valid_coins_rpc: {self.xlite_utility.valid_coins_rpc}, disable_daemons_conf_check: {self.disable_daemons_conf_check}")
         if not self.disable_daemons_conf_check and self.xlite_utility.valid_coins_rpc:
@@ -1166,36 +1233,6 @@ class BlocknetGUI(ctk.CTk):
             self.disable_daemons_conf_check = True
         if self.disable_daemons_conf_check and not self.xlite_utility.valid_coins_rpc:
             self.disable_daemons_conf_check = False
-
-    async def coroutine_update_status_xlite(self):
-        self.detect_new_xlite_install_and_add_to_xbridge()
-        self.update_xlite_process_status_checkbox()
-        self.update_xlite_start_close_button()
-        self.update_xlite_store_password_button()
-        self.update_xlite_daemon_process_status()
-        self.update_xlite_valid_config_checkbox()
-        self.update_xlite_daemon_valid_config_checkbox()
-
-    def update_status(self):
-        # Define an async function to run the coroutines concurrently
-        async def update_status_async():
-            coroutines = [
-                self.coroutine_update_status_blocknet_core(),
-                self.coroutine_update_status_blockdx(),
-                self.coroutine_update_status_xlite(),
-                self.coroutine_update_bins_buttons()
-            ]
-            if self.bins_should_check_aio_folder(max_delay=3.33):
-                coroutines.append(self.coroutine_bins_check_aio_folder())
-            if self.should_check_processes(max_delay=3.33):
-                coroutines.append(self.coroutine_check_processes())
-
-            await asyncio.gather(*coroutines)
-
-        # Run the async function using asyncio.run() to execute the coroutines
-        asyncio.run(update_status_async())
-        # Schedule the next update
-        self.after(1000, self.update_status)
 
     def bins_should_check_aio_folder(self, max_delay=5):
         current_time = time.time()
