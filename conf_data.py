@@ -129,3 +129,5 @@ blockdx_base_conf = {
     "autofillAddresses": False,
     "upgradedToV4": True
 }
+
+vc_redist_win_url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"

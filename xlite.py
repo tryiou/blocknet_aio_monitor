@@ -8,10 +8,70 @@ import logging
 import subprocess
 import time
 import json
-from conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths)
+from conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
 from globals_variables import *
 
 logging.basicConfig(level=logging.DEBUG)
+
+if system == 'Windows':
+    import winreg
+
+
+    def check_vc_redist_installed():
+        # Define the base key path
+        base_key_path = r"SOFTWARE\Classes\Installer\Dependencies\VC,redist.x64,amd64"
+        value_found = False
+        # Loop through versions from 14.00 to 14.99
+        for version in range(1400, 1500):
+            key_path = f"{base_key_path},{version // 100}.{version % 100:02d},bundle"
+            value_name = "DisplayName"
+
+            display_name = check_registry_value(key_path, value_name)
+            if display_name is not None:
+                logging.info(
+                    f"The value of {value_name} for version {version // 100}.{version % 100:02d} is: {display_name}")
+                value_found = True
+        # If no value is found, print a message
+
+        if not value_found:
+            logging.info("No vc_redist found.")
+            install_vc_redist(vc_redist_win_url)
+
+
+    def check_registry_value(key_path, value_name):
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+                value, _ = winreg.QueryValueEx(key, value_name)
+                return value
+        except FileNotFoundError:
+            return None
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
+
+
+    def install_vc_redist(url):
+        try:
+            # Parse filename from URL
+            installer_name = os.path.basename(url)
+
+            # Download the installer
+            with open(installer_name, 'wb') as file:
+                response = requests.get(url)
+                file.write(response.content)
+
+            # Command to run the installer silently
+            command = f"{installer_name} /install /quiet /norestart"
+
+            # Run the installer silently
+            subprocess.run(command, shell=True, check=True)
+            print("Visual C++ Redistributable installed successfully.")
+
+            # Remove the installer file after installation
+            os.remove(installer_name)
+
+        except Exception as e:
+            print(f"Error: {e}")
 
 
 class XliteRPCClient:
@@ -191,6 +251,10 @@ class XliteUtility:
             logging.info(f"XLITE-DAEMON: Parsed every coins conf {self.xlite_daemon_confs_local}")
 
     def start_xlite(self, retry_limit=3, retry_count=0, env_vars=[]):
+        if system == "Windows":
+            # check vcredist
+            check_vc_redist_installed()
+
         for var_dict in env_vars:
             for var_name, var_value in var_dict.items():
                 # logging.info(f"var_name: {var_name} var_value: {var_value}")
