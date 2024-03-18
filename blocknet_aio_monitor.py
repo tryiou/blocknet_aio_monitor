@@ -906,7 +906,8 @@ class BlocknetGUI(ctk.CTk):
                         shutil.rmtree(item_path)
 
     def start_or_close_blocknet(self):
-        disable_button(self.blocknet_start_close_button, img=self.start_greyed_img)
+        img = self.stop_greyed_img if self.blocknet_process_running else self.start_greyed_img
+        disable_button(self.blocknet_start_close_button, img=img)
         self.disable_start_blocknet_button = True
         if self.blocknet_process_running:
             self.blocknet_t1 = Thread(target=self.blocknet_utility.close_blocknet)
@@ -918,7 +919,8 @@ class BlocknetGUI(ctk.CTk):
         self.after(self.time_disable_button, self.enable_blocknet_start_button)
 
     def start_or_close_blockdx(self):
-        disable_button(self.blockdx_start_close_button, img=self.start_greyed_img)
+        img = self.stop_greyed_img if self.blockdx_process_running else self.start_greyed_img
+        disable_button(self.blockdx_start_close_button, img=img)
         self.disable_start_blockdx_button = True
         if self.blockdx_process_running:
             self.blockdx_t1 = Thread(target=self.blockdx_utility.close_blockdx)
@@ -930,13 +932,14 @@ class BlocknetGUI(ctk.CTk):
         self.after(self.time_disable_button, self.enable_blockdx_start_button)
 
     def start_or_close_xlite(self):
-        disable_button(self.xlite_start_close_button, img=self.start_greyed_img)
+        img = self.stop_greyed_img if self.xlite_process_running else self.start_greyed_img
+        disable_button(self.xlite_start_close_button, img=img)
         self.disable_start_xlite_button = True
         if self.xlite_process_running:
             self.xlite_t1 = Thread(target=self.xlite_utility.close_xlite)
             self.xlite_t1.start()
-
         else:
+            disable_button(self.xlite_start_close_button, img=self.start_greyed_img)
             if self.xlite_password:
                 env_vars = [{"CC_WALLET_PASS": self.xlite_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
             else:
