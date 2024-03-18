@@ -368,7 +368,7 @@ class BlocknetGUI(ctk.CTk):
         # Timer(interval=0.25, function=os._exit, args=(0,)).start()
 
     def adjust_theme(self):
-        if 'theme' in self.cfg:
+        if self.cfg and 'theme' in self.cfg:
             actual = ctk.get_appearance_mode()
             if self.cfg['theme'] != actual:
                 if actual == "Dark":
