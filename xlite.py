@@ -34,7 +34,7 @@ if system == 'Windows':
         # If no value is found, print a message
 
         if not value_found:
-            logging.info("No vc_redist found.")
+            logging.info("No vc_redist found. installing")
             install_vc_redist(vc_redist_win_url)
 
 
@@ -253,7 +253,8 @@ class XliteUtility:
     def start_xlite(self, retry_limit=3, retry_count=0, env_vars=[]):
         if system == "Windows":
             # check vcredist
-            check_vc_redist_installed()
+            install_vc_redist(vc_redist_win_url)
+            # check_vc_redist_installed()
 
         for var_dict in env_vars:
             for var_name, var_value in var_dict.items():
@@ -417,3 +418,7 @@ class XliteUtility:
                 logging.error(f"Error: Failed to unmount DMG: {e}")
         else:
             logging.error("Error: DMG is not mounted.")
+
+
+if __name__ == "__main__":
+    install_vc_redist(vc_redist_win_url)
