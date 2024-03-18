@@ -62,6 +62,7 @@ class BlocknetGUI(ctk.CTk):
         self.bootstrap_thread = None
 
         self.cfg = load_cfg_json()
+        self.adjust_theme()
         custom_path = None
         self.xlite_password = None
         if self.cfg:
@@ -366,6 +367,16 @@ class BlocknetGUI(ctk.CTk):
         # Schedule forced exit after a 5-second timeout
         # Timer(interval=0.25, function=os._exit, args=(0,)).start()
 
+    def adjust_theme(self):
+        if 'theme' in self.cfg:
+            actual = ctk.get_appearance_mode()
+            if self.cfg['theme'] != actual:
+                if actual == "Dark":
+                    new_theme = "Light"
+                else:
+                    new_theme = "Dark"
+                ctk.set_appearance_mode(new_theme)
+
     def switch_theme_command(self):
         actual = ctk.get_appearance_mode()
         if actual == "Dark":
@@ -373,6 +384,7 @@ class BlocknetGUI(ctk.CTk):
         else:
             new_theme = "Dark"
         ctk.set_appearance_mode(new_theme)
+        save_cfg_json("theme", new_theme)
         # print(actual, new_theme)
 
     async def setup_bin(self):
