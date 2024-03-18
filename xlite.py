@@ -253,8 +253,8 @@ class XliteUtility:
     def start_xlite(self, retry_limit=3, retry_count=0, env_vars=[]):
         if system == "Windows":
             # check vcredist
-            install_vc_redist(vc_redist_win_url)
-            # check_vc_redist_installed()
+            # install_vc_redist(vc_redist_win_url)
+            check_vc_redist_installed()
 
         for var_dict in env_vars:
             for var_name, var_value in var_dict.items():
