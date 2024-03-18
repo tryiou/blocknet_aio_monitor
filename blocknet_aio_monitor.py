@@ -405,7 +405,7 @@ class BlocknetGUI(ctk.CTk):
         self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=155,
                                               anchor='w')
         self.bins_header_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="nw")
-        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s', width=245)
+        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s', width=237)
         self.bins_found_label.grid(row=0, column=4, pady=5, sticky='ew')
         # os.path.join(aio_folder, "img", "dark.png")
 
