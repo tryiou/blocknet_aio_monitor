@@ -280,74 +280,65 @@ class BlocknetGUI(ctk.CTk):
         xlite_boolvar = self.xlite_bin_installed_boolvar.get()
 
         if blocknet_boolvar:
-            self.bins_install_delete_blocknet_button.configure(image=self.delete_img)
             # var_blocknet = "Delete"
             var_blocknet = ""
             blocknet_folder = os.path.join(aio_folder, blocknet_bin_path[0])
             configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_folder)
             if self.blocknet_process_running or self.blocknet_utility.downloading_bin:
-                disable_button(self.bins_install_delete_blocknet_button)
+                disable_button(self.bins_install_delete_blocknet_button, img=self.delete_greyed_img)
             else:
-                enable_button(self.bins_install_delete_blocknet_button)
+                enable_button(self.bins_install_delete_blocknet_button, img=self.delete_img)
         else:
-            self.bins_install_delete_blocknet_button.configure(image=self.install_img)
             configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_release_url)
             percent_buff = self.blocknet_utility.binary_percent_download
             dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
             var_blocknet = dl_string if self.blocknet_utility.downloading_bin else ""
             if self.blocknet_utility.downloading_bin:
-                # self.bins_install_delete_blocknet_button.configure(textvariable = self.bins_install_delete_blocknet_string_var)
-                disable_button(self.bins_install_delete_blocknet_button)
+                disable_button(self.bins_install_delete_blocknet_button, img=self.install_greyed_img)
             else:
-                # self.bins_install_delete_blocknet_button.configure(textvariable = None)
-                enable_button(self.bins_install_delete_blocknet_button)
+                enable_button(self.bins_install_delete_blocknet_button, img=self.install_img)
 
         if blockdx_boolvar:
-            self.bins_install_delete_blockdx_button.configure(image=self.delete_img)
             # var_blockdx = "Delete"
             var_blockdx = ""
             blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
             configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_folder)
             if self.blockdx_process_running or self.blockdx_utility.downloading_bin:
-                disable_button(self.bins_install_delete_blockdx_button)
+                disable_button(self.bins_install_delete_blockdx_button, img=self.delete_greyed_img)
             else:
-                enable_button(self.bins_install_delete_blockdx_button)
+                enable_button(self.bins_install_delete_blockdx_button, img=self.delete_img)
         else:
-            self.bins_install_delete_blockdx_button.configure(image=self.install_img)
             configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_release_url)
             percent_buff = self.blockdx_utility.binary_percent_download
             dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
             var_blockdx = dl_string if self.blockdx_utility.downloading_bin else ""
             if self.blockdx_utility.downloading_bin:
-                disable_button(self.bins_install_delete_blockdx_button)
+                disable_button(self.bins_install_delete_blockdx_button, img=self.install_greyed_img)
             else:
-                enable_button(self.bins_install_delete_blockdx_button)
+                enable_button(self.bins_install_delete_blockdx_button, img=self.install_img)
 
         if xlite_boolvar:
-            self.bins_install_delete_xlite_button.configure(image=self.delete_img)
             # var_xlite = "Delete"
             var_xlite = ""
             folder = os.path.join(aio_folder, xlite_bin_path.get(system))
             configure_tooltip_text(self.bins_install_delete_xlite_tooltip, folder)
             if self.xlite_process_running or self.xlite_utility.downloading_bin:
-                disable_button(self.bins_install_delete_xlite_button)
+                disable_button(self.bins_install_delete_xlite_button, img=self.delete_greyed_img)
             else:
-                enable_button(self.bins_install_delete_xlite_button)
+                enable_button(self.bins_install_delete_xlite_button, img=self.delete_img)
         else:
-            self.bins_install_delete_xlite_button.configure(image=self.install_img)
             configure_tooltip_text(self.bins_install_delete_xlite_tooltip, xlite_release_url)
             percent_buff = self.xlite_utility.binary_percent_download
             dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
             var_xlite = dl_string if self.xlite_utility.downloading_bin else ""
             if self.xlite_utility.downloading_bin:
-                disable_button(self.bins_install_delete_xlite_button)
+                disable_button(self.bins_install_delete_xlite_button, img=self.install_greyed_img)
             else:
-                enable_button(self.bins_install_delete_xlite_button)
+                enable_button(self.bins_install_delete_xlite_button, img=self.install_img)
 
         self.bins_install_delete_blocknet_string_var.set(var_blocknet)
         self.bins_install_delete_blockdx_string_var.set(var_blockdx)
         self.bins_install_delete_xlite_string_var.set(var_xlite)
-
 
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))
@@ -392,13 +383,25 @@ class BlocknetGUI(ctk.CTk):
                                                                                                PIL.Image.LANCZOS))
         self.start_img = ctk.CTkImage(
             light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "start-50.png")).resize(resize, PIL.Image.LANCZOS))
+        self.start_greyed_img = ctk.CTkImage(
+            light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "start-50_greyed.png")).resize(resize,
+                                                                                                   PIL.Image.LANCZOS))
         self.stop_img = ctk.CTkImage(
             light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "stop-50.png")).resize(resize, PIL.Image.LANCZOS))
+        self.stop_greyed_img = ctk.CTkImage(
+            light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "stop-50_greyed.png")).resize(resize,
+                                                                                                  PIL.Image.LANCZOS))
         self.delete_img = ctk.CTkImage(
             light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "delete-50.png")).resize(resize, PIL.Image.LANCZOS))
+        self.delete_greyed_img = ctk.CTkImage(
+            light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "delete-50_greyed.png")).resize(resize,
+                                                                                                    PIL.Image.LANCZOS))
         self.install_img = ctk.CTkImage(
             light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "installer-50.png")).resize(resize,
                                                                                                 PIL.Image.LANCZOS))
+        self.install_greyed_img = ctk.CTkImage(
+            light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "installer-50_greyed.png")).resize(resize,
+                                                                                                       PIL.Image.LANCZOS))
 
         self.bin_title_frame = ctk.CTkFrame(self.bins_download_frame)
         self.bin_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky="ew")
@@ -449,7 +452,7 @@ class BlocknetGUI(ctk.CTk):
                                                                     text='',
                                                                     variable=self.xlite_bin_installed_boolvar,
                                                                     state='disabled',
-                                                                      corner_radius=25)
+                                                                    corner_radius=25)
         width = 50
         self.bins_install_delete_blocknet_string_var = ctk.StringVar(value='')
         self.bins_install_delete_blocknet_button = ctk.CTkButton(self.bins_download_frame,
@@ -471,7 +474,7 @@ class BlocknetGUI(ctk.CTk):
                                                                 textvariable=self.bins_install_delete_blockdx_string_var,
                                                                 # text="",
                                                                 width=width,
-                                                                 corner_radius=25)
+                                                                corner_radius=25)
         self.bins_install_delete_blockdx_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_blockdx_button,
                                                                          message=blockdx_release_url, delay=1,
                                                                          follow=True,
@@ -484,7 +487,7 @@ class BlocknetGUI(ctk.CTk):
                                                               textvariable=self.bins_install_delete_xlite_string_var,
                                                               # text="",
                                                               width=width,
-                                                                 corner_radius=25)
+                                                              corner_radius=25)
         self.bins_install_delete_xlite_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_xlite_button,
                                                                        message=xlite_release_url, delay=1, follow=True,
                                                                        border_width=2,
@@ -496,7 +499,7 @@ class BlocknetGUI(ctk.CTk):
                                                          text="",
                                                          command=self.start_or_close_blocknet,
                                                          width=width + 10,
-                                                                 corner_radius=25)
+                                                         corner_radius=25)
         self.blockdx_start_close_button_string_var = ctk.StringVar(value='')
         self.blockdx_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                         image=self.transparent_img,
@@ -504,7 +507,7 @@ class BlocknetGUI(ctk.CTk):
                                                         text="",
                                                         command=self.start_or_close_blockdx,
                                                         width=width + 10,
-                                                                 corner_radius=25)
+                                                        corner_radius=25)
         self.xlite_start_close_button_string_var = ctk.StringVar(value='')
         self.xlite_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                       image=self.transparent_img,
@@ -512,7 +515,7 @@ class BlocknetGUI(ctk.CTk):
                                                       text="",
                                                       command=self.start_or_close_xlite,
                                                       width=width + 10,
-                                                                 corner_radius=25)
+                                                      corner_radius=25)
         x = 0
         y = 0
 
@@ -850,19 +853,19 @@ class BlocknetGUI(ctk.CTk):
             self.download_xlite_command()
 
     def download_blocknet_command(self):
-        disable_button(self.bins_install_delete_blocknet_button)
+        disable_button(self.bins_install_delete_blocknet_button, img=self.install_greyed_img)
         self.download_blocknet_thread = Thread(target=self.blocknet_utility.download_blocknet_bin)
         self.download_blocknet_thread.daemon = True
         self.download_blocknet_thread.start()
 
     def download_blockdx_command(self):
-        disable_button(self.bins_install_delete_blockdx_button)
+        disable_button(self.bins_install_delete_blockdx_button, img=self.install_greyed_img)
         self.download_blockdx_thread = Thread(target=self.blockdx_utility.download_blockdx_bin)
         self.download_blockdx_thread.daemon = True
         self.download_blockdx_thread.start()
 
     def download_xlite_command(self):
-        disable_button(self.bins_install_delete_xlite_button)
+        disable_button(self.bins_install_delete_xlite_button, img=self.install_greyed_img)
         self.download_xlite_thread = Thread(target=self.xlite_utility.download_xlite_bin)
         self.download_xlite_thread.daemon = True
         self.download_xlite_thread.start()
@@ -903,7 +906,7 @@ class BlocknetGUI(ctk.CTk):
                         shutil.rmtree(item_path)
 
     def start_or_close_blocknet(self):
-        disable_button(self.blocknet_start_close_button)
+        disable_button(self.blocknet_start_close_button, img=self.start_greyed_img)
         self.disable_start_blocknet_button = True
         if self.blocknet_process_running:
             self.blocknet_t1 = Thread(target=self.blocknet_utility.close_blocknet)
@@ -915,7 +918,7 @@ class BlocknetGUI(ctk.CTk):
         self.after(self.time_disable_button, self.enable_blocknet_start_button)
 
     def start_or_close_blockdx(self):
-        disable_button(self.blockdx_start_close_button)
+        disable_button(self.blockdx_start_close_button, img=self.start_greyed_img)
         self.disable_start_blockdx_button = True
         if self.blockdx_process_running:
             self.blockdx_t1 = Thread(target=self.blockdx_utility.close_blockdx)
@@ -927,7 +930,7 @@ class BlocknetGUI(ctk.CTk):
         self.after(self.time_disable_button, self.enable_blockdx_start_button)
 
     def start_or_close_xlite(self):
-        disable_button(self.xlite_start_close_button)
+        disable_button(self.xlite_start_close_button, img=self.start_greyed_img)
         self.disable_start_xlite_button = True
         if self.xlite_process_running:
             self.xlite_t1 = Thread(target=self.xlite_utility.close_xlite)
@@ -965,9 +968,6 @@ class BlocknetGUI(ctk.CTk):
         var = close_string if self.blocknet_process_running else start_string
         self.blocknet_start_close_button_string_var.set(var)
 
-        img = self.stop_img if self.blocknet_process_running else self.start_img
-        self.blocknet_start_close_button.configure(image=img)
-
         enabled = (not self.blocknet_utility.downloading_bin and
                    not self.disable_start_blocknet_button and
                    not self.blocknet_utility.checking_bootstrap)
@@ -976,9 +976,11 @@ class BlocknetGUI(ctk.CTk):
         #     f", self.disable_start_blocknet_button: {self.disable_start_blocknet_button}, enabled: {enabled}"
         # )
         if enabled:
-            enable_button(self.blocknet_start_close_button)
+            img = self.stop_img if self.blocknet_process_running else self.start_img
+            enable_button(self.blocknet_start_close_button, img=img)
         else:
-            disable_button(self.blocknet_start_close_button)
+            img = self.stop_greyed_img if self.blocknet_process_running else self.start_greyed_img
+            disable_button(self.blocknet_start_close_button, img=img)
 
     def update_blocknet_process_status_checkbox(self):
         # blocknet_process_status_checkbox_string_var
@@ -1039,16 +1041,15 @@ class BlocknetGUI(ctk.CTk):
         var = close_string if self.blockdx_process_running else start_string
         self.blockdx_start_close_button_string_var.set(var)
 
-        img = self.stop_img if self.blockdx_process_running else self.start_img
-        self.blockdx_start_close_button.configure(image=img)
-
         enabled = (self.blockdx_process_running or (not self.blockdx_utility.downloading_bin and
                                                     self.blocknet_utility.valid_rpc) and
                    not self.disable_start_blockdx_button)
         if enabled:
-            enable_button(self.blockdx_start_close_button)
+            img = self.stop_img if self.blockdx_process_running else self.start_img
+            enable_button(self.blockdx_start_close_button, img=img)
         else:
-            disable_button(self.blockdx_start_close_button)
+            img = self.stop_greyed_img if self.blockdx_process_running else self.start_greyed_img
+            disable_button(self.blockdx_start_close_button, img=img)
 
     def update_blockdx_config_button_checkbox(self):
         # blockdx_valid_config_checkbox_state
@@ -1095,15 +1096,15 @@ class BlocknetGUI(ctk.CTk):
         var = close_string if self.xlite_process_running else start_string
         self.xlite_start_close_button_string_var.set(var)
 
-        img = self.stop_img if self.xlite_process_running else self.start_img
-        self.xlite_start_close_button.configure(image=img)
-
         # xlite_start_close_button
         disable_start_close_button = self.xlite_utility.downloading_bin or self.disable_start_xlite_button
         if not disable_start_close_button:
-            enable_button(self.xlite_start_close_button)
+            img = self.stop_img if self.xlite_process_running else self.start_img
+            # self.xlite_start_close_button.configure(image=img)
+            enable_button(self.xlite_start_close_button, img=img)
         else:
-            disable_button(self.xlite_start_close_button)
+            img = self.stop_greyed_img if self.xlite_process_running else self.start_greyed_img
+            disable_button(self.xlite_start_close_button, img=img)
 
     def update_xlite_store_password_button(self):
         # xlite_store_password_button
@@ -1400,14 +1401,18 @@ def decrypt_password(encrypted_password, key):
     return decrypted_password.decode()
 
 
-def enable_button(button):
+def enable_button(button, img=None):
     if button.cget("state") == ctk.DISABLED:
         button.configure(state=ctk.NORMAL)
+    if img:
+        button.configure(image=img)
 
 
-def disable_button(button):
+def disable_button(button, img=None):
     if button.cget("state") == ctk.NORMAL:
         button.configure(state=ctk.DISABLED)
+    if img:
+        button.configure(image=img)
 
 
 def run_gui():
