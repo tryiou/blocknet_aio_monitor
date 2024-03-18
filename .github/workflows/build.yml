@@ -136,6 +136,11 @@ jobs:
           }
           Write-Host "VERSION_NUMBER: $env:VERSION_NUMBER"
 
+
+      - name: Debug VERSION_NUMBER
+        run: |
+          echo "VERSION_NUMBER: $env:VERSION_NUMBER"
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v3
         with:
@@ -150,7 +155,9 @@ jobs:
       - name: Build executable on Windows
         run: |
           pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName "${{ github.workspace }}/dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-windows-x86_64.exe"
+          $newName = "${{ github.workspace }}/dist/blocknet_aio_monitor-$env:VERSION_NUMBER-windows-x86_64.exe"
+          Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName $newName
+
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-win
