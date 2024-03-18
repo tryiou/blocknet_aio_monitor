@@ -12,7 +12,7 @@ import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import json
 import psutil
 import threading
-import PIL
+from PIL import Image
 import PIL._tkinter_finder
 from threading import Thread
 from cryptography.fernet import Fernet
