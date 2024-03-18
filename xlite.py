@@ -19,21 +19,13 @@ if system == 'Windows':
 
     def check_vc_redist_installed():
         # Define the base key path
-        base_key_path = r"SOFTWARE\Classes\Installer\Dependencies\VC,redist.x64,amd64"
-        value_found = False
-        # Loop through versions from 14.00 to 14.99
-        for version in range(1400, 1500):
-            key_path = f"{base_key_path},{version // 100}.{version % 100:02d},bundle"
-            value_name = "DisplayName"
+        base_key_path = r"SOFTWARE\Classes\Installer\Dependencies\Microsoft.VS.VC_RuntimeMinimumVSU_amd64,v14"
+        value_name = "DisplayName"
 
-            display_name = check_registry_value(key_path, value_name)
-            if display_name is not None:
-                logging.info(
-                    f"The value of {value_name} for version {version // 100}.{version % 100:02d} is: {display_name}")
-                value_found = True
-        # If no value is found, print a message
-
-        if not value_found:
+        display_name = check_registry_value(base_key_path, value_name)
+        if display_name is not None:
+            return True
+        else:
             logging.info("No vc_redist found. installing")
             install_vc_redist(vc_redist_win_url)
 
