@@ -127,10 +127,10 @@ jobs:
 
       - name: Set VERSION_NUMBER
         run: |
-          if ("${{ github.ref }}" -like "refs/tags/v*") {
-            Write-Host "VERSION_NUMBER=${{ github.ref_name }}" >> $env:GITHUB_ENV
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $env:VERSION_NUMBER = $env:GITHUB_REF -replace 'refs/tags/v', ''
           } else {
-            Write-Host "VERSION_NUMBER=" >> $env:GITHUB_ENV
+            $env:VERSION_NUMBER = ''
           }
 
       - name: Set up Python 3.10
