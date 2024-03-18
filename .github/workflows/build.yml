@@ -38,13 +38,13 @@ jobs:
       - name: Build executable on Ubuntu
         run: |
           pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-linux
+          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ github.ref_name }}-linux-x86_64
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-linux
           path: |
-            dist/blocknet_aio_monitor-linux
+            dist/blocknet_aio_monitor-${{ github.ref_name }}-linux-x86_64
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -53,7 +53,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor-linux
+            dist/blocknet_aio_monitor-${{ github.ref_name }}-linux-x86_64
 
   build-macos-12:
     runs-on: macos-12
@@ -77,20 +77,20 @@ jobs:
           which python
           pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mkdir -p my_bin
-          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor-macos
+          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor-${{ github.ref_name }}-macos-x86_64
 
       - name: Create DMG file
         run: |
           mkdir -p dmg
           hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/blocknet_aio_monitor-macos-base.dmg
-          hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-macos.dmg
+          hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-${{ github.ref_name }}-macos-x86_64.dmg
 
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-macos-12
           path: |
-            dmg/blocknet_aio_monitor-macos.dmg
+            dmg/blocknet_aio_monitor-${{ github.ref_name }}-macos-x86_64.dmg
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -99,7 +99,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dmg/blocknet_aio_monitor-macos.dmg
+            dmg/blocknet_aio_monitor-${{ github.ref_name }}-macos-x86_64.dmg
 
   build-windows:
     runs-on: windows-latest
@@ -121,13 +121,12 @@ jobs:
       - name: Build executable on Windows
         run: |
           pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName "${{ github.workspace }}/dist/blocknet_aio_monitor-windows.exe"
-
+          Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName "${{ github.workspace }}/dist/blocknet_aio_monitor-${{ github.ref_name }}-windows-x86_64.exe"
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-win
           path: |
-            dist/blocknet_aio_monitor-windows.exe
+            dist/blocknet_aio_monitor-${{ github.ref_name }}-windows-x86_64.exe
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -136,4 +135,4 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor-windows.exe
+            dist/blocknet_aio_monitor-${{ github.ref_name }}-windows-x86_64.exe
