@@ -127,14 +127,14 @@ jobs:
 
       - name: Set VERSION_NUMBER
         run: |
-          Write-Host "GitHub ref: $env:GITHUB_REF"
-          if ($env:GITHUB_REF -like 'refs/tags/v*') {
-            $env:VERSION_NUMBER = $env:GITHUB_REF -replace 'refs/tags/v', ''
-            Write-Host "Extracted tag: $env:VERSION_NUMBER"
-          } else {
-            $env:VERSION_NUMBER = ''
-          }
-          Write-Host "VERSION_NUMBER: $env:VERSION_NUMBER"
+          Write-Host "GitHub ref: $GITHUB_REF"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION_NUMBER=${GITHUB_REF#refs/tags/v}
+            Write-Host "Extracted tag: $VERSION_NUMBER"
+          else
+            VERSION_NUMBER=""
+          fi
+          echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
 
       - name: Debug VERSION_NUMBER
         run: |
