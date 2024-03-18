@@ -3,22 +3,19 @@ import shutil
 import threading
 import logging
 import subprocess
-import os
-import platform
-
 import psutil
 import requests
 import random
 import string
 import json
-import io
 import zipfile
 import tarfile
 from subprocess import check_output
 
-from conf_data import remote_blocknet_conf_url, aio_blocknet_data_path, blocknet_default_paths, base_xbridge_conf, \
-    blocknet_bin_name, blocknet_bin_path, blocknet_releases_urls, blocknet_bootstrap_url, nodes_to_add, \
-    remote_xbridge_conf_url, remote_manifest_url, remote_blockchain_configuration_repo
+from conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
+                       blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
+                       remote_blockchain_configuration_repo)
+from globals_variables import *
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -26,11 +23,6 @@ logging.basicConfig(level=logging.DEBUG)
 # Disable log entries from the urllib3 module (used by requests)
 urllib3_logger = logging.getLogger('urllib3')
 urllib3_logger.setLevel(logging.WARNING)
-
-system = platform.system()
-machine = platform.machine()
-blocknet_bin = blocknet_bin_name.get(system, None)
-aio_data_path = os.path.expandvars(os.path.expanduser(aio_blocknet_data_path.get(system)))
 
 
 class BlocknetRPCClient:
@@ -74,6 +66,8 @@ class BlocknetRPCClient:
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
+        self.blocknet_exe = os.path.join(aio_folder, *blocknet_bin_path, blocknet_bin)
+        self.binary_percent_download = None
         self.parsed_wallet_confs = {}
         self.parsed_xbridge_confs = {}
         self.checking_bootstrap = False
@@ -147,21 +141,18 @@ class BlocknetUtility:
         if retry_count >= retry_limit:
             logging.error("Retry limit exceeded. Unable to start Blocknet.")
             return
-        blocknet_exe = os.path.join(aio_data_path, *blocknet_bin_path, blocknet_bin)
 
-        if not os.path.exists(blocknet_exe):
-            self.downloading_bin = True
-            logging.info(f"Blocknet executable not found at {blocknet_exe}. Downloading...")
-            download_blocknet_bin()
-            self.downloading_bin = False
+        if not os.path.exists(self.blocknet_exe):
+            logging.info(f"Blocknet executable not found at {self.blocknet_exe}. Downloading...")
+            self.download_blocknet_bin()
         try:
             # Start the Blocknet process using subprocess with custom data folder argument
-            self.blocknet_process = subprocess.Popen([blocknet_exe, f"-datadir={self.data_folder}"],
+            self.blocknet_process = subprocess.Popen([self.blocknet_exe, f"-datadir={self.data_folder}"],
                                                      stdout=subprocess.PIPE,
                                                      stderr=subprocess.PIPE,
                                                      stdin=subprocess.PIPE,
                                                      start_new_session=True)
-            logging.info(f"Started Blocknet process: {blocknet_exe} with data directory: {self.data_folder}")
+            logging.info(f"Started Blocknet process: {self.blocknet_exe} with data directory: {self.data_folder}")
         except Exception as e:
             logging.error(f"Error: {e}")
 
@@ -450,47 +441,56 @@ class BlocknetUtility:
         if not self.data_folder:
             logging.error("No valid data folder provided to install bootstrap")
             return None
-        if not aio_data_path:
+        if not aio_folder:
             logging.error("No path provided for temporary storage")
             return None
 
         self.create_data_folder()
         self.checking_bootstrap = True
         filename = "Blocknet.zip"
-        temp_file_path = os.path.join(aio_data_path, filename)
+        local_file_path = os.path.join(aio_folder, filename)
         remote_file_size = get_remote_file_size(blocknet_bootstrap_url)
         # Check if the file already exists on disk
         need_to_download = True
-        if os.path.exists(temp_file_path):
+        if os.path.exists(local_file_path):
             # Compare the size of the local file with the remote file
-            local_file_size = os.path.getsize(temp_file_path)
+            local_file_size = os.path.getsize(local_file_path)
 
             if local_file_size == remote_file_size:
                 logging.info("Bootstrap file already exists on disk and matches the remote file.")
                 need_to_download = False
             else:
                 logging.info("Local bootstrap file exists but does not match the remote file. Re-downloading...")
-                os.remove(temp_file_path)  # Remove the local file and proceed with download
+                os.remove(local_file_path)  # Remove the local file and proceed with download
 
         try:
             if need_to_download:
-                logging.info("Downloading Blocknet bootstrap...")
-                with open(temp_file_path, 'wb') as f:
-
-                    r = requests.get(blocknet_bootstrap_url, stream=True)
-                    r.raise_for_status()
-                    bytes_downloaded = 0
-                    total = remote_file_size
-                    for chunk in r.iter_content(chunk_size=8192 * 2):
-                        if chunk:
-                            f.write(chunk)
-                            bytes_downloaded += len(chunk)
-                            self.bootstrap_percent_download = (bytes_downloaded / total) * 100
+                with open(local_file_path, 'wb') as f:
+                    # Set timeout values in seconds
+                    connection_timeout = 5
+                    read_timeout = 30
+                    response = requests.get(blocknet_bootstrap_url, stream=True,
+                                            timeout=(connection_timeout, read_timeout))
+                    response.raise_for_status()
+                    if response.status_code == 200:
+                        logging.info(
+                            f"Downloading {blocknet_bootstrap_url} to {local_file_size}, remote size: {int(remote_file_size / 1024)} kb")
+                        bytes_downloaded = 0
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+                                bytes_downloaded += len(chunk)
+                                self.bootstrap_percent_download = (bytes_downloaded / remote_file_size) * 100
+                    else:
+                        logging.error("Failed to download the Blocknet Bootstrap.")
                 self.bootstrap_percent_download = None
-                local_file_size = os.path.getsize(temp_file_path)
+
+                local_file_size = os.path.getsize(local_file_path)
                 if local_file_size != remote_file_size:
-                    raise ValueError("Downloaded bootstrap file size doesn't match the expected size.")
-                logging.info("Bootstrap downloaded successfully.")
+                    os.remove(local_file_path)
+                    raise ValueError(f"Downloaded {filename} file size doesn't match the expected size. Deleting it")
+
+                logging.info(f"{filename} Bootstrap downloaded successfully.")
 
             to_delete = ['blocks', 'chainstate', 'indexes', 'peers.dat', 'banlist.dat']
             for item_name in to_delete:
@@ -506,7 +506,7 @@ class BlocknetUtility:
                         logging.info(f"{item_name} deleted successfully.")
 
             logging.info("Extracting bootstrap...")
-            with zipfile.ZipFile(temp_file_path, "r") as zip_ref:
+            with zipfile.ZipFile(local_file_path, "r") as zip_ref:
                 zip_ref.extractall(self.data_folder)
             logging.info("Extraction completed.")
 
@@ -516,6 +516,52 @@ class BlocknetUtility:
         finally:
             self.checking_bootstrap = False
 
+    def download_blocknet_bin(self):
+        self.downloading_bin = True
+        url = blocknet_releases_urls.get((system, machine))
+        if url is None:
+            raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+
+        # Set timeout values in seconds
+        connection_timeout = 10
+        read_timeout = 30
+        response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
+        response.raise_for_status()
+        if response.status_code == 200:
+            remote_file_size = int(response.headers.get('Content-Length', 0))
+            local_file_path = os.path.join(aio_folder, os.path.basename(url))
+            logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+            bytes_downloaded = 0
+            with open(local_file_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
+                    if chunk:  # Filter out keep-alive new chunks
+                        f.write(chunk)
+                        bytes_downloaded += len(chunk)
+                        self.binary_percent_download = (bytes_downloaded / remote_file_size) * 100
+            self.binary_percent_download = None
+
+            local_file_size = os.path.getsize(local_file_path)
+            if local_file_size != remote_file_size:
+                os.remove(local_file_path)
+                raise ValueError(
+                    f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
+
+            logging.info(f"{os.path.basename(url)} downloaded successfully.")
+
+            if url.endswith(".zip"):
+                with zipfile.ZipFile(local_file_path, "r") as zip_ref:
+                    zip_ref.extractall(aio_folder)
+                logging.info("Zip file extracted successfully.")
+                os.remove(local_file_path)
+            elif url.endswith(".tar.gz"):
+                with tarfile.open(local_file_path, "r:gz") as tar:
+                    tar.extractall(aio_folder)
+                logging.info("Tar.gz file extracted successfully.")
+                os.remove(local_file_path)
+        else:
+            print("Failed to download the Blocknet binary.")
+        self.downloading_bin = False
+
 
 def get_remote_file_size(url):
     """
@@ -524,26 +570,6 @@ def get_remote_file_size(url):
     r = requests.head(url)
     r.raise_for_status()
     return int(r.headers.get('content-length', 0))
-
-
-def download_blocknet_bin():
-    url = blocknet_releases_urls.get((system, machine))
-    if url is None:
-        raise ValueError(f"Unsupported OS or architecture {system} {machine}")
-
-    response = requests.get(url)
-    if response.status_code == 200:
-        # Extract the archive from memory
-        if url.endswith(".zip"):
-            with zipfile.ZipFile(io.BytesIO(response.content), "r") as zip_ref:
-                zip_ref.extractall(aio_data_path)
-        elif url.endswith(".tar.gz"):
-            with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as tar:
-                tar.extractall(aio_data_path)
-        else:
-            print("Unsupported archive format.")
-    else:
-        print("Failed to download the Blocknet binary.")
 
 
 def get_pid(name):
@@ -591,7 +617,7 @@ def save_conf_to_file(conf_data, file_path):
 
 def retrieve_remote_conf(remote_url, subfolder, expected_filename):
     folder = "xb_conf"
-    local_conf_file = os.path.join(aio_data_path, folder, subfolder, expected_filename)
+    local_conf_file = os.path.join(aio_folder, folder, subfolder, expected_filename)
 
     if os.path.exists(local_conf_file):
         try:
@@ -636,7 +662,7 @@ def retrieve_xb_manifest():
     # remote_manifest_url
     folder = "xb_conf"
     filename = os.path.basename(remote_manifest_url)
-    local_manifest_file = os.path.join(aio_data_path, folder, filename)
+    local_manifest_file = os.path.join(aio_folder, folder, filename)
 
     if os.path.exists(local_manifest_file):
         try:

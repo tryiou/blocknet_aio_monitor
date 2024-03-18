@@ -24,6 +24,14 @@ jobs:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
 
+      - name: Set VERSION_NUMBER
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "VERSION_NUMBER=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "VERSION_NUMBER=" >> $GITHUB_ENV
+          fi
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v3
         with:
@@ -37,14 +45,14 @@ jobs:
 
       - name: Build executable on Ubuntu
         run: |
-          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-linux
+          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-linux-x86_64
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-linux
           path: |
-            dist/blocknet_aio_monitor-linux
+            dist/blocknet_aio_monitor-*
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -53,13 +61,22 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor-linux
+            dist/blocknet_aio_monitor-*
 
   build-macos-12:
     runs-on: macos-12
+
     steps:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
+
+      - name: Set VERSION_NUMBER
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "VERSION_NUMBER=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "VERSION_NUMBER=" >> $GITHUB_ENV
+          fi
 
       - name: Set up Python using Homebrew
         run: |
@@ -75,22 +92,22 @@ jobs:
           pip install pyinstaller
           python --version
           which python
-          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mkdir -p my_bin
-          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor-macos
+          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-macos-x86_64
 
       - name: Create DMG file
         run: |
           mkdir -p dmg
           hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/blocknet_aio_monitor-macos-base.dmg
-          hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-macos.dmg
+          hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-macos-x86_64.dmg
 
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-macos-12
           path: |
-            dmg/blocknet_aio_monitor-macos.dmg
+            dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-macos-x86_64.dmg
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -99,13 +116,28 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dmg/blocknet_aio_monitor-macos.dmg
+            dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-macos-x86_64.dmg
 
   build-windows:
     runs-on: windows-latest
+
     steps:
       - uses: actions/checkout@v3
         if: github.event.pull_request.draft == false
+
+      - name: Set VERSION_NUMBER
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $VERSION_NUMBER = $env:GITHUB_REF -replace 'refs/tags/', ''
+            Write-Host "Extracted tag: $VERSION_NUMBER"
+          } else {
+            $VERSION_NUMBER = ""
+          }
+          echo "VERSION_NUMBER=$VERSION_NUMBER" >> $env:GITHUB_ENV
+
+      - name: Debug VERSION_NUMBER
+        run: |
+          Write-Host "DEBUG: VERSION_NUMBER = $env:VERSION_NUMBER"
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v3
@@ -120,14 +152,21 @@ jobs:
 
       - name: Build executable on Windows
         run: |
-          pyinstaller --noconfirm --onefile --windowed --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName "${{ github.workspace }}/dist/blocknet_aio_monitor-windows.exe"
+          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+
+      - name: Rename executable
+        run: |
+          $newName = "${{ github.workspace }}/dist/blocknet_aio_monitor-$env:VERSION_NUMBER-windows-x86_64.exe"
+          Write-Host "DEBUG: New filename = $newName"
+          Rename-Item -Path "${{ github.workspace }}/dist/blocknet_aio_monitor.exe" -NewName $newName
+          Write-Host "DEBUG: Rename command executed successfully"
+
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-win
           path: |
-            dist/blocknet_aio_monitor-windows.exe
+            dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-windows-x86_64.exe
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -136,4 +175,4 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor-windows.exe
+            dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-windows-x86_64.exe

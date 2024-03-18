@@ -3,3 +3,4 @@ requests==2.31.0
 cryptography==42.0.5
 customtkinter==5.2.2
 CTkToolTip==0.8
+pillow==10.2.0
