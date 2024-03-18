@@ -37,7 +37,7 @@ jobs:
 
       - name: Build executable on Ubuntu
         run: |
-          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme"  --add-data "img/img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-linux
 
       - uses: actions/upload-artifact@v3
@@ -75,7 +75,7 @@ jobs:
           pip install pyinstaller
           python --version
           which python
-          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme"  --add-data "img/img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mkdir -p my_bin
           mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor-macos
 
