@@ -188,6 +188,14 @@ class BlocknetGUI(ctk.CTk):
 
         self.init_setup()
 
+    async def setup_management_sections(self):
+        await asyncio.gather(
+            self.setup_bin(),
+            self.setup_blocknet_core(),
+            self.setup_blockdx(),
+            self.setup_xlite()
+        )
+
     def init_setup(self):
         self.title(app_title_string)
         self.resizable(False, False)
@@ -196,10 +204,11 @@ class BlocknetGUI(ctk.CTk):
         self.set_howtouse_tooltip()
 
         # Call functions to setup management sections
-        self.setup_bin()
-        self.setup_blocknet_core()
-        self.setup_blockdx()
-        self.setup_xlite()
+        asyncio.run(self.setup_management_sections())
+        # self.setup_bin()
+        # self.setup_blocknet_core()
+        # self.setup_blockdx()
+        # self.setup_xlite()
         # Update status for UI elements
         # Update process & pids for Blocknet Core, Block-DX & XLite
         self.update_status_thread = Thread(target=self.update_status)
@@ -414,10 +423,10 @@ class BlocknetGUI(ctk.CTk):
         logging.info("Closing application...")
         terminate_all_threads()
         logging.info("Threads terminated.")
-        self.destroy()
-        logging.info("Tkinter GUI destroyed.")
+        os._exit(0)
+        # self.destroy()
+        # logging.info("Tkinter GUI destroyed.")
         # Schedule forced exit after a 5-second timeout
-        os._exit
         # Timer(interval=0.25, function=os._exit, args=(0,)).start()
 
     def switch_theme_command(self):
@@ -429,7 +438,7 @@ class BlocknetGUI(ctk.CTk):
         ctk.set_appearance_mode(new_theme)
         # print(actual, new_theme)
 
-    def setup_bin(self):
+    async def setup_bin(self):
         self.bin_title_frame = ctk.CTkFrame(self.bins_download_frame)
         self.bin_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky="ew")
         self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=140,
@@ -556,7 +565,7 @@ class BlocknetGUI(ctk.CTk):
         # Button for starting or closing Xlite
         self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=(8, 2), pady=(2, 5), sticky='ew')
 
-    def setup_blocknet_core(self):
+    async def setup_blocknet_core(self):
         # Frame for Data Path label and entry
         self.blocknet_title_frame = ctk.CTkFrame(self.blocknet_core_frame)
         self.blocknet_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky="ew")
@@ -644,7 +653,7 @@ class BlocknetGUI(ctk.CTk):
         #                                                   width=button_width)
         # self.blocknet_check_config_button.grid(row=3, column=3, sticky="e")
 
-    def setup_blockdx(self):
+    async def setup_blockdx(self):
         self.blockdx_title_frame = ctk.CTkFrame(self.blockdx_frame)
         self.blockdx_title_frame.grid(row=0, column=0, columnspan=2, padx=(5, 2), pady=5, sticky="ew")
         # Label for Block-dx frame
@@ -681,7 +690,7 @@ class BlocknetGUI(ctk.CTk):
         #                                                  width=button_width, state='disabled')
         # self.blockdx_check_config_button.grid(row=1, column=1, sticky="e")
 
-    def setup_xlite(self):
+    async def setup_xlite(self):
         self.xlite_title_frame = ctk.CTkFrame(self.xlite_frame)
         self.xlite_title_frame.grid(row=0, column=0, columnspan=4, padx=5, pady=5, sticky="ew")
         width = 350
@@ -1428,7 +1437,7 @@ def run_gui():
         app.mainloop()
     except KeyboardInterrupt:
         print("GUI execution terminated by user.")
-        app.on_close()
+        # app.on_close()
         # sys.exit(0)
     except Exception as e:
         # Log the error to a file
