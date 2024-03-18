@@ -437,15 +437,18 @@ class BlocknetUtility:
         if self.data_folder and not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
 
+    def create_aio_folder(self):
+        if aio_folder and not os.path.exists(aio_folder):
+            os.makedirs(aio_folder)
+
     def download_bootstrap(self):
-        if not self.data_folder:
-            logging.error("No valid data folder provided to install bootstrap")
-            return None
+        self.create_data_folder()
+        self.create_aio_folder()
+
         if not aio_folder:
             logging.error("No path provided for temporary storage")
             return None
 
-        self.create_data_folder()
         self.checking_bootstrap = True
         filename = "Blocknet.zip"
         local_file_path = os.path.join(aio_folder, filename)
