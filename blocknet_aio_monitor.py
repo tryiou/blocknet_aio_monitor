@@ -439,8 +439,8 @@ class BlocknetGUI(ctk.CTk):
         resize = (65, 30)
 
         self.theme_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(os.getcwd(), "img", "light.png")).resize(resize, PIL.Image.LANCZOS),
-            dark_image=PIL.Image.open(os.path.join(os.getcwd(), "img", "dark.png")).resize(resize, PIL.Image.LANCZOS),
+            light_image=PIL.Image.open(os.path.join(DIRPATH, "img", "light.png")).resize(resize, PIL.Image.LANCZOS),
+            dark_image=PIL.Image.open(os.path.join(DIRPATH, "img", "dark.png")).resize(resize, PIL.Image.LANCZOS),
             size=resize)
         bg_color = self.bin_title_frame.cget('fg_color')
         self.bins_button_switch_theme = ctk.CTkButton(self.bin_title_frame,
