@@ -10,7 +10,7 @@ import customtkinter as ctk
 import custom_tk_mods.ctkInputDialogMod as ctkInputDialogMod
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 from json import load as json_load
-from json import dumps as json_dump
+from json import dump as json_dump
 from json import JSONDecodeError
 from psutil import process_iter
 from PIL import Image
@@ -425,6 +425,8 @@ class BlocknetGUI(ctk.CTk):
         logging.info("Threads terminated.")
         os._exit(0)
         # self.destroy()
+        # exit()
+        #
         # logging.info("Tkinter GUI destroyed.")
         # Schedule forced exit after a 5-second timeout
         # Timer(interval=0.25, function=os._exit, args=(0,)).start()
