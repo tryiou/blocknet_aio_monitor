@@ -9,9 +9,7 @@ import CTkToolTip
 import customtkinter as ctk
 import custom_tk_mods.ctkInputDialogMod as ctkInputDialogMod
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
-from json import load as json_load
-from json import dump as json_dump
-from json import JSONDecodeError
+import json
 from psutil import process_iter
 from PIL import Image
 import PIL._tkinter_finder
@@ -1322,7 +1320,7 @@ def load_cfg_json():
     # Check if the file exists
     if os.path.exists(filename):
         with open(filename, 'r') as file:
-            cfg_data = json_load(file)
+            cfg_data = json.load(file)
         logging.info(f"Configuration file '{filename}' loaded.")
         return cfg_data
     else:
@@ -1364,8 +1362,8 @@ def remove_cfg_json_key(key):
     # Try loading the existing JSON file
     try:
         with open(filename, 'r') as file:
-            cfg_data = json_load(file)
-    except (FileNotFoundError, JSONDecodeError):
+            cfg_data = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
         # If file doesn't exist or JSON decoding error occurs, return without modifying anything
         logging.error(f"Failed to load JSON file: {filename}")
         return
@@ -1376,7 +1374,7 @@ def remove_cfg_json_key(key):
         del cfg_data[key]
         # Save the modified dictionary back to the file
         with open(filename, 'w') as file:
-            json_dump(cfg_data, file)
+            json.dump(cfg_data, file)
         logging.info(f"Key '{key}' was removed from configuration file: {filename}")
     else:
         logging.warning(f"Key '{key}' not found in configuration file: {filename}")
@@ -1390,8 +1388,8 @@ def save_cfg_json(key, data):
     # Try loading the existing JSON file
     try:
         with open(filename, 'r') as file:
-            cfg_data = json_load(file)
-    except (FileNotFoundError, JSONDecodeError):
+            cfg_data = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
         # If file doesn't exist or JSON decoding error occurs, create a new empty dictionary
         cfg_data = {}
 
@@ -1400,7 +1398,7 @@ def save_cfg_json(key, data):
 
     # Save to file
     with open(filename, 'w') as file:
-        json_dump(cfg_data, file)
+        json.dump(cfg_data, file)
     logging.info(f"{key} {data} was saved to configuration file: {filename}")
 
 
