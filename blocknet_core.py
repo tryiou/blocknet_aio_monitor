@@ -445,10 +445,6 @@ class BlocknetUtility:
         self.create_data_folder()
         self.create_aio_folder()
 
-        if not aio_folder:
-            logging.error("No path provided for temporary storage")
-            return None
-
         self.checking_bootstrap = True
         filename = "Blocknet.zip"
         local_file_path = os.path.join(aio_folder, filename)

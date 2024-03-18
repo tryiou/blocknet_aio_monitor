@@ -130,4 +130,5 @@ blockdx_base_conf = {
     "upgradedToV4": True
 }
 
+# https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022
 vc_redist_win_url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
