@@ -128,7 +128,7 @@ jobs:
       - name: Set VERSION_NUMBER
         run: |
           if ($env:GITHUB_REF -like 'refs/tags/v*') {
-            $VERSION_NUMBER = $env:GITHUB_REF -replace 'refs/tags/v', ''
+            $VERSION_NUMBER = $env:GITHUB_REF -replace 'refs/tags/', ''
             Write-Host "Extracted tag: $VERSION_NUMBER"
           } else {
             $VERSION_NUMBER = ""
