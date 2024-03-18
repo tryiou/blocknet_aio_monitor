@@ -9,12 +9,13 @@ import CTkToolTip
 import customtkinter as ctk
 import custom_tk_mods.ctkInputDialogMod as ctkInputDialogMod
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
-import json
-import psutil
-import threading
+from json import load as json_load
+from json import dumps as json_dump
+from json import JSONDecodeError
+from psutil import process_iter
 from PIL import Image
 import PIL._tkinter_finder
-from threading import Thread
+from threading import Thread, Timer, enumerate, current_thread
 from cryptography.fernet import Fernet
 
 from blockdx import BlockdxUtility
@@ -416,7 +417,8 @@ class BlocknetGUI(ctk.CTk):
         self.destroy()
         logging.info("Tkinter GUI destroyed.")
         # Schedule forced exit after a 5-second timeout
-        threading.Timer(interval=1, function=os._exit, args=(0,)).start()
+        os._exit
+        # Timer(interval=0.25, function=os._exit, args=(0,)).start()
 
     def switch_theme_command(self):
         actual = ctk.get_appearance_mode()
@@ -445,7 +447,7 @@ class BlocknetGUI(ctk.CTk):
         bg_color = self.bin_title_frame.cget('fg_color')
         self.bins_button_switch_theme = ctk.CTkButton(self.bin_title_frame,
                                                       image=self.theme_img, command=self.switch_theme_command, text='',
-                                                      fg_color=bg_color, hover=False,width=50)
+                                                      fg_color=bg_color, hover=False, width=50)
         self.bins_button_switch_theme.grid(row=0, column=5, padx=2, pady=2, sticky='ew')
         # Creating labels
         self.bins_blocknet_label = ctk.CTkLabel(self.bins_download_frame, text="Blocknet Core:")
@@ -1254,7 +1256,7 @@ class BlocknetGUI(ctk.CTk):
 
         try:
             # Get all processes
-            for proc in psutil.process_iter(['pid', 'name']):
+            for proc in process_iter(['pid', 'name']):
                 # Check if any process matches the Blocknet process name
                 if blocknet_bin == proc.info['name']:
                     blocknet_processes.append(proc.info['pid'])
@@ -1267,7 +1269,7 @@ class BlocknetGUI(ctk.CTk):
                 # Check if any process matches the Xlite-daemon process name
                 if xlite_daemon_bin == proc.info['name']:
                     xlite_daemon_processes.append(proc.info['pid'])
-        except psutil.Error as e:
+        except Exception as e:
             logging.warning(f"Error while checking processes: {e}")
 
         # Update Blocknet process status and store the PIDs
@@ -1309,7 +1311,7 @@ def load_cfg_json():
     # Check if the file exists
     if os.path.exists(filename):
         with open(filename, 'r') as file:
-            cfg_data = json.load(file)
+            cfg_data = json_load(file)
         logging.info(f"Configuration file '{filename}' loaded.")
         return cfg_data
     else:
@@ -1319,8 +1321,8 @@ def load_cfg_json():
 
 def terminate_all_threads():
     logging.info("Terminating all threads...")
-    for thread in threading.enumerate():
-        if thread != threading.current_thread():
+    for thread in enumerate():
+        if thread != current_thread():
             logging.info(f"Terminating thread: {thread.name}")
             thread.join(timeout=0.25)  # Terminate thread
             logging.info(f"Thread {thread.name} terminated")
@@ -1351,8 +1353,8 @@ def remove_cfg_json_key(key):
     # Try loading the existing JSON file
     try:
         with open(filename, 'r') as file:
-            cfg_data = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
+            cfg_data = json_load(file)
+    except (FileNotFoundError, JSONDecodeError):
         # If file doesn't exist or JSON decoding error occurs, return without modifying anything
         logging.error(f"Failed to load JSON file: {filename}")
         return
@@ -1363,7 +1365,7 @@ def remove_cfg_json_key(key):
         del cfg_data[key]
         # Save the modified dictionary back to the file
         with open(filename, 'w') as file:
-            json.dump(cfg_data, file)
+            json_dump(cfg_data, file)
         logging.info(f"Key '{key}' was removed from configuration file: {filename}")
     else:
         logging.warning(f"Key '{key}' not found in configuration file: {filename}")
@@ -1377,8 +1379,8 @@ def save_cfg_json(key, data):
     # Try loading the existing JSON file
     try:
         with open(filename, 'r') as file:
-            cfg_data = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
+            cfg_data = json_load(file)
+    except (FileNotFoundError, JSONDecodeError):
         # If file doesn't exist or JSON decoding error occurs, create a new empty dictionary
         cfg_data = {}
 
@@ -1387,7 +1389,7 @@ def save_cfg_json(key, data):
 
     # Save to file
     with open(filename, 'w') as file:
-        json.dump(cfg_data, file)
+        json_dump(cfg_data, file)
     logging.info(f"{key} {data} was saved to configuration file: {filename}")
 
 
