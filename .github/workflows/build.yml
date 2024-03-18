@@ -37,14 +37,15 @@ jobs:
 
       - name: Build executable on Ubuntu
         run: |
+          VERSION_NUMBER=$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
           pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ github.ref_name }}-linux-x86_64
+          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${VERSION_NUMBER}-linux-x86_64
 
       - uses: actions/upload-artifact@v3
         with:
           name: artifacts-linux
           path: |
-            dist/blocknet_aio_monitor-${{ github.ref_name }}-linux-x86_64
+            dist/blocknet_aio_monitor-*
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
@@ -53,7 +54,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor-${{ github.ref_name }}-linux-x86_64
+            dist/blocknet_aio_monitor-*
 
   build-macos-12:
     runs-on: macos-12
