@@ -402,7 +402,7 @@ class BlocknetGUI(ctk.CTk):
 
         self.bin_title_frame = ctk.CTkFrame(self.bins_download_frame)
         self.bin_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky="ew")
-        self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=140,
+        self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=155,
                                               anchor='w')
         self.bins_header_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="nw")
         self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s', width=245)
