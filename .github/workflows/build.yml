@@ -127,11 +127,14 @@ jobs:
 
       - name: Set VERSION_NUMBER
         run: |
+          Write-Host "GitHub ref: $env:GITHUB_REF"
           if ($env:GITHUB_REF -like 'refs/tags/v*') {
             $env:VERSION_NUMBER = $env:GITHUB_REF -replace 'refs/tags/v', ''
+            Write-Host "Extracted tag: $env:VERSION_NUMBER"
           } else {
             $env:VERSION_NUMBER = ''
           }
+          Write-Host "VERSION_NUMBER: $env:VERSION_NUMBER"
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v3
