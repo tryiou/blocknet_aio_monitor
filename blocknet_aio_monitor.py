@@ -533,6 +533,10 @@ class BlocknetGUI(ctk.CTk):
                                                          text="",
                                                          command=self.start_or_close_blocknet,
                                                          corner_radius=25)
+        self.blocknet_start_close_button_tooltip = CTkToolTip.CTkToolTip(self.blocknet_start_close_button, delay=1,
+                                                                         follow=True,
+                                                                         border_width=2,
+                                                                         justify="left")
         self.blockdx_start_close_button_string_var = ctk.StringVar(value='')
         self.blockdx_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                         image=self.transparent_img,
@@ -541,6 +545,10 @@ class BlocknetGUI(ctk.CTk):
                                                         text="",
                                                         command=self.start_or_close_blockdx,
                                                         corner_radius=25)
+        self.blockdx_start_close_button_tooltip = CTkToolTip.CTkToolTip(self.blockdx_start_close_button, delay=1,
+                                                                        follow=True,
+                                                                        border_width=2,
+                                                                        justify="left")
         self.xlite_start_close_button_string_var = ctk.StringVar(value='')
         self.xlite_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                       image=self.transparent_img,
@@ -549,6 +557,10 @@ class BlocknetGUI(ctk.CTk):
                                                       text="",
                                                       command=self.start_or_close_xlite,
                                                       corner_radius=25)
+        self.xlite_start_close_button_tooltip = CTkToolTip.CTkToolTip(self.xlite_start_close_button, delay=1,
+                                                                      follow=True,
+                                                                      border_width=2,
+                                                                      justify="left")
         x = 0
         y = 0
 
@@ -674,7 +686,6 @@ class BlocknetGUI(ctk.CTk):
 
         CTkToolTip.CTkToolTip(self.blockdx_label, message=tooltip_blockdx_label_msg,
                               delay=1.0, border_width=2, follow=True)
-
 
         # Checkboxes
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
@@ -1011,6 +1022,11 @@ class BlocknetGUI(ctk.CTk):
         var = close_string if self.blocknet_process_running else start_string
         self.blocknet_start_close_button_string_var.set(var)
 
+        if self.blocknet_process_running:
+            configure_tooltip_text(self.blocknet_start_close_button_tooltip, close_string)
+        else:
+            configure_tooltip_text(self.blocknet_start_close_button_tooltip, start_string)
+
         enabled = (not self.blocknet_utility.downloading_bin and
                    not self.disable_start_blocknet_button and
                    not self.blocknet_utility.bootstrap_checking)
@@ -1088,10 +1104,24 @@ class BlocknetGUI(ctk.CTk):
                                                     self.blocknet_utility.valid_rpc) and
                    not self.disable_start_blockdx_button)
         if enabled:
-            img = self.stop_img if self.blockdx_process_running else self.start_img
+            if self.blockdx_process_running:
+                configure_tooltip_text(self.blockdx_start_close_button_tooltip, msg=close_string)
+                img = self.stop_img
+            else:
+                configure_tooltip_text(self.blockdx_start_close_button_tooltip, msg=start_string)
+                img = self.start_img
             enable_button(self.blockdx_start_close_button, img=img)
+
+            # self.blockdx_start_close_button_tooltip.hide()
         else:
-            img = self.stop_greyed_img if self.blockdx_process_running else self.start_greyed_img
+            if self.blockdx_process_running:
+                img = self.stop_greyed_img
+                configure_tooltip_text(self.blockdx_start_close_button_tooltip,
+                                       msg=close_string)
+            else:
+                configure_tooltip_text(self.blockdx_start_close_button_tooltip,
+                                       msg=blockdx_missing_blocknet_config_string)
+                img = self.start_greyed_img
             disable_button(self.blockdx_start_close_button, img=img)
 
     def update_blockdx_config_button_checkbox(self):
@@ -1139,8 +1169,14 @@ class BlocknetGUI(ctk.CTk):
         var = close_string if self.xlite_process_running else start_string
         self.xlite_start_close_button_string_var.set(var)
 
+        if self.xlite_process_running:
+            configure_tooltip_text(self.xlite_start_close_button_tooltip, close_string)
+        else:
+            configure_tooltip_text(self.xlite_start_close_button_tooltip, start_string)
+
         # xlite_start_close_button
         disable_start_close_button = self.xlite_utility.downloading_bin or self.disable_start_xlite_button
+
         if not disable_start_close_button:
             img = self.stop_img if self.xlite_process_running else self.start_img
             # self.xlite_start_close_button.configure(image=img)
