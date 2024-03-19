@@ -466,7 +466,7 @@ class BlocknetUtility:
             if need_to_download:
                 with open(local_file_path, 'wb') as f:
                     # Set timeout values in seconds
-                    connection_timeout = 5
+                    connection_timeout = 10
                     read_timeout = 30
                     response = requests.get(blocknet_bootstrap_url, stream=True,
                                             timeout=(connection_timeout, read_timeout))

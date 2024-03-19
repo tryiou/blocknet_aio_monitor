@@ -438,6 +438,21 @@ class BlocknetGUI(ctk.CTk):
         self.bins_blocknet_label = ctk.CTkLabel(self.bins_download_frame, text="Blocknet Core:")
         self.bins_blockdx_label = ctk.CTkLabel(self.bins_download_frame, text="Block-DX:")
         self.bins_xlite_label = ctk.CTkLabel(self.bins_download_frame, text="Xlite:")
+        CTkToolTip.CTkToolTip(self.bins_blocknet_label,
+                              message=tooltip_blocknet_core_label_msg, delay=1,
+                              follow=True,
+                              border_width=2,
+                              justify="left")
+        CTkToolTip.CTkToolTip(self.bins_blockdx_label,
+                              message=tooltip_blockdx_label_msg, delay=1,
+                              follow=True,
+                              border_width=2,
+                              justify="left")
+        CTkToolTip.CTkToolTip(self.bins_xlite_label,
+                              message=tooltip_xlite_label_msg, delay=1,
+                              follow=True,
+                              border_width=2,
+                              justify="left")
         self.blocknet_bin_installed_boolvar = ctk.BooleanVar(value=False)
         self.blockdx_bin_installed_boolvar = ctk.BooleanVar(value=False)
         self.xlite_bin_installed_boolvar = ctk.BooleanVar(value=False)
