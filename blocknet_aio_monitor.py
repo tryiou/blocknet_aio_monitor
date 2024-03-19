@@ -422,18 +422,21 @@ class BlocknetGUI(ctk.CTk):
 
         self.bin_title_frame = ctk.CTkFrame(self.bins_download_frame)
         self.bin_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky="ew")
-        self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:", width=155,
-                                              anchor='w')
-        self.bins_header_label.grid(row=0, column=0, columnspan=2, padx=5, pady=0, sticky="nw")
-        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s', width=237)
-        self.bins_found_label.grid(row=0, column=4, pady=5, sticky='ew')
+        self.bins_header_label = ctk.CTkLabel(self.bin_title_frame, text="Binaries Control panel:")  # width=155,
+        self.bins_header_label.grid(row=0, column=0, padx=5, pady=0, sticky="nw")
+        # Add an empty column between the header label and the found label
+        self.bin_title_frame.columnconfigure(1, weight=1)
+
+        self.bins_found_label = ctk.CTkLabel(self.bin_title_frame, text="Found:", anchor='s')
+        self.bins_found_label.grid(row=0, column=3, padx=(35, 0), pady=5)
         # os.path.join(aio_folder, "img", "dark.png")
 
+        self.bin_title_frame.columnconfigure(4, weight=2)
         bg_color = self.bin_title_frame.cget('fg_color')
         self.bins_button_switch_theme = ctk.CTkButton(self.bin_title_frame,
                                                       image=self.theme_img, command=self.switch_theme_command, text='',
-                                                      fg_color=bg_color, hover=False, width=50)
-        self.bins_button_switch_theme.grid(row=0, column=5, padx=2, pady=2, sticky='ew')
+                                                      fg_color=bg_color, hover=False, width=1)
+        self.bins_button_switch_theme.grid(row=0, column=5, padx=2, pady=2, sticky='e')
         # Creating labels
         self.bins_blocknet_label = ctk.CTkLabel(self.bins_download_frame, text="Blocknet Core:")
         self.bins_blockdx_label = ctk.CTkLabel(self.bins_download_frame, text="Block-DX:")
@@ -457,18 +460,14 @@ class BlocknetGUI(ctk.CTk):
         self.blockdx_bin_installed_boolvar = ctk.BooleanVar(value=False)
         self.xlite_bin_installed_boolvar = ctk.BooleanVar(value=False)
 
-        width = 150
         self.bins_blocknet_version_optionmenu = ctk.CTkOptionMenu(self.bins_download_frame,
                                                                   values=self.blocknet_version,
-                                                                  width=width,
                                                                   state='disabled')
         self.bins_blockdx_version_optionmenu = ctk.CTkOptionMenu(self.bins_download_frame,
                                                                  values=self.blockdx_version,
-                                                                 width=width,
                                                                  state='disabled')
         self.bins_xlite_version_optionmenu = ctk.CTkOptionMenu(self.bins_download_frame,
                                                                values=self.xlite_version,
-                                                               width=width,
                                                                state='disabled')
         self.bins_blocknet_found_checkbox = ctkCheckBoxMod.CTkCheckBox(self.bins_download_frame,
                                                                        text='',
@@ -485,17 +484,18 @@ class BlocknetGUI(ctk.CTk):
                                                                     variable=self.xlite_bin_installed_boolvar,
                                                                     state='disabled',
                                                                     corner_radius=25)
-        width = 50
+
         self.bins_install_delete_blocknet_string_var = ctk.StringVar(value='')
         self.bins_install_delete_blocknet_button = ctk.CTkButton(self.bins_download_frame,
                                                                  state='normal', image=self.transparent_img,
                                                                  command=self.install_delete_blocknet_command,
                                                                  # text="",
+                                                                 width=1,
                                                                  textvariable=self.bins_install_delete_blocknet_string_var,
-                                                                 width=width,
                                                                  corner_radius=25)
         self.bins_install_delete_blocknet_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_blocknet_button,
                                                                           message='', delay=1,
+                                                                          width=1,
                                                                           follow=True,
                                                                           border_width=2,
                                                                           justify="left")
@@ -504,11 +504,12 @@ class BlocknetGUI(ctk.CTk):
                                                                 state='normal', image=self.transparent_img,
                                                                 command=self.install_delete_blockdx_command,
                                                                 textvariable=self.bins_install_delete_blockdx_string_var,
+                                                                width=1,
                                                                 # text="",
-                                                                width=width,
                                                                 corner_radius=25)
         self.bins_install_delete_blockdx_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_blockdx_button,
                                                                          message=blockdx_release_url, delay=1,
+                                                                         width=1,
                                                                          follow=True,
                                                                          border_width=2,
                                                                          justify="left")
@@ -517,8 +518,8 @@ class BlocknetGUI(ctk.CTk):
                                                               state='normal', image=self.transparent_img,
                                                               command=self.install_delete_xlite_command,
                                                               textvariable=self.bins_install_delete_xlite_string_var,
+                                                              width=1,
                                                               # text="",
-                                                              width=width,
                                                               corner_radius=25)
         self.bins_install_delete_xlite_tooltip = CTkToolTip.CTkToolTip(self.bins_install_delete_xlite_button,
                                                                        message=xlite_release_url, delay=1, follow=True,
@@ -528,25 +529,25 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                          image=self.transparent_img,
                                                          # textvariable=self.blocknet_start_close_button_string_var,
+                                                         width=1,
                                                          text="",
                                                          command=self.start_or_close_blocknet,
-                                                         width=width + 10,
                                                          corner_radius=25)
         self.blockdx_start_close_button_string_var = ctk.StringVar(value='')
         self.blockdx_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                         image=self.transparent_img,
                                                         # textvariable=self.blockdx_start_close_button_string_var,
+                                                        width=1,
                                                         text="",
                                                         command=self.start_or_close_blockdx,
-                                                        width=width + 10,
                                                         corner_radius=25)
         self.xlite_start_close_button_string_var = ctk.StringVar(value='')
         self.xlite_start_close_button = ctk.CTkButton(self.bins_download_frame,
                                                       image=self.transparent_img,
                                                       # textvariable=self.xlite_start_close_button_string_var,
+                                                      width=1,
                                                       text="",
                                                       command=self.start_or_close_xlite,
-                                                      width=width + 10,
                                                       corner_radius=25)
         x = 0
         y = 0
@@ -561,15 +562,18 @@ class BlocknetGUI(ctk.CTk):
         self.bins_blocknet_found_checkbox.grid(row=x + 1, column=y + 2, padx=5, sticky=sticky)
         self.bins_blockdx_found_checkbox.grid(row=x + 2, column=y + 2, padx=5, sticky=sticky)
         self.bins_xlite_found_checkbox.grid(row=x + 3, column=y + 2, padx=5, pady=(2, 5), sticky=sticky)
-        button_sticky = 'e'
-        self.bins_install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=8, sticky=button_sticky)
-        self.bins_install_delete_blockdx_button.grid(row=x + 2, column=y + 3, padx=8, sticky=button_sticky)
-        self.bins_install_delete_xlite_button.grid(row=x + 3, column=y + 3, padx=8, pady=(2, 5), sticky=button_sticky)
-        self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=(8, 2), sticky='ew')
+        button_sticky = 'ew'
+        padx = (70, 8)
+        self.bins_install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=padx, sticky=button_sticky)
+        self.bins_install_delete_blockdx_button.grid(row=x + 2, column=y + 3, padx=padx, sticky=button_sticky)
+        self.bins_install_delete_xlite_button.grid(row=x + 3, column=y + 3, padx=padx, pady=(2, 5),
+                                                   sticky=button_sticky)
+        padx = (8, 8)
+        self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=padx, sticky='e')
         # Button for starting or closing Block-dx
-        self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=(8, 2), sticky='ew')
+        self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=padx, sticky='e')
         # Button for starting or closing Xlite
-        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=(8, 2), pady=(2, 5), sticky='ew')
+        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=padx, pady=(2, 5), sticky='e')
 
     async def setup_blocknet_core(self):
         # Frame for Data Path label and entry
@@ -670,6 +674,8 @@ class BlocknetGUI(ctk.CTk):
 
         CTkToolTip.CTkToolTip(self.blockdx_label, message=tooltip_blockdx_label_msg,
                               delay=1.0, border_width=2, follow=True)
+
+
         # Checkboxes
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
         self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value='')
@@ -678,7 +684,7 @@ class BlocknetGUI(ctk.CTk):
                                                                           variable=self.blockdx_process_status_checkbox_state,
                                                                           corner_radius=25,
                                                                           state='disabled')
-        self.blockdx_process_status_checkbox.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
+        self.blockdx_process_status_checkbox.grid(row=1, column=0, padx=10, pady=5, sticky="w")
 
         self.blockdx_valid_config_checkbox_state = ctk.BooleanVar()
         self.blockdx_valid_config_checkbox_string_var = ctk.StringVar(value='')
@@ -688,7 +694,7 @@ class BlocknetGUI(ctk.CTk):
                                                                         corner_radius=25,
                                                                         state='disabled',
                                                                         width=190)  # , disabledforeground='black')
-        self.blockdx_valid_config_checkbox.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
+        self.blockdx_valid_config_checkbox.grid(row=1, column=1, padx=10, pady=5, sticky="w")
 
         # Button for checking config
         # self.blockdx_check_config_button = ctk.CTkButton(self.blockdx_frame, text=check_config_string,
