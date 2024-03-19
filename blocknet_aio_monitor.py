@@ -590,8 +590,8 @@ class BlocknetGUI(ctk.CTk):
         self.blocknet_custom_path_button.grid(row=1, column=3, padx=2, pady=2, sticky="e")
 
         # Button for downloading blocknet bootstrap
-        self.blocknet_download_bootstrap_string_var = ctk.StringVar(value="Get Bootstrap")
-        self.blocknet_download_bootstrap_button = ctk.CTkButton(self.blocknet_title_frame,
+        self.blocknet_download_bootstrap_string_var = ctk.StringVar(value="")
+        self.blocknet_download_bootstrap_button = ctk.CTkButton(self.blocknet_title_frame, image=self.transparent_img,
                                                                 textvariable=self.blocknet_download_bootstrap_string_var,
                                                                 command=self.download_bootstrap_command,
                                                                 width=button_width)
@@ -843,7 +843,7 @@ class BlocknetGUI(ctk.CTk):
         self.disable_start_xlite_button = False
 
     def download_bootstrap_command(self):
-        disable_button(self.blocknet_download_bootstrap_button)
+        disable_button(self.blocknet_download_bootstrap_button, img=self.install_greyed_img)
         self.bootstrap_thread = Thread(target=self.blocknet_utility.download_bootstrap)
         self.bootstrap_thread.daemon = True
         self.bootstrap_thread.start()
@@ -966,20 +966,22 @@ class BlocknetGUI(ctk.CTk):
         self.after(self.time_disable_button, self.enable_xlite_start_button)
 
     def update_blocknet_bootstrap_button(self):
-        bootstrap_download_in_progress = bool(self.blocknet_utility.checking_bootstrap)
+        bootstrap_download_in_progress = bool(self.blocknet_utility.bootstrap_checking)
         enabled = (self.blocknet_utility.data_folder and not bootstrap_download_in_progress and
                    not self.blocknet_process_running)
         if enabled:
-            enable_button(self.blocknet_download_bootstrap_button)
+            enable_button(self.blocknet_download_bootstrap_button, img=self.install_img)
         else:
-            disable_button(self.blocknet_download_bootstrap_button)
+            disable_button(self.blocknet_download_bootstrap_button, img=self.install_greyed_img)
         if bootstrap_download_in_progress:
             if self.blocknet_utility.bootstrap_percent_download:
-                var = f"Progress: {self.blocknet_utility.bootstrap_percent_download:.1f}%"
+                var = f"{self.blocknet_utility.bootstrap_percent_download:.1f}%"
+            elif self.blocknet_utility.bootstrap_extracting:
+                var = "Unpacking"
             else:
                 var = "Loading"
         else:
-            var = "Get Bootstrap"
+            var = "Bootstrap"
         self.blocknet_download_bootstrap_string_var.set(var)
 
     def update_blocknet_start_close_button(self):
@@ -990,7 +992,7 @@ class BlocknetGUI(ctk.CTk):
 
         enabled = (not self.blocknet_utility.downloading_bin and
                    not self.disable_start_blocknet_button and
-                   not self.blocknet_utility.checking_bootstrap)
+                   not self.blocknet_utility.bootstrap_checking)
         # logging.debug(
         #     f"blocknet_utility.downloading_bin: {self.blocknet_utility.downloading_bin}"
         #     f", self.disable_start_blocknet_button: {self.disable_start_blocknet_button}, enabled: {enabled}"
@@ -1012,7 +1014,7 @@ class BlocknetGUI(ctk.CTk):
     def update_blocknet_custom_path_button(self):
         # blocknet_custom_path_button
         bootstrap_download_in_progress = (
-                self.blocknet_utility.checking_bootstrap or self.blocknet_utility.bootstrap_percent_download)
+                self.blocknet_utility.bootstrap_checking or self.blocknet_utility.bootstrap_percent_download)
         condition = (not self.blocknet_process_running and not bootstrap_download_in_progress)
         if condition:
             enable_button(self.blocknet_custom_path_button)

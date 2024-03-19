@@ -70,7 +70,8 @@ class BlocknetUtility:
         self.binary_percent_download = None
         self.parsed_wallet_confs = {}
         self.parsed_xbridge_confs = {}
-        self.checking_bootstrap = False
+        self.bootstrap_checking = False
+        self.bootstrap_extracting = False
         self.bootstrap_percent_download = None
         self.downloading_bin = False
         self.data_folder = get_blocknet_data_folder(custom_path)
@@ -445,7 +446,7 @@ class BlocknetUtility:
         self.create_data_folder()
         self.create_aio_folder()
 
-        self.checking_bootstrap = True
+        self.bootstrap_checking = True
         filename = "Blocknet.zip"
         local_file_path = os.path.join(aio_folder, filename)
         remote_file_size = get_remote_file_size(blocknet_bootstrap_url)
@@ -461,7 +462,6 @@ class BlocknetUtility:
             else:
                 logging.info("Local bootstrap file exists but does not match the remote file. Re-downloading...")
                 os.remove(local_file_path)  # Remove the local file and proceed with download
-
         try:
             if need_to_download:
                 with open(local_file_path, 'wb') as f:
@@ -473,7 +473,7 @@ class BlocknetUtility:
                     response.raise_for_status()
                     if response.status_code == 200:
                         logging.info(
-                            f"Downloading {blocknet_bootstrap_url} to {local_file_size}, remote size: {int(remote_file_size / 1024)} kb")
+                            f"Downloading {blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
                         bytes_downloaded = 0
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:
@@ -503,17 +503,18 @@ class BlocknetUtility:
                         logging.info(f"Deleting existing file: {item_name}...")
                         os.remove(item_path)
                         logging.info(f"{item_name} deleted successfully.")
-
             logging.info("Extracting bootstrap...")
             with zipfile.ZipFile(local_file_path, "r") as zip_ref:
+                self.bootstrap_extracting = True
                 zip_ref.extractall(self.data_folder)
+            self.bootstrap_extracting = False
             logging.info("Extraction completed.")
 
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}")
             self.bootstrap_percent_download = None
         finally:
-            self.checking_bootstrap = False
+            self.bootstrap_checking = False
 
     def download_blocknet_bin(self):
         self.downloading_bin = True
