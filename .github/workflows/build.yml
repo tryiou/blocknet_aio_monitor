@@ -94,7 +94,7 @@ jobs:
           which python
           pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mkdir -p my_bin
-          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-macos
+          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor
 
       - name: Create DMG file
         run: |
