@@ -253,27 +253,52 @@ class BlocknetGUI(ctk.CTk):
         xlite_present = False
 
         for item in os.listdir(aio_folder):
-            item_path = os.path.join(aio_folder, item)
-            if os.path.isdir(item_path):
-                # if a wrong version is found, delete it.
-                if 'blocknet-' in item:
-                    if blocknet_pruned_version in item:
-                        blocknet_present = True
-                    else:
-                        logging.info(f"deleting outdated version: {item_path}")
-                        shutil.rmtree(item_path)
-                elif 'BLOCK-DX-' in item:
-                    if blockdx_pruned_version in item:
-                        blockdx_present = True
-                    else:
-                        logging.info(f"deleting outdated version: {item_path}")
-                        shutil.rmtree(item_path)
-                elif 'XLite-' in item:
-                    if xlite_pruned_version in item:
-                        xlite_present = True
-                    else:
-                        logging.info(f"deleting outdated version: {item_path}")
-                        shutil.rmtree(item_path)
+            if system == "Darwin":
+                blockdx_filename = os.path.basename(blockdx_release_url)
+                xlite_filename = os.path.basename(xlite_release_url)
+                item_path = os.path.join(aio_folder, item)
+                if os.path.isdir(item_path):
+                    if 'blocknet-' in item:
+                        if blocknet_pruned_version in item:
+                            blocknet_present = True
+                        else:
+                            logging.info(f"deleting outdated version: {item_path}")
+                            shutil.rmtree(item_path)
+                elif os.path.isfile(item_path):
+                    if 'BLOCK-DX-' in item:
+                        if blockdx_filename in item:
+                            blockdx_present = True
+                        else:
+                            logging.info(f"deleting outdated version: {item_path}")
+                            os.remove(item_path)
+                    elif 'XLite-' in item:
+                        if xlite_filename in item:
+                            xlite_present = True
+                        else:
+                            logging.info(f"deleting outdated version: {item_path}")
+                            os.remove(item_path)
+            else:
+                item_path = os.path.join(aio_folder, item)
+                if os.path.isdir(item_path):
+                    # if a wrong version is found, delete it.
+                    if 'blocknet-' in item:
+                        if blocknet_pruned_version in item:
+                            blocknet_present = True
+                        else:
+                            logging.info(f"deleting outdated version: {item_path}")
+                            shutil.rmtree(item_path)
+                    elif 'BLOCK-DX-' in item:
+                        if blockdx_pruned_version in item:
+                            blockdx_present = True
+                        else:
+                            logging.info(f"deleting outdated version: {item_path}")
+                            shutil.rmtree(item_path)
+                    elif 'XLite-' in item:
+                        if xlite_pruned_version in item:
+                            xlite_present = True
+                        else:
+                            logging.info(f"deleting outdated version: {item_path}")
+                            shutil.rmtree(item_path)
 
         self.blocknet_bin_installed_boolvar.set(blocknet_present)
         self.blockdx_bin_installed_boolvar.set(blockdx_present)
