@@ -365,7 +365,7 @@ class XliteUtility:
             remote_file_size = int(response.headers.get('Content-Length', 0))
 
             file_name = os.path.basename(url)
-            tmp_file_path = os.path.join(aio_folder, file_name+"_tmp")
+            tmp_file_path = os.path.join(aio_folder, "tmp_xl_bin")
 
             # tmp_file_path = os.path.join(aio_folder, file_name + "_tmp")
             logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")

@@ -217,7 +217,7 @@ class BlockdxUtility:
         if response.status_code == 200:
             file_name = os.path.basename(url)
             remote_file_size = int(response.headers.get('Content-Length', 0))
-            tmp_file_path = os.path.join(aio_folder, file_name + "_tmp")
+            tmp_file_path = os.path.join(aio_folder, "tmp_dx_bin")
             logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")
             bytes_downloaded = 0
             total = remote_file_size
