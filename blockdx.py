@@ -215,12 +215,13 @@ class BlockdxUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
+            file_name = os.path.basename(url)
             remote_file_size = int(response.headers.get('Content-Length', 0))
-            local_file_path = os.path.join(aio_folder, os.path.basename(url))
-            logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+            tmp_file_path = os.path.join(aio_folder, file_name + "_tmp")
+            logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")
             bytes_downloaded = 0
             total = remote_file_size
-            with open(local_file_path, "wb") as f:
+            with open(tmp_file_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
                     if chunk:  # Filter out keep-alive new chunks
                         f.write(chunk)
@@ -228,9 +229,9 @@ class BlockdxUtility:
                         self.binary_percent_download = (bytes_downloaded / total) * 100
             self.binary_percent_download = None
 
-            local_file_size = os.path.getsize(local_file_path)
+            local_file_size = os.path.getsize(tmp_file_path)
             if local_file_size != remote_file_size:
-                os.remove(local_file_path)
+                os.remove(tmp_file_path)
                 raise ValueError(
                     f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
 
@@ -238,17 +239,19 @@ class BlockdxUtility:
 
             # Extract the archive
             if url.endswith(".zip"):
-                with zipfile.ZipFile(local_file_path, "r") as zip_ref:
+                with zipfile.ZipFile(tmp_file_path, "r") as zip_ref:
                     local_path = os.path.join(aio_folder, blockdx_bin_path[system])
                     zip_ref.extractall(local_path)
                 logging.info("Zip file extracted successfully.")
-                os.remove(local_file_path)
+                os.remove(tmp_file_path)
             elif url.endswith(".tar.gz"):
-                with tarfile.open(local_file_path, "r:gz") as tar:
+                with tarfile.open(tmp_file_path, "r:gz") as tar:
                     tar.extractall(aio_folder)
                 logging.info("Tar.gz file extracted successfully.")
-                os.remove(local_file_path)
+                os.remove(tmp_file_path)
             elif url.endswith(".dmg"):
+                file_path = os.path.join(aio_folder, file_name)
+                os.rename(tmp_file_path, file_path)
                 logging.info("DMG file saved successfully.")
         else:
             logging.error("Failed to download the Blockdx binary.")
