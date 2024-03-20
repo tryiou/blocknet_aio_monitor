@@ -959,15 +959,14 @@ class BlocknetGUI(ctk.CTk):
     def delete_blockdx_command(self):
         blockdx_pruned_version = self.blockdx_version[0].replace('v', '')
         for item in os.listdir(aio_folder):
+            item_path = os.path.join(aio_folder, item)
             if system == 'Darwin':
                 blockdx_filname = os.path.basename(blockdx_release_url)
-                item_path = os.path.join(aio_folder, item)
                 if os.path.isfile(item_path):
                     if blockdx_filname in item_path:
                         self.blockdx_utility.unmount_dmg()
                         os.remove(item_path)
             else:
-                item_path = os.path.join(aio_folder, item)
                 if os.path.isdir(item_path):
                     if 'BLOCK-DX-' in item:
                         if blockdx_pruned_version in item:
@@ -978,15 +977,14 @@ class BlocknetGUI(ctk.CTk):
 
         xlite_pruned_version = self.xlite_version[0].replace('v', '')
         for item in os.listdir(aio_folder):
+            item_path = os.path.join(aio_folder, item)
             if system == 'Darwin':
                 xlite_filname = os.path.basename(blockdx_release_url)
-                item_path = os.path.join(aio_folder, item)
                 if os.path.isfile(item_path):
                     if xlite_filname in item_path:
                         self.xlite_utility.unmount_dmg()
                         os.remove(item_path)
             else:
-                item_path = os.path.join(aio_folder, item)
                 if os.path.isdir(item_path):
                     if 'XLite-' in item:
                         if xlite_pruned_version in item:
