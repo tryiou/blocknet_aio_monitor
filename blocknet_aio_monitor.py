@@ -278,7 +278,7 @@ class BlocknetGUI(ctk.CTk):
         self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=padx_main_frame, pady=(2, 5), sticky='e')
 
         # blocknet-core
-        self.blocknet_core_label.grid(row=x, column=y, columnspan=2, padx=5, pady=0)
+        self.blocknet_core_label.grid(row=x, column=y, columnspan=2, padx=5, pady=0, sticky="w")
         self.blocknet_data_path_label.grid(row=x + 1, column=y, padx=5, pady=5, sticky="w")
         self.blocknet_data_path_entry.grid(row=x + 1, column=y + 1, padx=(0, 10), pady=5, sticky="ew")
         self.blocknet_custom_path_button.grid(row=x + 1, column=y + 3, padx=2, pady=2, sticky="e")
