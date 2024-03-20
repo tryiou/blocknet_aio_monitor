@@ -311,62 +311,121 @@ class BlocknetGUI(ctk.CTk):
         blockdx_boolvar = self.blockdx_bin_installed_boolvar.get()
         xlite_boolvar = self.xlite_bin_installed_boolvar.get()
 
+        percent_buff = self.blocknet_utility.binary_percent_download
+        dl_string = f"{int(percent_buff)}%" if percent_buff else ""
+        var_blocknet = dl_string if self.blocknet_utility.downloading_bin else ""
+        blocknet_folder = os.path.join(aio_folder, blocknet_bin_path[0])
+
         if blocknet_boolvar:
-            # var_blocknet = "Delete"
             var_blocknet = ""
-            blocknet_folder = os.path.join(aio_folder, blocknet_bin_path[0])
             configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_folder)
-            if self.blocknet_process_running or self.blocknet_utility.downloading_bin:
-                disable_button(self.bins_install_delete_blocknet_button, img=self.delete_greyed_img)
-            else:
-                enable_button(self.bins_install_delete_blocknet_button, img=self.delete_img)
+            button_condition = self.blocknet_process_running or self.blocknet_utility.downloading_bin
         else:
             configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_release_url)
-            percent_buff = self.blocknet_utility.binary_percent_download
-            dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
-            var_blocknet = dl_string if self.blocknet_utility.downloading_bin else ""
-            if self.blocknet_utility.downloading_bin:
-                disable_button(self.bins_install_delete_blocknet_button, img=self.install_greyed_img)
-            else:
-                enable_button(self.bins_install_delete_blocknet_button, img=self.install_img)
+            button_condition = self.blocknet_utility.downloading_bin
+
+        if button_condition:
+            disable_button(self.bins_install_delete_blocknet_button,
+                           img=self.delete_greyed_img if blocknet_boolvar else self.install_greyed_img)
+        else:
+            enable_button(self.bins_install_delete_blocknet_button,
+                          img=self.delete_img if blocknet_boolvar else self.install_img)
+
+        # percent_buff = self.blocknet_utility.binary_percent_download
+        # dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
+        # var_blocknet = dl_string if self.blocknet_utility.downloading_bin else ""
+        # if blocknet_boolvar:
+        #     # var_blocknet = "Delete"
+        #     var_blocknet = ""
+        #     blocknet_folder = os.path.join(aio_folder, blocknet_bin_path[0])
+        #     configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_folder)
+        #     if self.blocknet_process_running or self.blocknet_utility.downloading_bin:
+        #         disable_button(self.bins_install_delete_blocknet_button, img=self.delete_greyed_img)
+        #     else:
+        #         enable_button(self.bins_install_delete_blocknet_button, img=self.delete_img)
+        # else:
+        #     configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_release_url)
+        #     if self.blocknet_utility.downloading_bin:
+        #         disable_button(self.bins_install_delete_blocknet_button, img=self.install_greyed_img)
+        #     else:
+        #         enable_button(self.bins_install_delete_blocknet_button, img=self.install_img)
+
+        percent_buff = self.blockdx_utility.binary_percent_download
+        dl_string = f"{int(percent_buff)}%" if percent_buff else ""
+        var_blockdx = dl_string if self.blockdx_utility.downloading_bin else ""
+        blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
 
         if blockdx_boolvar:
-            # var_blockdx = "Delete"
             var_blockdx = ""
-            blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
             configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_folder)
-            if self.blockdx_process_running or self.blockdx_utility.downloading_bin:
-                disable_button(self.bins_install_delete_blockdx_button, img=self.delete_greyed_img)
-            else:
-                enable_button(self.bins_install_delete_blockdx_button, img=self.delete_img)
+            button_condition = self.blockdx_process_running or self.blockdx_utility.downloading_bin
         else:
             configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_release_url)
-            percent_buff = self.blockdx_utility.binary_percent_download
-            dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
-            var_blockdx = dl_string if self.blockdx_utility.downloading_bin else ""
-            if self.blockdx_utility.downloading_bin:
-                disable_button(self.bins_install_delete_blockdx_button, img=self.install_greyed_img)
-            else:
-                enable_button(self.bins_install_delete_blockdx_button, img=self.install_img)
+            button_condition = self.blockdx_utility.downloading_bin
+
+        if button_condition:
+            disable_button(self.bins_install_delete_blockdx_button,
+                           img=self.delete_greyed_img if blockdx_boolvar else self.install_greyed_img)
+        else:
+            enable_button(self.bins_install_delete_blockdx_button,
+                          img=self.delete_img if blockdx_boolvar else self.install_img)
+
+        # percent_buff = self.blockdx_utility.binary_percent_download
+        # dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
+        # var_blockdx = dl_string if self.blockdx_utility.downloading_bin else ""
+        # if blockdx_boolvar:
+        #     var_blockdx = ""
+        #     blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
+        #     configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_folder)
+        #     if self.blockdx_process_running or self.blockdx_utility.downloading_bin:
+        #         disable_button(self.bins_install_delete_blockdx_button, img=self.delete_greyed_img)
+        #     else:
+        #         enable_button(self.bins_install_delete_blockdx_button, img=self.delete_img)
+        # else:
+        #     configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_release_url)
+        #     if self.blockdx_utility.downloading_bin:
+        #         disable_button(self.bins_install_delete_blockdx_button, img=self.install_greyed_img)
+        #     else:
+        #         enable_button(self.bins_install_delete_blockdx_button, img=self.install_img)
+
+        percent_buff = self.xlite_utility.binary_percent_download
+        dl_string = f"{int(percent_buff)}%" if percent_buff else ""
+        var_xlite = dl_string if self.xlite_utility.downloading_bin else ""
+        folder = os.path.join(aio_folder, xlite_bin_path.get(system))
 
         if xlite_boolvar:
-            # var_xlite = "Delete"
             var_xlite = ""
-            folder = os.path.join(aio_folder, xlite_bin_path.get(system))
             configure_tooltip_text(self.bins_install_delete_xlite_tooltip, folder)
-            if self.xlite_process_running or self.xlite_utility.downloading_bin:
-                disable_button(self.bins_install_delete_xlite_button, img=self.delete_greyed_img)
-            else:
-                enable_button(self.bins_install_delete_xlite_button, img=self.delete_img)
+            button_condition = self.xlite_process_running or self.xlite_utility.downloading_bin
         else:
             configure_tooltip_text(self.bins_install_delete_xlite_tooltip, xlite_release_url)
-            percent_buff = self.xlite_utility.binary_percent_download
-            dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
-            var_xlite = dl_string if self.xlite_utility.downloading_bin else ""
-            if self.xlite_utility.downloading_bin:
-                disable_button(self.bins_install_delete_xlite_button, img=self.install_greyed_img)
-            else:
-                enable_button(self.bins_install_delete_xlite_button, img=self.install_img)
+            button_condition = self.xlite_utility.downloading_bin
+
+        if button_condition:
+            disable_button(self.bins_install_delete_xlite_button,
+                           img=self.delete_greyed_img if xlite_boolvar else self.install_greyed_img)
+        else:
+            enable_button(self.bins_install_delete_xlite_button,
+                          img=self.delete_img if xlite_boolvar else self.install_img)
+        # percent_buff = self.xlite_utility.binary_percent_download
+        # dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
+        # var_xlite = dl_string if self.xlite_utility.downloading_bin else ""
+        # if xlite_boolvar:
+        #     # var_xlite = "Delete"
+        #     var_xlite = ""
+        #     folder = os.path.join(aio_folder, xlite_bin_path.get(system))
+        #     configure_tooltip_text(self.bins_install_delete_xlite_tooltip, folder)
+        #     if self.xlite_process_running or self.xlite_utility.downloading_bin:
+        #         disable_button(self.bins_install_delete_xlite_button, img=self.delete_greyed_img)
+        #     else:
+        #         enable_button(self.bins_install_delete_xlite_button, img=self.delete_img)
+        # else:
+        #     configure_tooltip_text(self.bins_install_delete_xlite_tooltip, xlite_release_url)
+        #
+        #     if self.xlite_utility.downloading_bin:
+        #         disable_button(self.bins_install_delete_xlite_button, img=self.install_greyed_img)
+        #     else:
+        #         enable_button(self.bins_install_delete_xlite_button, img=self.install_img)
 
         self.bins_install_delete_blocknet_string_var.set(var_blocknet)
         self.bins_install_delete_blockdx_string_var.set(var_blockdx)
