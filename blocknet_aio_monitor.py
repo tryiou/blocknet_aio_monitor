@@ -979,7 +979,7 @@ class BlocknetGUI(ctk.CTk):
         for item in os.listdir(aio_folder):
             item_path = os.path.join(aio_folder, item)
             if system == 'Darwin':
-                xlite_filename = os.path.basename(blockdx_release_url)
+                xlite_filename = os.path.basename(xlite_release_url)
                 if os.path.isfile(item_path):
                     if xlite_filename in item_path:
                         self.xlite_utility.unmount_dmg()
