@@ -804,10 +804,12 @@ class BlocknetGUI(ctk.CTk):
             # ask_user_pass
             # store_salted_pass
             logging.info("Left click detected")
-            password = ctkInputDialogMod.CTkInputDialog(title="Store XLite Password",
+            fg_color = self.xlite_frame.cget('fg_color')
+            password = ctkInputDialogMod.CTkInputDialog(
+                                                        title="Store XLite Password",
                                                         text="Enter XLite password:",
                                                         show='*',
-                                                        fg_color="#0f2742").get_input()
+                                                        fg_color=fg_color).get_input()
             # password = simpledialog.askstring("Store XLite Password","Enter XLite password:" , show='*')
             if password:
                 encryption_key = generate_key()
