@@ -1542,15 +1542,6 @@ def configure_tooltip_text(tooltip, msg):
         tooltip.configure(message=msg)
 
 
-def boolvar_to_button_state(boolvar):
-    if boolvar.get() is True:
-        return ctk.NORMAL
-    elif boolvar.get() is False:
-        return ctk.DISABLED
-    else:
-        logging.error(f"boolvar_to_button_state error, boolvar: {boolvar}")
-
-
 def load_cfg_json():
     local_filename = "cfg.json"
     local_conf_path = aio_blocknet_data_path.get(system)
@@ -1574,23 +1565,6 @@ def terminate_all_threads():
             logging.info(f"Terminating thread: {thread.name}")
             thread.join(timeout=0.25)  # Terminate thread
             logging.info(f"Thread {thread.name} terminated")
-
-
-def terminate_thread(thread):
-    """Terminates a python thread from another thread."""
-    if not thread.is_alive():
-        return
-
-    exc = ctypes.py_object(SystemExit)
-    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
-        ctypes.c_long(thread.ident), exc)
-    if res == 0:
-        raise ValueError("nonexistent thread id")
-    elif res > 1:
-        # "if it returns a number greater than one, you're in trouble,
-        # and you should call it again with exc=NULL to revert the effect"
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, None)
-        raise SystemError("PyThreadState_SetAsyncExc failed")
 
 
 def remove_cfg_json_key(key):
