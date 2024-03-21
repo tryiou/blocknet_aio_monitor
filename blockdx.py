@@ -215,18 +215,23 @@ class BlockdxUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
-            file_name = os.path.basename(url)
-            remote_file_size = int(response.headers.get('Content-Length', 0))
-            tmp_file_path = os.path.join(aio_folder, "tmp_dx_bin")
-            logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")
-            bytes_downloaded = 0
-            total = remote_file_size
-            with open(tmp_file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
-                    if chunk:  # Filter out keep-alive new chunks
-                        f.write(chunk)
-                        bytes_downloaded += len(chunk)
-                        self.binary_percent_download = (bytes_downloaded / total) * 100
+
+            try:
+                file_name = os.path.basename(url)
+                remote_file_size = int(response.headers.get('Content-Length', 0))
+                tmp_file_path = os.path.join(aio_folder, "tmp_dx_bin")
+                logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+                bytes_downloaded = 0
+                total = remote_file_size
+                with open(tmp_file_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
+                        if chunk:  # Filter out keep-alive new chunks
+                            f.write(chunk)
+                            bytes_downloaded += len(chunk)
+                            self.binary_percent_download = (bytes_downloaded / total) * 100
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Error occurred during download: {str(e)}")
+
             self.binary_percent_download = None
 
             local_file_size = os.path.getsize(tmp_file_path)

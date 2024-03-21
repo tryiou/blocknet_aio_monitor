@@ -362,21 +362,24 @@ class XliteUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
-            remote_file_size = int(response.headers.get('Content-Length', 0))
 
-            file_name = os.path.basename(url)
-            tmp_file_path = os.path.join(aio_folder, "tmp_xl_bin")
+            try:
+                remote_file_size = int(response.headers.get('Content-Length', 0))
+                file_name = os.path.basename(url)
+                tmp_file_path = os.path.join(aio_folder, "tmp_xl_bin")
+                # tmp_file_path = os.path.join(aio_folder, file_name + "_tmp")
+                logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+                bytes_downloaded = 0
+                with open(tmp_file_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
+                        if chunk:  # Filter out keep-alive new chunks
+                            f.write(chunk)
+                            bytes_downloaded += len(chunk)
+                            self.binary_percent_download = (bytes_downloaded / remote_file_size) * 100
+                            # print(self.binary_percent_download)
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Error occurred during download: {str(e)}")
 
-            # tmp_file_path = os.path.join(aio_folder, file_name + "_tmp")
-            logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")
-            bytes_downloaded = 0
-            with open(tmp_file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
-                    if chunk:  # Filter out keep-alive new chunks
-                        f.write(chunk)
-                        bytes_downloaded += len(chunk)
-                        self.binary_percent_download = (bytes_downloaded / remote_file_size) * 100
-                        # print(self.binary_percent_download)
             self.binary_percent_download = None
 
             local_file_size = os.path.getsize(tmp_file_path)

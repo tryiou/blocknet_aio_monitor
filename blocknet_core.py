@@ -56,7 +56,7 @@ class BlocknetRPCClient:
                 return json_answer['result']
             else:
                 logging.error(f"No result in json: {json_answer}")
-        except requests.RequestException as e:
+        except requests.exceptions.RequestException as e:
             # logging.error(f"Error sending RPC request: {e}")
             return None
         except Exception as ex:
@@ -472,16 +472,20 @@ class BlocknetUtility:
                                             timeout=(connection_timeout, read_timeout))
                     response.raise_for_status()
                     if response.status_code == 200:
-                        logging.info(
-                            f"Downloading {blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
-                        bytes_downloaded = 0
-                        for chunk in response.iter_content(chunk_size=8192):
-                            if chunk:
-                                f.write(chunk)
-                                bytes_downloaded += len(chunk)
-                                self.bootstrap_percent_download = (bytes_downloaded / remote_file_size) * 100
+                        try:
+                            logging.info(
+                                f"Downloading {blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+                            bytes_downloaded = 0
+                            for chunk in response.iter_content(chunk_size=8192):
+                                if chunk:
+                                    f.write(chunk)
+                                    bytes_downloaded += len(chunk)
+                                    self.bootstrap_percent_download = (bytes_downloaded / remote_file_size) * 100
+                        except requests.exceptions.RequestException as e:
+                            logging.error(f"Error occurred during download: {str(e)}")
                     else:
                         logging.error("Failed to download the Blocknet Bootstrap.")
+
                 self.bootstrap_percent_download = None
 
                 local_file_size = os.path.getsize(local_file_path)
@@ -528,16 +532,21 @@ class BlocknetUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()
         if response.status_code == 200:
-            remote_file_size = int(response.headers.get('Content-Length', 0))
-            local_file_path = os.path.join(aio_folder, os.path.basename(url))
-            logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
-            bytes_downloaded = 0
-            with open(local_file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
-                    if chunk:  # Filter out keep-alive new chunks
-                        f.write(chunk)
-                        bytes_downloaded += len(chunk)
-                        self.binary_percent_download = (bytes_downloaded / remote_file_size) * 100
+
+            try:
+                remote_file_size = int(response.headers.get('Content-Length', 0))
+                local_file_path = os.path.join(aio_folder, os.path.basename(url))
+                logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+                bytes_downloaded = 0
+                with open(local_file_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):  # Iterate over response content in chunks
+                        if chunk:  # Filter out keep-alive new chunks
+                            f.write(chunk)
+                            bytes_downloaded += len(chunk)
+                            self.binary_percent_download = (bytes_downloaded / remote_file_size) * 100
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Error occurred during download: {str(e)}")
+
             self.binary_percent_download = None
 
             local_file_size = os.path.getsize(local_file_path)
@@ -653,7 +662,7 @@ def download_remote_conf(url, filepath):
             logging.error(
                 f"Failed to retrieve remote blocknet configuration file: {url} {response.status_code}")
             return None
-    except requests.RequestException as e:
+    except requests.exceptions.RequestException as e:
         logging.error(f"Error retrieving remote blocknet configuration file: {e}")
         return None
 
@@ -686,7 +695,7 @@ def retrieve_xb_manifest():
         else:
             logging.error(f"Failed to retrieve remote configuration file: {remote_manifest_url} {response.status_code}")
             return None
-    except requests.RequestException as e:
+    except requests.exceptions.RequestException as e:
         logging.error(f"Error retrieving remote configuration file: {e}")
         return None
 

@@ -1,12 +1,12 @@
 # Define the gui strings
 app_title_string = "Blocknet AIO monitor"
-tooltip_howtouse = (f"{app_title_string}\n"
+tooltip_howtouse = (f"\n{app_title_string}\n"
                     "HOW TO USE:\n"
                     "1/ (Optional) Set a custom path for the Blocknet core chain directory, or use the default path.\n"
                     "2/ (Optional) Obtain the bootstrap for a faster initial synchronization of the Core wallet.\n"
                     "3/ Start Blocknet Core, wait for it to synchronize with the network, and unlock it.\n"
                     "4/ Start Block-DX.\n"
-                    "5/ Start Xlite, create a wallet, and carefully backup the mnemonic.")
+                    "5/ Start Xlite, create a wallet, and carefully backup the mnemonic.\n")
 
 tooltip_blocknet_core_label_msg = "Blocknet Core is used to connect Xbridge to P2P network and expose it locally"
 tooltip_blockdx_label_msg = "Block-DX is a GUI for Xbridge API"
