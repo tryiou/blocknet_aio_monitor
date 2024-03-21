@@ -10,7 +10,7 @@ import json
 import copy
 
 from conf_data import (blockdx_bin_path, blockdx_default_paths, blockdx_selectedWallets_blocknet, blockdx_base_conf)
-from globals_variables import *
+from global_variables import *
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -104,11 +104,7 @@ class BlockdxUtility:
         else:
             logging.error("Error: DMG is not mounted.")
 
-    def start_blockdx(self, retry_limit=3, retry_count=0):
-        if retry_count >= retry_limit:
-            logging.error("Retry limit exceeded. Unable to start Blockdx.")
-            return
-
+    def start_blockdx(self):
         if not os.path.exists(self.blockdx_exe):
             # self.downloading_bin = True
             logging.info(f"Blockdx executable not found at {self.blockdx_exe}. Downloading...")
@@ -215,11 +211,10 @@ class BlockdxUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
-
+            file_name = os.path.basename(url)
+            tmp_file_path = os.path.join(aio_folder, "tmp_dx_bin")
             try:
-                file_name = os.path.basename(url)
                 remote_file_size = int(response.headers.get('Content-Length', 0))
-                tmp_file_path = os.path.join(aio_folder, "tmp_dx_bin")
                 logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")
                 bytes_downloaded = 0
                 total = remote_file_size
@@ -234,8 +229,7 @@ class BlockdxUtility:
 
             self.binary_percent_download = None
 
-            local_file_size = os.path.getsize(tmp_file_path)
-            if local_file_size != remote_file_size:
+            if os.path.getsize(tmp_file_path) != remote_file_size:
                 os.remove(tmp_file_path)
                 raise ValueError(
                     f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
@@ -271,10 +265,10 @@ def get_blockdx_data_folder():
         raise ValueError("Unsupported system")
 
 
-async def main():
-    blockdx_utility = BlockdxUtility()
-    # blockdx_utility.compare_and_update_local_conf()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# async def main():
+#     blockdx_utility = BlockdxUtility()
+#     # blockdx_utility.compare_and_update_local_conf()
+#
+#
+# if __name__ == "__main__":
+#     asyncio.run(main())

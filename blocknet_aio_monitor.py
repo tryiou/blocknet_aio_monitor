@@ -1,5 +1,4 @@
 import asyncio
-import ctypes
 # import cProfile
 import logging
 import shutil
@@ -23,7 +22,7 @@ from xlite import XliteUtility
 from conf_data import (blockdx_selectedWallets_blocknet, blockdx_bin_path, blocknet_bin_path, xlite_bin_path)
 
 from widgets_strings import *
-from globals_variables import *
+from global_variables import *
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)

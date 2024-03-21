@@ -15,7 +15,7 @@ from subprocess import check_output
 from conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
                        blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
                        remote_blockchain_configuration_repo)
-from globals_variables import *
+from global_variables import *
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -136,13 +136,8 @@ class BlocknetUtility:
             logging.error("RPC user, password, or port not found in the configuration.")
             self.blocknet_rpc = None
 
-    def start_blocknet(self, retry_limit=3, retry_count=0):
+    def start_blocknet(self):
         self.create_data_folder()
-
-        if retry_count >= retry_limit:
-            logging.error("Retry limit exceeded. Unable to start Blocknet.")
-            return
-
         if not os.path.exists(self.blocknet_exe):
             logging.info(f"Blocknet executable not found at {self.blocknet_exe}. Downloading...")
             self.download_blocknet_bin()
@@ -488,8 +483,7 @@ class BlocknetUtility:
 
                 self.bootstrap_percent_download = None
 
-                local_file_size = os.path.getsize(local_file_path)
-                if local_file_size != remote_file_size:
+                if os.path.getsize(local_file_path) != remote_file_size:
                     os.remove(local_file_path)
                     raise ValueError(f"Downloaded {filename} file size doesn't match the expected size. Deleting it")
 
@@ -532,10 +526,9 @@ class BlocknetUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()
         if response.status_code == 200:
-
+            local_file_path = os.path.join(aio_folder, os.path.basename(url))
             try:
                 remote_file_size = int(response.headers.get('Content-Length', 0))
-                local_file_path = os.path.join(aio_folder, os.path.basename(url))
                 logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
                 bytes_downloaded = 0
                 with open(local_file_path, "wb") as f:
@@ -549,8 +542,7 @@ class BlocknetUtility:
 
             self.binary_percent_download = None
 
-            local_file_size = os.path.getsize(local_file_path)
-            if local_file_size != remote_file_size:
+            if os.path.getsize(local_file_path) != remote_file_size:
                 os.remove(local_file_path)
                 raise ValueError(
                     f"Downloaded {os.path.basename(url)} size doesn't match the expected size. Deleting it")
@@ -747,6 +739,6 @@ def parse_conf_file(file_path=None, input_string=None):
     return conf_data
 
 
-if __name__ == "__main__":
-    a = BlocknetUtility()
-    a.retrieve_coin_conf('BTC')
+# if __name__ == "__main__":
+#     a = BlocknetUtility()
+#     a.retrieve_coin_conf('BTC')

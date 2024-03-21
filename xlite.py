@@ -9,7 +9,7 @@ import subprocess
 import time
 import json
 from conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
-from globals_variables import *
+from global_variables import *
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -242,7 +242,7 @@ class XliteUtility:
         if not silent:
             logging.info(f"XLITE-DAEMON: Parsed every coins conf {self.xlite_daemon_confs_local}")
 
-    def start_xlite(self, retry_limit=3, retry_count=0, env_vars=[]):
+    def start_xlite(self, env_vars=[]):
         if system == "Windows":
             # check vcredist
             # install_vc_redist(vc_redist_win_url)
@@ -252,10 +252,6 @@ class XliteUtility:
             for var_name, var_value in var_dict.items():
                 # logging.info(f"var_name: {var_name} var_value: {var_value}")
                 os.environ[var_name] = var_value
-
-        if retry_count >= retry_limit:
-            logging.error("Retry limit exceeded. Unable to start Xlite.")
-            return
 
         if not os.path.exists(self.xlite_exe):
             logging.info(f"Xlite executable not found at {self.xlite_exe}. Downloading...")
@@ -362,11 +358,10 @@ class XliteUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
-
+            file_name = os.path.basename(url)
+            tmp_file_path = os.path.join(aio_folder, "tmp_xl_bin")
             try:
                 remote_file_size = int(response.headers.get('Content-Length', 0))
-                file_name = os.path.basename(url)
-                tmp_file_path = os.path.join(aio_folder, "tmp_xl_bin")
                 # tmp_file_path = os.path.join(aio_folder, file_name + "_tmp")
                 logging.info(f"Downloading {url} to {tmp_file_path}, remote size: {int(remote_file_size / 1024)} kb")
                 bytes_downloaded = 0
@@ -421,5 +416,5 @@ class XliteUtility:
             logging.error("Error: DMG is not mounted.")
 
 
-if __name__ == "__main__":
-    install_vc_redist(vc_redist_win_url)
+# if __name__ == "__main__":
+    # install_vc_redist(vc_redist_win_url)
