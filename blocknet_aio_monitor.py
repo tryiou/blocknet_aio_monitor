@@ -32,6 +32,7 @@ pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.WARNING)
 button_width = 120
 gui_width = 400
+panel_checkboxes_width = 165
 
 tooltip_bg_color = ("#ebebeb", "#051937")
 # ctk.set_appearance_mode("system")
@@ -280,28 +281,29 @@ class BlocknetGUI(ctk.CTk):
         # Button for starting or closing Xlite
         self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=padx_main_frame, pady=(2, 5), sticky='e')
 
+        check_boxes_sticky = "ew"
         # blocknet-core
         self.blocknet_core_label.grid(row=x, column=y, columnspan=2, padx=5, pady=0, sticky="w")
         self.blocknet_data_path_label.grid(row=x + 1, column=y, padx=5, pady=5, sticky="w")
         self.blocknet_data_path_entry.grid(row=x + 1, column=y + 1, padx=(0, 10), pady=5, sticky="ew")
         self.blocknet_custom_path_button.grid(row=x + 1, column=y + 3, padx=2, pady=2, sticky="e")
         self.blocknet_download_bootstrap_button.grid(row=x, column=y + 3, padx=2, pady=2, sticky="e")
-        self.blocknet_data_path_status_checkbox.grid(row=x + 2, column=y, padx=10, pady=5, sticky="w")
-        self.blocknet_process_status_checkbox.grid(row=x + 3, column=y, padx=10, pady=5, sticky="w")
-        self.blocknet_conf_status_checkbox.grid(row=x + 2, column=y + 1, padx=10, pady=5, sticky="w")
-        self.blocknet_rpc_connection_checkbox.grid(row=x + 3, column=y + 1, padx=10, pady=5, sticky="w")
+        self.blocknet_data_path_status_checkbox.grid(row=x + 2, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
+        self.blocknet_process_status_checkbox.grid(row=x + 3, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
+        self.blocknet_conf_status_checkbox.grid(row=x + 2, column=y + 1, padx=10, pady=5, sticky=check_boxes_sticky)
+        self.blocknet_rpc_connection_checkbox.grid(row=x + 3, column=y + 1, padx=10, pady=5, sticky=check_boxes_sticky)
 
         # block-dx
         self.blockdx_label.grid(row=x, column=y, columnspan=3, padx=5, pady=0)
-        self.blockdx_process_status_checkbox.grid(row=x + 1, column=y, padx=10, pady=5, sticky="w")
-        self.blockdx_valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=10, pady=5, sticky="w")
+        self.blockdx_process_status_checkbox.grid(row=x + 1, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
+        self.blockdx_valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=10, pady=5, sticky=check_boxes_sticky)
 
         # xlite
         self.xlite_label.grid(row=x, column=y, columnspan=2, padx=5, pady=0)
-        self.xlite_process_status_checkbox.grid(row=x + 1, column=y, padx=10, pady=5, sticky="w")
-        self.xlite_daemon_process_status_checkbox.grid(row=x + 2, column=y, padx=10, pady=5, sticky="w")
-        self.xlite_valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=10, pady=5, sticky="ew")
-        self.xlite_daemon_valid_config_checkbox.grid(row=x + 2, column=y + 1, padx=10, pady=5, sticky="ew")
+        self.xlite_process_status_checkbox.grid(row=x + 1, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
+        self.xlite_daemon_process_status_checkbox.grid(row=x + 2, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
+        self.xlite_valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=10, pady=5, sticky=check_boxes_sticky)
+        self.xlite_daemon_valid_config_checkbox.grid(row=x + 2, column=y + 1, padx=10, pady=5, sticky=check_boxes_sticky)
         self.xlite_store_password_button.grid(row=x, column=y + 3, padx=2, pady=2, sticky="e")
 
     def setup_load_images(self):
@@ -549,6 +551,7 @@ class BlocknetGUI(ctk.CTk):
                                                                 width=button_width)
 
         # Checkboxes
+        width_mod = 15
         self.blocknet_data_path_status_checkbox_state = ctk.BooleanVar()
         self.blocknet_data_path_status_checkbox_string_var = ctk.StringVar(value="Data Path")
         self.blocknet_data_path_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.blocknet_core_frame,
@@ -556,7 +559,7 @@ class BlocknetGUI(ctk.CTk):
                                                                              variable=self.blocknet_data_path_status_checkbox_state,
                                                                              state='disabled',
                                                                              corner_radius=25,
-                                                                             width=165)  # , disabledforeground='black')
+                                                                             width=panel_checkboxes_width + width_mod)  # , disabledforeground='black')
 
         self.blocknet_process_status_checkbox_state = ctk.BooleanVar()
         self.blocknet_process_status_checkbox_string_var = ctk.StringVar(value='')
@@ -564,7 +567,8 @@ class BlocknetGUI(ctk.CTk):
                                                                            textvariable=self.blocknet_process_status_checkbox_string_var,
                                                                            variable=self.blocknet_process_status_checkbox_state,
                                                                            state='disabled',
-                                                                           corner_radius=25)  # , disabledforeground='black')
+                                                                           corner_radius=25,
+                                                                           width=panel_checkboxes_width + width_mod)  # , disabledforeground='black')
 
         self.blocknet_conf_status_checkbox_state = ctk.BooleanVar()
         self.blocknet_conf_status_checkbox_string_var = ctk.StringVar(value='')
@@ -572,7 +576,8 @@ class BlocknetGUI(ctk.CTk):
                                                                         textvariable=self.blocknet_conf_status_checkbox_string_var,
                                                                         variable=self.blocknet_conf_status_checkbox_state,
                                                                         corner_radius=25,
-                                                                        state='disabled')  # , disabledforeground='black')
+                                                                        state='disabled',
+                                                                        width=panel_checkboxes_width)  # , disabledforeground='black')
 
         self.blocknet_rpc_connection_checkbox_state = ctk.BooleanVar()
         self.blocknet_rpc_connection_checkbox_string_var = ctk.StringVar(value='')
@@ -580,7 +585,8 @@ class BlocknetGUI(ctk.CTk):
                                                                            textvariable=self.blocknet_rpc_connection_checkbox_string_var,
                                                                            variable=self.blocknet_rpc_connection_checkbox_state,
                                                                            corner_radius=25,
-                                                                           state='disabled')  # , disabledforeground='black')
+                                                                           state='disabled',
+                                                                           width=panel_checkboxes_width)  # , disabledforeground='black')
 
         # Button for starting or closing Blocknet
 
@@ -607,13 +613,15 @@ class BlocknetGUI(ctk.CTk):
                               bg_color=tooltip_bg_color)
 
         # Checkboxes
+        width_mod = 35
         self.blockdx_process_status_checkbox_state = ctk.BooleanVar()
         self.blockdx_process_status_checkbox_string_var = ctk.StringVar(value='')
         self.blockdx_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.blockdx_frame,
                                                                           textvariable=self.blockdx_process_status_checkbox_string_var,
                                                                           variable=self.blockdx_process_status_checkbox_state,
                                                                           corner_radius=25,
-                                                                          state='disabled')
+                                                                          state='disabled',
+                                                                          width=panel_checkboxes_width - width_mod)
 
         self.blockdx_valid_config_checkbox_state = ctk.BooleanVar()
         self.blockdx_valid_config_checkbox_string_var = ctk.StringVar(value='')
@@ -621,7 +629,8 @@ class BlocknetGUI(ctk.CTk):
                                                                         textvariable=self.blockdx_valid_config_checkbox_string_var,
                                                                         variable=self.blockdx_valid_config_checkbox_state,
                                                                         corner_radius=25,
-                                                                        state='disabled')  # , disabledforeground='black')
+                                                                        state='disabled',
+                                                                        width=panel_checkboxes_width - width_mod)  # , disabledforeground='black')
 
     async def setup_xlite(self):
         width = 415
@@ -640,7 +649,8 @@ class BlocknetGUI(ctk.CTk):
                                                                         textvariable=self.xlite_process_status_checkbox_string_var,
                                                                         variable=self.xlite_process_status_checkbox_state,
                                                                         corner_radius=25,
-                                                                        state='disabled')
+                                                                        state='disabled',
+                                                                        width=panel_checkboxes_width)
 
         self.xlite_daemon_process_status_checkbox_state = ctk.BooleanVar()
         self.xlite_daemon_process_status_checkbox_string_var = ctk.StringVar(value='')
@@ -648,7 +658,8 @@ class BlocknetGUI(ctk.CTk):
                                                                                textvariable=self.xlite_daemon_process_status_checkbox_string_var,
                                                                                variable=self.xlite_daemon_process_status_checkbox_state,
                                                                                corner_radius=25,
-                                                                               state='disabled')
+                                                                               state='disabled',
+                                                                               width=panel_checkboxes_width)
 
         self.xlite_reverse_proxy_process_status_checkbox_state = ctk.BooleanVar()
         self.xlite_reverse_proxy_process_status_checkbox_string_var = ctk.StringVar(
@@ -657,14 +668,16 @@ class BlocknetGUI(ctk.CTk):
                                                                                       textvariable=self.xlite_reverse_proxy_process_status_checkbox_string_var,
                                                                                       variable=self.xlite_reverse_proxy_process_status_checkbox_state,
                                                                                       corner_radius=25,
-                                                                                      state='disabled')
+                                                                                      state='disabled',
+                                                                                      width=panel_checkboxes_width)
         self.xlite_valid_config_checkbox_state = ctk.BooleanVar()
         self.xlite_valid_config_checkbox_string_var = ctk.StringVar(value='')
         self.xlite_valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(self.xlite_frame,
                                                                       textvariable=self.xlite_valid_config_checkbox_string_var,
                                                                       variable=self.xlite_valid_config_checkbox_state,
                                                                       corner_radius=25,
-                                                                      state='disabled')
+                                                                      state='disabled',
+                                                                      width=panel_checkboxes_width)
 
         self.xlite_daemon_valid_config_checkbox_state = ctk.BooleanVar()
         self.xlite_daemon_valid_config_checkbox_string_var = ctk.StringVar(value='')
@@ -672,7 +685,8 @@ class BlocknetGUI(ctk.CTk):
                                                                              textvariable=self.xlite_daemon_valid_config_checkbox_string_var,
                                                                              variable=self.xlite_daemon_valid_config_checkbox_state,
                                                                              corner_radius=25,
-                                                                             state='disabled')
+                                                                             state='disabled',
+                                                                             width=panel_checkboxes_width)
 
         # Button for refreshing Xlite config data
         # self.xlite_check_config_button_string_var = ctk.StringVar(value=check_config_string)
