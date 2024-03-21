@@ -313,7 +313,6 @@ class BlocknetUtility:
             return False
 
     def retrieve_coin_conf(self, coin):
-        xb_folder = "xb_conf"
         latest_version = None
         highest_version_id = None
 
