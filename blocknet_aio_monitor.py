@@ -580,6 +580,8 @@ class BlocknetGUI(ctk.CTk):
                               bg_color=tooltip_bg_color, border_width=2, justify="left")
         CTkToolTip.CTkToolTip(self.bins_title_frame, message=tooltip_bins_title_msg, delay=1, follow=True,
                               bg_color=tooltip_bg_color, border_width=2, justify="left")
+        CTkToolTip.CTkToolTip(self.bins_header_label, message=tooltip_bins_title_msg, delay=1, follow=True,
+                              bg_color=tooltip_bg_color, border_width=2, justify="left")
         CTkToolTip.CTkToolTip(self.xlite_label, message=tooltip_xlite_label_msg, delay=1.0, border_width=2, follow=True,
                               bg_color=tooltip_bg_color)
         CTkToolTip.CTkToolTip(self.bins_blocknet_label,
