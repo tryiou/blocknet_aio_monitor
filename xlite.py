@@ -302,19 +302,16 @@ class XliteUtility:
                 self.xlite_process.wait(timeout=10)  # Wait for the process to terminate with a timeout of 60 seconds
                 logging.info(f"Closed Xlite subprocess.")
                 self.xlite_process = None
-                return
             except subprocess.TimeoutExpired:
                 logging.info(f"Force terminating Xlite subprocess.")
                 self.kill_xlite()
                 logging.info(f"Xlite subprocess has been force terminated.")
                 self.xlite_process = None
-                return
             except Exception as e:
                 logging.error(f"Error: {e}")
         else:
             self.close_xlite_pids()
         self.close_xlite_daemon_pids()
-
 
     def kill_xlite(self):
         # Kill the Xlite subprocess if it exists
@@ -349,7 +346,9 @@ class XliteUtility:
                 logging.error(f"Error: {e}")
 
     def close_xlite_daemon_pids(self):
-        # Close the Xlite processes using their PIDs
+
+        logging.info(f"close_xlite_daemon_pids: {self.xlite_daemon_pids}")
+        # Close the Xlite-daemon processes using their PIDs
         for pid in self.xlite_daemon_pids:
             try:
                 # Get the process object corresponding to the PID
