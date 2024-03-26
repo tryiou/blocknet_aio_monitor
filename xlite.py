@@ -299,7 +299,7 @@ class XliteUtility:
             try:
                 self.xlite_process.terminate()
                 # logging.info(f"Terminating Xlite subprocess.")
-                self.xlite_process.wait(timeout=60)  # Wait for the process to terminate with a timeout of 60 seconds
+                self.xlite_process.wait(timeout=10)  # Wait for the process to terminate with a timeout of 60 seconds
                 logging.info(f"Closed Xlite subprocess.")
                 self.xlite_process = None
                 return
@@ -313,6 +313,8 @@ class XliteUtility:
                 logging.error(f"Error: {e}")
         else:
             self.close_xlite_pids()
+        self.close_xlite_daemon_pids()
+
 
     def kill_xlite(self):
         # Kill the Xlite subprocess if it exists
@@ -333,7 +335,7 @@ class XliteUtility:
                 proc = psutil.Process(pid)
                 proc.terminate()
                 logging.info(f"Initiated termination of Xlite process with PID {pid}.")
-                proc.wait(timeout=60)  # Wait for the process to terminate with a timeout of 60 seconds
+                proc.wait(timeout=10)  # Wait for the process to terminate with a timeout of 60 seconds
                 logging.info(f"Xlite process with PID {pid} has been terminated.")
             except psutil.NoSuchProcess:
                 logging.warning(f"Xlite process with PID {pid} not found.")
@@ -343,6 +345,27 @@ class XliteUtility:
                     proc.kill()
                     proc.wait()
                     logging.info(f"Xlite process with PID {pid} has been force terminated.")
+            except Exception as e:
+                logging.error(f"Error: {e}")
+
+    def close_xlite_daemon_pids(self):
+        # Close the Xlite processes using their PIDs
+        for pid in self.xlite_daemon_pids:
+            try:
+                # Get the process object corresponding to the PID
+                proc = psutil.Process(pid)
+                proc.terminate()
+                logging.info(f"Initiated termination of Xlite-daemon process with PID {pid}.")
+                proc.wait(timeout=10)  # Wait for the process to terminate with a timeout of 60 seconds
+                logging.info(f"Xlite-daemon process with PID {pid} has been terminated.")
+            except psutil.NoSuchProcess:
+                logging.warning(f"Xlite-daemon process with PID {pid} not found.")
+            except psutil.TimeoutExpired:
+                logging.warning(f"Force terminating Xlite-daemon process with PID {pid}.")
+                if proc:
+                    proc.kill()
+                    proc.wait()
+                    logging.info(f"Xlite-daemon process with PID {pid} has been force terminated.")
             except Exception as e:
                 logging.error(f"Error: {e}")
 
