@@ -40,25 +40,23 @@ For more information about Blocknet projects, visit:
 
 ### From repository:
 
-   - Clone the repository:
+1. Clone the repository:
 
      ```bash
      git clone https://github.com/tryiou/blocknet_aio_monitor
      ```
-
-   - Navigate to the repository folder:
+2. Navigate to the repository folder:
 
      ```bash
      cd blocknet_aio_monitor
      ```
 
-   - Create a virtual environment:
+3. Create a virtual environment:
 
      ```bash
      python -m venv venv
      ```
-
-   - Activate the virtual environment:
+4. Activate the virtual environment:
 
      - **Linux/macOS:**
 
@@ -72,13 +70,13 @@ For more information about Blocknet projects, visit:
        venv\Scripts\activate
        ```
 
-   - Install requirements:
+5. Install requirements:
 
      ```bash
      pip install -r requirements.txt
      ```
 
-   - Run the GUI:
+6. Run the GUI:
 
      ```bash
      python blocknet_aio_monitor.py
