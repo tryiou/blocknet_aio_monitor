@@ -38,7 +38,7 @@ For more information about Blocknet projects, visit:
      Mount the dmg file and execute the application.
 
 
-2. **From repository:**
+### From repository:
 
    - Clone the repository:
 
