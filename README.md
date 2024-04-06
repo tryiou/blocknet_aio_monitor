@@ -17,7 +17,6 @@ For more information about Blocknet projects, visit:
 - **Download Bootstrap:** Automatically download the Bootstrap for Blocknet Core to facilitate a faster initial sync.
 - **Control Panel:** Easily start or close any of the applications from the control panel and monitor their status.
 - **Configuration Management:** Check and update configurations for Blocknet Core and Block-DX, ensuring they work together seamlessly at first launch.
-- **XLite to Block-DX Configuration:** Configure XLite to work with Block-DX using the Block-DX setup wizard. No wallet restart is required at this stage.
 - **Password Storage:** Securely store existing XLite wallet passwords. Input your password, which will then be encrypted and stored in a configuration file for future use.
  On the next XLite startup, the password will be pre-filled and ready to use.
  Right-clicking on this button will clear any stored password.
