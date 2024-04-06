@@ -23,50 +23,67 @@ For more information about Blocknet projects, visit:
  Similar functionality will be added for Blocknet Core, enabling automatic wallet unlocking at startup.
 
 
-## How to use 
-1. Clone the repository:
+## How to use
 
-   ```bash
-   git clone https://github.com/tryiou/blocknet_aio_monitor
-   ```
+### From release:
 
-2. Navigate to the repository folder:
+1. Download the release for your OS from [Latest Release](https://github.com/tryiou/blocknet_aio_monitor/releases/latest)
 
-   ```bash
-   cd blocknet_aio_monitor
-   ```
+2. **Running the application:**
 
-3. Create a virtual environment:
+   - **Linux/Windows:**
+     Execute the application.
 
-   ```bash
-   python -m venv venv
-   ```
+   - **Mac:**
+     Mount the dmg file and execute the application.
 
-4. Activate the virtual environment:
 
-   - **Linux/macOS:**
+2. **From repository:**
+
+   - Clone the repository:
 
      ```bash
-     source venv/bin/activate
+     git clone https://github.com/tryiou/blocknet_aio_monitor
      ```
 
-   - **Windows:**
+   - Navigate to the repository folder:
 
      ```bash
-     venv\Scripts\activate
+     cd blocknet_aio_monitor
      ```
 
-5. Install requirements:
+   - Create a virtual environment:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+     ```bash
+     python -m venv venv
+     ```
 
-6. Run the GUI:
+   - Activate the virtual environment:
 
-   ```bash
-   python blocknet_aio_monitor.py
-   ```
+     - **Linux/macOS:**
+
+       ```bash
+       source venv/bin/activate
+       ```
+
+     - **Windows:**
+
+       ```bash
+       venv\Scripts\activate
+       ```
+
+   - Install requirements:
+
+     ```bash
+     pip install -r requirements.txt
+     ```
+
+   - Run the GUI:
+
+     ```bash
+     python blocknet_aio_monitor.py
+     ```
+
 
 ## Contribution
 
