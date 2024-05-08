@@ -292,7 +292,9 @@ class BlocknetUtility:
                             #     f"Value for {key} is empty. Generated new value: {self.blocknet_conf_local[section][key]}")
                             # CHECK IF VALUE IS NOT EMPTY STRING ELSE GENERATE NEW VALUE
                 else:
-                    if key not in self.blocknet_conf_local[section] or self.blocknet_conf_local[section][key] != value:
+                    if key == "rpcallowip":
+                        self.blocknet_conf_local[section][key] = "127.0.0.1"
+                    elif key not in self.blocknet_conf_local[section] or self.blocknet_conf_local[section][key] != value:
                         self.blocknet_conf_local[section][key] = value
                         # logging.debug(f"Updated {key} value: {value}")
 
