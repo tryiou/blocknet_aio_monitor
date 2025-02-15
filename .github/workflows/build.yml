@@ -105,7 +105,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifacts-macos-12
+          name: artifacts-macos-13
           path: |
             dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-macos.dmg
 
