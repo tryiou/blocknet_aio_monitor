@@ -63,8 +63,8 @@ jobs:
           files: |
             dist/blocknet_aio_monitor-*
 
-  build-macos-12:
-    runs-on: macos-12
+  build-macos-13:
+    runs-on: macos-13
 
     steps:
       - uses: actions/checkout@v3
