@@ -48,7 +48,7 @@ jobs:
           pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-linux
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: artifacts-linux
           path: |
@@ -103,7 +103,7 @@ jobs:
           hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-macos.dmg
 
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: artifacts-macos-12
           path: |
@@ -162,7 +162,7 @@ jobs:
           Write-Host "DEBUG: Rename command executed successfully"
 
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: artifacts-win
           path: |
