@@ -666,15 +666,15 @@ def retrieve_xb_manifest():
     filename = os.path.basename(remote_manifest_url)
     local_manifest_file = os.path.join(aio_folder, folder, filename)
 
-    if os.path.exists(local_manifest_file):
-        try:
-            with open(local_manifest_file, 'r') as f:
-                json_data = f.read()
-            parsed_json = json.loads(json_data)
-            logging.info(f"REMOTE: Found and parsed successfully: {local_manifest_file}")
-            return parsed_json
-        except Exception as e:
-            logging.error(f"{local_manifest_file} Error opening or parsing file: {e}")
+    # if os.path.exists(local_manifest_file):
+    #     try:
+    #         with open(local_manifest_file, 'r') as f:
+    #             json_data = f.read()
+    #         parsed_json = json.loads(json_data)
+    #         logging.info(f"REMOTE: Found and parsed successfully: {local_manifest_file}")
+    #         return parsed_json
+    #     except Exception as e:
+    #         logging.error(f"{local_manifest_file} Error opening or parsing file: {e}")
 
     try:
         response = requests.get(remote_manifest_url)
