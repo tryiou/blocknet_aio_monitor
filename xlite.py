@@ -1,13 +1,15 @@
 import asyncio
-import tarfile
-import threading
-import zipfile
-import psutil
-import requests
+import json
 import logging
 import subprocess
+import tarfile
+import threading
 import time
-import json
+import zipfile
+
+import psutil
+import requests
+
 from conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
 from global_variables import *
 
@@ -437,6 +439,5 @@ class XliteUtility:
         else:
             logging.error("Error: DMG is not mounted.")
 
-
 # if __name__ == "__main__":
-    # install_vc_redist(vc_redist_win_url)
+# install_vc_redist(vc_redist_win_url)

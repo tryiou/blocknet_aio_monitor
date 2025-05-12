@@ -1,7 +1,8 @@
+import os
+import platform
+
 from conf_data import (blocknet_bin_name, blockdx_bin_name, xlite_bin_name, xlite_daemon_bin_name,
                        blocknet_releases_urls, blockdx_releases_urls, xlite_releases_urls, aio_blocknet_data_path)
-import platform
-import os
 
 system = platform.system()
 machine = platform.machine()

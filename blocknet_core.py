@@ -1,16 +1,17 @@
 import asyncio
-import shutil
-import threading
+import json
 import logging
+import random
+import shutil
+import string
 import subprocess
+import tarfile
+import threading
+import zipfile
+from subprocess import check_output
+
 import psutil
 import requests
-import random
-import string
-import json
-import zipfile
-import tarfile
-from subprocess import check_output
 
 from conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
                        blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
@@ -294,7 +295,8 @@ class BlocknetUtility:
                 else:
                     if key == "rpcallowip":
                         self.blocknet_conf_local[section][key] = "127.0.0.1"
-                    elif key not in self.blocknet_conf_local[section] or self.blocknet_conf_local[section][key] != value:
+                    elif key not in self.blocknet_conf_local[section] or self.blocknet_conf_local[section][
+                        key] != value:
                         self.blocknet_conf_local[section][key] = value
                         # logging.debug(f"Updated {key} value: {value}")
 
@@ -738,7 +740,6 @@ def parse_conf_file(file_path=None, input_string=None):
                 conf_data.setdefault(current_section.strip('[]'), {})
 
     return conf_data
-
 
 # if __name__ == "__main__":
 #     a = BlocknetUtility()

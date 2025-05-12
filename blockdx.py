@@ -1,13 +1,13 @@
-import tarfile
-import zipfile
-import asyncio
-import psutil
-import requests
+import copy
+import json
 import logging
 import subprocess
+import tarfile
 import time
-import json
-import copy
+import zipfile
+
+import psutil
+import requests
 
 from conf_data import (blockdx_bin_path, blockdx_default_paths, blockdx_selectedWallets_blocknet, blockdx_base_conf)
 from global_variables import *
@@ -263,7 +263,6 @@ def get_blockdx_data_folder():
         return os.path.expandvars(os.path.expanduser(path))
     else:
         raise ValueError("Unsupported system")
-
 
 # async def main():
 #     blockdx_utility = BlockdxUtility()

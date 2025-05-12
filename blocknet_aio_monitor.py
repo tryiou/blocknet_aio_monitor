@@ -1,28 +1,27 @@
 import asyncio
+import json
 # import cProfile
 import logging
 import shutil
 import signal
 import time
-import CTkToolTip
-import customtkinter as ctk
-import custom_tk_mods.ctkInputDialogMod as ctkInputDialogMod
-import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
-import json
-from psutil import process_iter
-from PIL import Image
-import PIL._tkinter_finder
 from threading import Thread, enumerate, current_thread
-from cryptography.fernet import Fernet
 
+import CTkToolTip
+import PIL._tkinter_finder
+import customtkinter as ctk
+from PIL import Image
+from cryptography.fernet import Fernet
+from psutil import process_iter
+
+import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
+import custom_tk_mods.ctkInputDialogMod as ctkInputDialogMod
 from blockdx import BlockdxUtility
 from blocknet_core import BlocknetUtility
-from xlite import XliteUtility
-
 from conf_data import (blockdx_selectedWallets_blocknet, blockdx_bin_path, blocknet_bin_path, xlite_bin_path)
-
-from widgets_strings import *
 from global_variables import *
+from widgets_strings import *
+from xlite import XliteUtility
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
@@ -288,10 +287,7 @@ class BlocknetGUI(ctk.CTk):
         self.bins_found_label = ctk.CTkLabel(self.bins_title_frame,
                                              text="Found:",
                                              anchor='s')
-        # self.bins_found_label.grid(row=0, column=2, padx=(0, 30), pady=5)
-        # os.path.join(aio_folder, "img", "dark.png")
 
-        # bg_color = self.bins_title_frame.cget('fg_color')
         self.bins_button_switch_theme = ctk.CTkButton(self.bins_title_frame,
                                                       image=self.theme_img,
                                                       command=self.switch_theme_command,
@@ -299,8 +295,6 @@ class BlocknetGUI(ctk.CTk):
                                                       fg_color='transparent',
                                                       hover=False,
                                                       width=1)
-
-        # self.bin_title_frame.columnconfigure(3, weight=1)
         # Creating labels
         self.bins_blocknet_label = ctk.CTkLabel(self.bins_download_frame, text="Blocknet Core:")
         self.bins_blockdx_label = ctk.CTkLabel(self.bins_download_frame, text="Block-DX:")
@@ -458,15 +452,6 @@ class BlocknetGUI(ctk.CTk):
                                                                            state='disabled',
                                                                            width=panel_checkboxes_width)  # , disabledforeground='black')
 
-        # Button for starting or closing Blocknet
-
-        # Button for checking config
-        # self.blocknet_check_config_button = ctk.CTkButton(self.blocknet_core_frame,
-        #                                                   text=check_config_string,
-        #                                                   command=self.blocknet_check_config,
-        #                                                   width=button_width)
-        # self.blocknet_check_config_button.grid(row=3, column=3, sticky="e")
-
     async def setup_blockdx(self):
         # Label for Block-dx frame
         width = 540
@@ -543,13 +528,6 @@ class BlocknetGUI(ctk.CTk):
                                                                              corner_radius=25,
                                                                              state='disabled',
                                                                              width=panel_checkboxes_width)
-
-        # Button for refreshing Xlite config data
-        # self.xlite_check_config_button_string_var = ctk.StringVar(value=check_config_string)
-        # self.xlite_check_config_button = ctk.CTkButton(self.xlite_frame,
-        #                                                textvariable=self.xlite_check_config_button_string_var,
-        #                                                command=self.refresh_xlite_confs, width=button_width)
-        # self.xlite_check_config_button.grid(row=1, column=1, sticky="e")
 
         # Create the Button widget with a text variable
         self.xlite_store_password_button_string_var = ctk.StringVar(value='')
@@ -714,12 +692,6 @@ class BlocknetGUI(ctk.CTk):
         terminate_all_threads()
         logging.info("Threads terminated.")
         os._exit(0)
-        # self.destroy()
-        # exit()
-        #
-        # logging.info("Tkinter GUI destroyed.")
-        # Schedule forced exit after a 5-second timeout
-        # Timer(interval=0.25, function=os._exit, args=(0,)).start()
 
     def adjust_theme(self):
         if self.cfg and 'theme' in self.cfg:
@@ -990,10 +962,7 @@ class BlocknetGUI(ctk.CTk):
         enabled = (not self.blocknet_utility.downloading_bin and
                    not self.disable_start_blocknet_button and
                    not self.blocknet_utility.bootstrap_checking)
-        # logging.debug(
-        #     f"blocknet_utility.downloading_bin: {self.blocknet_utility.downloading_bin}"
-        #     f", self.disable_start_blocknet_button: {self.disable_start_blocknet_button}, enabled: {enabled}"
-        # )
+
         if enabled:
             img = self.stop_img if self.blocknet_process_running else self.start_img
             enable_button(self.blocknet_start_close_button, img=img)
@@ -1235,25 +1204,6 @@ class BlocknetGUI(ctk.CTk):
         # Run all coroutines within the asyncio event loop
         asyncio.run(run_all_coroutines())
 
-    # def update_status_old(self):
-    #     # Define an async function to run the coroutines concurrently
-    #     async def update_status_async():
-    #         coroutines = [
-    #             self.coroutine_update_status_blocknet_core(),
-    #             self.coroutine_update_status_blockdx(),
-    #             self.coroutine_update_status_xlite(),
-    #             self.coroutine_update_bins_buttons(),
-    #             self.coroutine_bins_check_aio_folder(),
-    #             self.coroutine_check_processes()
-    #         ]
-    #
-    #         await asyncio.gather(*coroutines)
-    #
-    #     # Run the async function using asyncio.run() to execute the coroutines
-    #     asyncio.run(update_status_async())
-    #     # Schedule the next update
-    #     self.after(1000, self.update_status)
-
     def detect_new_xlite_install_and_add_to_xbridge(self):
         # logging.info(f"detect_new_xlite_install_and_add_to_xbridge, valid_coins_rpc: {self.xlite_utility.valid_coins_rpc}, disable_daemons_conf_check: {self.disable_daemons_conf_check}")
         if not self.disable_daemons_conf_check and self.xlite_utility.valid_coins_rpc:
@@ -1366,25 +1316,6 @@ class BlocknetGUI(ctk.CTk):
             enable_button(self.bins_install_delete_blocknet_button,
                           img=self.delete_img if blocknet_boolvar else self.install_img)
 
-        # percent_buff = self.blocknet_utility.binary_percent_download
-        # dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
-        # var_blocknet = dl_string if self.blocknet_utility.downloading_bin else ""
-        # if blocknet_boolvar:
-        #     # var_blocknet = "Delete"
-        #     var_blocknet = ""
-        #     blocknet_folder = os.path.join(aio_folder, blocknet_bin_path[0])
-        #     configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_folder)
-        #     if self.blocknet_process_running or self.blocknet_utility.downloading_bin:
-        #         disable_button(self.bins_install_delete_blocknet_button, img=self.delete_greyed_img)
-        #     else:
-        #         enable_button(self.bins_install_delete_blocknet_button, img=self.delete_img)
-        # else:
-        #     configure_tooltip_text(self.bins_install_delete_blocknet_tooltip, blocknet_release_url)
-        #     if self.blocknet_utility.downloading_bin:
-        #         disable_button(self.bins_install_delete_blocknet_button, img=self.install_greyed_img)
-        #     else:
-        #         enable_button(self.bins_install_delete_blocknet_button, img=self.install_img)
-
         percent_buff = self.blockdx_utility.binary_percent_download
         dl_string = f"{int(percent_buff)}%" if percent_buff else ""
         var_blockdx = dl_string if self.blockdx_utility.downloading_bin else ""
@@ -1405,24 +1336,6 @@ class BlocknetGUI(ctk.CTk):
             enable_button(self.bins_install_delete_blockdx_button,
                           img=self.delete_img if blockdx_boolvar else self.install_img)
 
-        # percent_buff = self.blockdx_utility.binary_percent_download
-        # dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
-        # var_blockdx = dl_string if self.blockdx_utility.downloading_bin else ""
-        # if blockdx_boolvar:
-        #     var_blockdx = ""
-        #     blockdx_folder = os.path.join(aio_folder, blockdx_bin_path.get(system))
-        #     configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_folder)
-        #     if self.blockdx_process_running or self.blockdx_utility.downloading_bin:
-        #         disable_button(self.bins_install_delete_blockdx_button, img=self.delete_greyed_img)
-        #     else:
-        #         enable_button(self.bins_install_delete_blockdx_button, img=self.delete_img)
-        # else:
-        #     configure_tooltip_text(self.bins_install_delete_blockdx_tooltip, blockdx_release_url)
-        #     if self.blockdx_utility.downloading_bin:
-        #         disable_button(self.bins_install_delete_blockdx_button, img=self.install_greyed_img)
-        #     else:
-        #         enable_button(self.bins_install_delete_blockdx_button, img=self.install_img)
-
         percent_buff = self.xlite_utility.binary_percent_download
         dl_string = f"{int(percent_buff)}%" if percent_buff else ""
         var_xlite = dl_string if self.xlite_utility.downloading_bin else ""
@@ -1442,25 +1355,6 @@ class BlocknetGUI(ctk.CTk):
         else:
             enable_button(self.bins_install_delete_xlite_button,
                           img=self.delete_img if xlite_boolvar else self.install_img)
-        # percent_buff = self.xlite_utility.binary_percent_download
-        # dl_string = f"{str(int(percent_buff))}%" if percent_buff else ""
-        # var_xlite = dl_string if self.xlite_utility.downloading_bin else ""
-        # if xlite_boolvar:
-        #     # var_xlite = "Delete"
-        #     var_xlite = ""
-        #     folder = os.path.join(aio_folder, xlite_bin_path.get(system))
-        #     configure_tooltip_text(self.bins_install_delete_xlite_tooltip, folder)
-        #     if self.xlite_process_running or self.xlite_utility.downloading_bin:
-        #         disable_button(self.bins_install_delete_xlite_button, img=self.delete_greyed_img)
-        #     else:
-        #         enable_button(self.bins_install_delete_xlite_button, img=self.delete_img)
-        # else:
-        #     configure_tooltip_text(self.bins_install_delete_xlite_tooltip, xlite_release_url)
-        #
-        #     if self.xlite_utility.downloading_bin:
-        #         disable_button(self.bins_install_delete_xlite_button, img=self.install_greyed_img)
-        #     else:
-        #         enable_button(self.bins_install_delete_xlite_button, img=self.install_img)
 
         self.bins_install_delete_blocknet_string_var.set(var_blocknet)
         self.bins_install_delete_blockdx_string_var.set(var_blockdx)
@@ -1653,14 +1547,11 @@ def run_gui():
         app.mainloop()
     except KeyboardInterrupt:
         print("GUI execution terminated by user.")
-        # app.on_close()
-        # sys.exit(0)
     except Exception as e:
         # Log the error to a file
         logging.basicConfig(filename='gui_errors.log', level=logging.ERROR,
                             format='%(asctime)s - %(levelname)s - %(message)s')
         logging.error("An error occurred: %s", e)
-
         # Print a user-friendly error message
         print("An unexpected error occurred. Please check the log file 'gui_errors.log' for more information.")
         app.on_close()
