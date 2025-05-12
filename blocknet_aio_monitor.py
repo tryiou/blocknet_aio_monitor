@@ -37,7 +37,7 @@ tooltip_bg_color = ("#ebebeb", "#051937")
 ctk.set_default_color_theme(themepath)
 
 
-class BlocknetGUI(ctk.CTk):
+class Blocknet_AIO_GUI(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.install_greyed_img = None
@@ -1542,7 +1542,7 @@ def disable_button(button, img=None):
 
 
 def run_gui():
-    app = BlocknetGUI()
+    app = Blocknet_AIO_GUI()
     try:
         app.mainloop()
     except KeyboardInterrupt:
