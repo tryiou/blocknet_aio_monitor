@@ -43,7 +43,8 @@ class BinaryManager:
         setattr(self, disable_flag, False)
 
     def start_or_close_blocknet(self):
-        self.parent.blocknet_manager.check_config()
+        if not self.parent.blocknet_manager.blocknet_process_running:
+            self.parent.blocknet_manager.check_config()
         self._start_or_close_binary(
             process_running=self.parent.blocknet_manager.blocknet_process_running,
             stop_func=self.parent.blocknet_manager.utility.close_blocknet,
@@ -53,6 +54,8 @@ class BinaryManager:
         )
 
     def start_or_close_blockdx(self):
+        if not self.parent.blockdx_manager.process_running:
+            self.parent.blockdx_manager.blockdx_check_config()
         self._start_or_close_binary(
             process_running=self.parent.blockdx_manager.process_running,
             stop_func=self.parent.blockdx_manager.utility.close_blockdx,
@@ -62,10 +65,11 @@ class BinaryManager:
         )
 
     def start_or_close_xlite(self):
-        if self.parent.stored_password:
-            env_vars = [{"CC_WALLET_PASS": self.parent.stored_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
-        else:
-            env_vars = []
+        if not self.parent.xlite_manager.process_running:
+            if self.parent.stored_password:
+                env_vars = [{"CC_WALLET_PASS": self.parent.stored_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
+            else:
+                env_vars = []
         self._start_or_close_binary(
             process_running=self.parent.xlite_manager.process_running,
             stop_func=self.parent.xlite_manager.utility.close_xlite,
