@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import subprocess
 import tarfile
 import threading
@@ -10,12 +11,12 @@ import zipfile
 import psutil
 import requests
 
+import global_variables
 from conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
-from global_variables import *
 
 logging.basicConfig(level=logging.DEBUG)
 
-if system == 'Windows':
+if global_variables.system == 'Windows':
     import winreg
 
 
@@ -109,11 +110,12 @@ class XliteRPCClient:
 
 class XliteUtility:
     def __init__(self):
-        if system == "Darwin":
-            self.xlite_exe = os.path.join(aio_folder, os.path.basename(xlite_url))
-            self.dmg_mount_path = f"/Volumes/{xlite_volume_name}"
+        if global_variables.system == "Darwin":
+            self.xlite_exe = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.xlite_url))
+            self.dmg_mount_path = f"/Volumes/{global_variables.xlite_volume_name}"
         else:
-            self.xlite_exe = os.path.join(aio_folder, xlite_bin_path[system], xlite_bin_name[system])
+            self.xlite_exe = os.path.join(global_variables.aio_folder, xlite_bin_path[global_variables.system],
+                                          global_variables.xlite_bin_name[global_variables.system])
         self.binary_percent_download = None
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
@@ -195,7 +197,7 @@ class XliteUtility:
         thread.start()
 
     def parse_xlite_conf(self):
-        data_folder = os.path.expandvars(os.path.expanduser(xlite_default_paths.get(system, None)))
+        data_folder = os.path.expandvars(os.path.expanduser(xlite_default_paths.get(global_variables.system, None)))
         file = "app-settings.json"
         file_path = os.path.join(data_folder, file)
         meta_data = {}
@@ -214,7 +216,8 @@ class XliteUtility:
 
     def parse_xlite_daemon_conf(self, silent=False):
         # Assuming daemon_data_path and confs_folder are defined earlier in your code
-        daemon_data_path = os.path.expandvars(os.path.expanduser(xlite_daemon_default_paths.get(system, None)))
+        daemon_data_path = os.path.expandvars(
+            os.path.expanduser(xlite_daemon_default_paths.get(global_variables.system, None)))
         confs_folder = os.path.join(daemon_data_path, "settings")
 
         # List all files in the confs_folder
@@ -245,7 +248,7 @@ class XliteUtility:
             logging.info(f"XLITE-DAEMON: Parsed every coins conf {self.xlite_daemon_confs_local}")
 
     def start_xlite(self, env_vars=[]):
-        if system == "Windows":
+        if global_variables.system == "Windows":
             # check vcredist
             # install_vc_redist(vc_redist_win_url)
             check_vc_redist_installed()
@@ -260,7 +263,7 @@ class XliteUtility:
             self.download_xlite_bin()
 
         try:
-            if system == "Darwin":
+            if global_variables.system == "Darwin":
                 # mac mod
                 # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
                 # Path to the application inside the DMG file
@@ -271,9 +274,9 @@ class XliteUtility:
                     os.system(f'hdiutil attach "{self.xlite_exe}"')
                 else:
                     logging.info("Volume is already mounted.")
-                full_path = os.path.join(self.dmg_mount_path, *xlite_bin_name[system])
+                full_path = os.path.join(self.dmg_mount_path, *global_variables.xlite_bin_name[global_variables.system])
                 logging.info(
-                    f"volume_name: {xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
+                    f"volume_name: {global_variables.xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 self.xlite_process = subprocess.Popen([full_path],
                                                       stdout=subprocess.PIPE,
                                                       stderr=subprocess.PIPE,
@@ -372,9 +375,9 @@ class XliteUtility:
 
     def download_xlite_bin(self):
         self.downloading_bin = True
-        url = xlite_releases_urls.get((system, machine))
+        url = global_variables.xlite_releases_urls.get((global_variables.system, global_variables.machine))
         if url is None:
-            raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+            raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
         # Set timeout values in seconds
         connection_timeout = 5
@@ -383,7 +386,7 @@ class XliteUtility:
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
             file_name = os.path.basename(url)
-            tmp_file_path = os.path.join(aio_folder, "tmp_xl_bin")
+            tmp_file_path = os.path.join(global_variables.aio_folder, "tmp_xl_bin")
             try:
                 remote_file_size = int(response.headers.get('Content-Length', 0))
                 # tmp_file_path = os.path.join(aio_folder, file_name + "_tmp")
@@ -412,17 +415,17 @@ class XliteUtility:
             # Extract the archive
             if url.endswith(".zip"):
                 with zipfile.ZipFile(tmp_file_path, "r") as zip_ref:
-                    local_path = os.path.join(aio_folder, xlite_bin_path[system])
+                    local_path = os.path.join(global_variables.aio_folder, xlite_bin_path[global_variables.system])
                     zip_ref.extractall(local_path)
                 logging.info("Zip file extracted successfully.")
                 os.remove(tmp_file_path)
             elif url.endswith(".tar.gz"):
                 with tarfile.open(tmp_file_path, "r:gz") as tar:
-                    tar.extractall(aio_folder)
+                    tar.extractall(global_variables.aio_folder)
                 logging.info("Tar.gz file extracted successfully.")
                 os.remove(tmp_file_path)
             elif url.endswith(".dmg"):
-                file_path = os.path.join(aio_folder, file_name)
+                file_path = os.path.join(global_variables.aio_folder, file_name)
                 os.rename(tmp_file_path, file_path)
                 logging.info("DMG file saved successfully.")
         else:

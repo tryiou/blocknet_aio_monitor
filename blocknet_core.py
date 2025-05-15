@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import random
 import shutil
 import string
@@ -13,10 +14,10 @@ from subprocess import check_output
 import psutil
 import requests
 
+import global_variables
 from conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
                        blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
                        remote_blockchain_configuration_repo)
-from global_variables import *
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -67,7 +68,8 @@ class BlocknetRPCClient:
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
-        self.blocknet_exe = os.path.join(aio_folder, *blocknet_bin_path, blocknet_bin)
+        self.blocknet_exe = global_variables.os.path.join(global_variables.aio_folder, *blocknet_bin_path,
+                                                          global_variables.blocknet_bin)
         self.binary_percent_download = None
         self.parsed_wallet_confs = {}
         self.parsed_xbridge_confs = {}
@@ -437,8 +439,8 @@ class BlocknetUtility:
             os.makedirs(self.data_folder)
 
     def create_aio_folder(self):
-        if aio_folder and not os.path.exists(aio_folder):
-            os.makedirs(aio_folder)
+        if global_variables.aio_folder and not os.path.exists(global_variables.aio_folder):
+            os.makedirs(global_variables.aio_folder)
 
     def download_bootstrap(self):
         self.create_data_folder()
@@ -446,7 +448,7 @@ class BlocknetUtility:
 
         self.bootstrap_checking = True
         filename = "Blocknet.zip"
-        local_file_path = os.path.join(aio_folder, filename)
+        local_file_path = os.path.join(global_variables.aio_folder, filename)
         remote_file_size = get_remote_file_size(blocknet_bootstrap_url)
         # Check if the file already exists on disk
         need_to_download = True
@@ -519,9 +521,9 @@ class BlocknetUtility:
 
     def download_blocknet_bin(self):
         self.downloading_bin = True
-        url = blocknet_releases_urls.get((system, machine))
+        url = global_variables.blocknet_releases_urls.get((global_variables.system, global_variables.machine))
         if url is None:
-            raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+            raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
         # Set timeout values in seconds
         connection_timeout = 10
@@ -529,7 +531,7 @@ class BlocknetUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()
         if response.status_code == 200:
-            local_file_path = os.path.join(aio_folder, os.path.basename(url))
+            local_file_path = os.path.join(global_variables.aio_folder, os.path.basename(url))
             try:
                 remote_file_size = int(response.headers.get('Content-Length', 0))
                 logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
@@ -554,12 +556,12 @@ class BlocknetUtility:
 
             if url.endswith(".zip"):
                 with zipfile.ZipFile(local_file_path, "r") as zip_ref:
-                    zip_ref.extractall(aio_folder)
+                    zip_ref.extractall(global_variables.aio_folder)
                 logging.info("Zip file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
                 with tarfile.open(local_file_path, "r:gz") as tar:
-                    tar.extractall(aio_folder)
+                    tar.extractall(global_variables.aio_folder)
                 logging.info("Tar.gz file extracted successfully.")
                 os.remove(local_file_path)
         else:
@@ -584,7 +586,7 @@ def get_blocknet_data_folder(custom_path=None):
     if custom_path:
         path = custom_path
     else:
-        path = blocknet_default_paths.get(system)
+        path = blocknet_default_paths.get(global_variables.system)
     if path:
         expanded_path = os.path.expandvars(os.path.expanduser(path))
         # logging.info(f"\n path {norm_path} \n")
@@ -621,7 +623,7 @@ def save_conf_to_file(conf_data, file_path):
 
 def retrieve_remote_conf(remote_url, subfolder, expected_filename):
     folder = "xb_conf"
-    local_conf_file = os.path.join(aio_folder, folder, subfolder, expected_filename)
+    local_conf_file = os.path.join(global_variables.aio_folder, folder, subfolder, expected_filename)
 
     if os.path.exists(local_conf_file):
         try:
@@ -666,7 +668,7 @@ def retrieve_xb_manifest():
     # remote_manifest_url
     folder = "xb_conf"
     filename = os.path.basename(remote_manifest_url)
-    local_manifest_file = os.path.join(aio_folder, folder, filename)
+    local_manifest_file = os.path.join(global_variables.aio_folder, folder, filename)
 
     # if os.path.exists(local_manifest_file):
     #     try:
