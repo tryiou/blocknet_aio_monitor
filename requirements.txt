@@ -1,6 +1,6 @@
 psutil==5.9.8
-requests==2.31.0
-cryptography==42.0.5
+requests==2.32.0
+cryptography==44.0.1
 customtkinter==5.2.2
 CTkToolTip==0.8
-pillow==10.2.0
+pillow==10.3.0
