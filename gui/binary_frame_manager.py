@@ -122,9 +122,11 @@ class BinaryFrameManager:
         self.blocknet_start_close_button_string_var.set(var)
 
         if self.root.blocknet_manager.blocknet_process_running:
-            self.tooltip_manager.update_tooltip(self.blocknet_start_close_button, widgets_strings.close_string)
+            self.tooltip_manager.update_tooltip(widget=self.blocknet_start_close_button,
+                                                msg=widgets_strings.close_string)
         else:
-            self.tooltip_manager.update_tooltip(self.blocknet_start_close_button, widgets_strings.start_string)
+            self.tooltip_manager.update_tooltip(widget=self.blocknet_start_close_button,
+                                                msg=widgets_strings.start_string)
 
         enabled = (not self.root.blocknet_manager.utility.downloading_bin and
                    not self.parent.disable_start_blocknet_button and
@@ -176,21 +178,22 @@ class BinaryFrameManager:
                    not self.parent.disable_start_blockdx_button)
         if enabled:
             if self.root.blockdx_manager.process_running:
-                self.tooltip_manager.update_tooltip(self.blockdx_start_close_button, msg=widgets_strings.close_string)
+                self.tooltip_manager.update_tooltip(widget=self.blockdx_start_close_button,
+                                                    msg=widgets_strings.close_string)
                 img = self.root.stop_img
             else:
-                self.tooltip_manager.update_tooltip(self.blockdx_start_close_button, msg=widgets_strings.start_string)
+                self.tooltip_manager.update_tooltip(widget=self.blockdx_start_close_button,
+                                                    msg=widgets_strings.start_string)
                 img = self.root.start_img
             utils.enable_button(self.blockdx_start_close_button, img=img)
 
-            # self.blockdx_start_close_button_tooltip.hide()
         else:
             if self.root.blockdx_manager.process_running:
                 img = self.root.stop_greyed_img
-                self.tooltip_manager.update_tooltip(self.blockdx_start_close_button,
+                self.tooltip_manager.update_tooltip(widget=self.blockdx_start_close_button,
                                                     msg=widgets_strings.close_string)
             else:
-                self.tooltip_manager.update_tooltip(self.blockdx_start_close_button,
+                self.tooltip_manager.update_tooltip(widget=self.blockdx_start_close_button,
                                                     msg=widgets_strings.blockdx_missing_blocknet_config_string)
                 img = self.root.start_greyed_img
             utils.disable_button(self.blockdx_start_close_button, img=img)
@@ -212,11 +215,11 @@ class BinaryFrameManager:
 
         if blocknet_boolvar:
             var_blocknet = ""
-            self.tooltip_manager.update_tooltip(self.install_delete_blocknet_button, blocknet_folder)
+            self.tooltip_manager.update_tooltip(widget=self.install_delete_blocknet_button, msg=blocknet_folder)
             button_condition = self.root.blocknet_manager.blocknet_process_running or self.root.blocknet_manager.utility.downloading_bin
         else:
-            self.tooltip_manager.update_tooltip(self.install_delete_blocknet_button,
-                                                global_variables.blocknet_release_url)
+            self.tooltip_manager.update_tooltip(widget=self.install_delete_blocknet_button,
+                                                msg=global_variables.blocknet_release_url)
             button_condition = self.root.blocknet_manager.utility.downloading_bin
 
         if button_condition:
@@ -233,11 +236,12 @@ class BinaryFrameManager:
 
         if blockdx_boolvar:
             var_blockdx = ""
-            self.tooltip_manager.update_tooltip(self.install_delete_blockdx_button, blockdx_folder)
+            self.tooltip_manager.update_tooltip(widget=self.install_delete_blockdx_button,
+                                                msg=blockdx_folder)
             button_condition = self.root.blockdx_manager.process_running or self.root.blockdx_manager.utility.downloading_bin
         else:
-            self.tooltip_manager.update_tooltip(self.install_delete_blockdx_button,
-                                                global_variables.blockdx_release_url)
+            self.tooltip_manager.update_tooltip(widget=self.install_delete_blockdx_button,
+                                                msg=global_variables.blockdx_release_url)
             button_condition = self.root.blockdx_manager.utility.downloading_bin
 
         if button_condition:
@@ -254,11 +258,12 @@ class BinaryFrameManager:
 
         if xlite_boolvar:
             var_xlite = ""
-            self.tooltip_manager.update_tooltip(self.install_delete_xlite_button, folder)
+            self.tooltip_manager.update_tooltip(widget=self.install_delete_xlite_button,
+                                                msg=folder)
             button_condition = self.root.xlite_manager.process_running or self.root.xlite_manager.utility.downloading_bin
         else:
-            self.tooltip_manager.update_tooltip(self.install_delete_xlite_button,
-                                                global_variables.xlite_release_url)
+            self.tooltip_manager.update_tooltip(widget=self.install_delete_xlite_button,
+                                                msg=global_variables.xlite_release_url)
             button_condition = self.root.xlite_manager.utility.downloading_bin
 
         if button_condition:
@@ -278,9 +283,11 @@ class BinaryFrameManager:
         self.xlite_start_close_button_string_var.set(var)
 
         if self.root.xlite_manager.process_running:
-            self.tooltip_manager.update_tooltip(self.xlite_start_close_button, widgets_strings.close_string)
+            self.tooltip_manager.update_tooltip(widget=self.xlite_start_close_button,
+                                                msg=widgets_strings.close_string)
         else:
-            self.tooltip_manager.update_tooltip(self.xlite_start_close_button, widgets_strings.start_string)
+            self.tooltip_manager.update_tooltip(widget=self.xlite_start_close_button,
+                                                msg=widgets_strings.start_string)
 
         # xlite_start_close_button
         disable_start_close_button = self.root.xlite_manager.utility.downloading_bin or self.parent.disable_start_xlite_button
