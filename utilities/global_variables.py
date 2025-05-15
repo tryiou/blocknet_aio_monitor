@@ -1,8 +1,9 @@
 import os
 import platform
 
-from conf_data import (blocknet_bin_name, blockdx_bin_name, xlite_bin_name, xlite_daemon_bin_name,
-                       blocknet_releases_urls, blockdx_releases_urls, xlite_releases_urls, aio_blocknet_data_path)
+from config.conf_data import (blocknet_bin_name, blockdx_bin_name, xlite_bin_name, xlite_daemon_bin_name,
+                              blocknet_releases_urls, blockdx_releases_urls, xlite_releases_urls,
+                              aio_blocknet_data_path)
 
 system = platform.system()
 machine = platform.machine()
@@ -23,5 +24,5 @@ xlite_url = xlite_releases_urls.get((system, machine))
 if system == "Darwin":
     xlite_volume_name = ' '.join(os.path.splitext(os.path.basename(xlite_url))[0].split('-')[:-1])
 
-DIRPATH = os.path.dirname(os.path.abspath(__file__))
+DIRPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 themepath = os.path.join(DIRPATH, "theme", "aio.json")

@@ -11,8 +11,8 @@ import zipfile
 import psutil
 import requests
 
-import global_variables
-from conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
+from config.conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
+from utilities import global_variables
 
 logging.basicConfig(level=logging.DEBUG)
 

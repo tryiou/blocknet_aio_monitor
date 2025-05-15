@@ -14,10 +14,10 @@ from subprocess import check_output
 import psutil
 import requests
 
-import global_variables
-from conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
-                       blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
-                       remote_blockchain_configuration_repo)
+from config.conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
+                              blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
+                              remote_blockchain_configuration_repo)
+from utilities import global_variables
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)

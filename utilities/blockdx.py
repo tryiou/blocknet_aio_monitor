@@ -10,8 +10,9 @@ import zipfile
 import psutil
 import requests
 
-import global_variables
-from conf_data import (blockdx_bin_path, blockdx_default_paths, blockdx_selectedWallets_blocknet, blockdx_base_conf)
+from config.conf_data import (blockdx_bin_path, blockdx_default_paths, blockdx_selectedWallets_blocknet,
+                              blockdx_base_conf)
+from utilities import global_variables
 
 logging.basicConfig(level=logging.DEBUG)
 
