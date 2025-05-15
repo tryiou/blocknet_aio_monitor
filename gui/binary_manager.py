@@ -25,7 +25,7 @@ class BinaryManager:
         self.download_blockdx_thread = None
         self.download_xlite_thread = None
 
-    def setup(self):
+    async def setup(self):
         self.frame_manager = BinaryFrameManager(self, self.master_frame, self.title_frame)
 
     def _start_or_close_binary(self, process_running, stop_func, start_func, button, disable_flag):

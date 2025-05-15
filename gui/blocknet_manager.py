@@ -16,7 +16,7 @@ class BlocknetManager:
 
         self.utility = BlocknetUtility(custom_path=self.parent.custom_path)
 
-    def setup(self):
+    async def setup(self):
         self.frame_manager = BlocknetCoreFrameManager(self, self.master_frame, self.title_frame)
 
     def check_config(self):

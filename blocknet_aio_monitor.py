@@ -6,19 +6,19 @@ import signal
 import time
 from threading import Thread
 
-import CTkToolTip
 import PIL._tkinter_finder
 import customtkinter as ctk
 from PIL import Image
 from psutil import process_iter
 
-from utilities import global_variables
-from utilities import utils
 import widgets_strings
 from gui.binary_manager import BinaryManager
 from gui.blockdx_manager import BlockDXManager
 from gui.blocknet_manager import BlocknetManager
+from gui.tooltip_manager import TooltipManager
 from gui.xlite_manager import XliteManager
+from utilities import global_variables
+from utilities import utils
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
@@ -42,7 +42,6 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.start_img = None
         self.transparent_img = None
         self.theme_img = None
-        self.xlite_version = [global_variables.xlite_release_url.split('/')[7]]
 
         self.last_process_check_time = None
         self.disable_daemons_conf_check = False
@@ -88,13 +87,16 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.xlite_frame = None
         self.xlite_title_frame = None
 
+        self.tooltip_manager = TooltipManager(self)
         self.init_setup()
 
-    def setup_management_sections(self):
-        self.binary_manager.setup()
-        self.blocknet_manager.setup()
-        self.blockdx_manager.setup()
-        self.xlite_manager.setup()
+    async def setup_management_sections(self):
+        await asyncio.gather(
+            self.binary_manager.setup(),
+            self.blocknet_manager.setup(),
+            self.blockdx_manager.setup(),
+            self.xlite_manager.setup()
+        )
 
     def create_managers(self):
         self.blocknet_manager = BlocknetManager(self, self.blocknet_core_frame, self.blocknet_title_frame)
@@ -108,7 +110,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.setup_load_images()
         self.init_frames()
         self.create_managers()
-        self.setup_management_sections()
+        asyncio.run(self.setup_management_sections())
         self.setup_tooltips()
         self.init_grid()
 
@@ -177,79 +179,74 @@ class Blocknet_AIO_GUI(ctk.CTk):
                 PIL.Image.LANCZOS))
 
     def setup_tooltips(self):
-        CTkToolTip.CTkToolTip(self.blocknet_core_frame, message=widgets_strings.tooltip_howtouse, delay=1, follow=True,
-                              bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.blockdx_frame, message=widgets_strings.tooltip_howtouse, delay=1, follow=True,
-                              bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.xlite_frame, message=widgets_strings.tooltip_howtouse, delay=1, follow=True,
-                              bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.bins_download_frame, message=widgets_strings.tooltip_howtouse, delay=1, follow=True,
-                              bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.bins_title_frame, message=widgets_strings.tooltip_bins_title_msg, delay=1,
-                              follow=True,
-                              bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.header_label,
-                              message=widgets_strings.tooltip_bins_title_msg,
-                              delay=1,
-                              follow=True,
-                              bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.xlite_manager.frame_manager.xlite_label,
-                              message=widgets_strings.tooltip_xlite_label_msg,
-                              delay=1.0,
-                              border_width=2, follow=True,
-                              bg_color=tooltip_bg_color)
-        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.blocknet_label,
-                              message=widgets_strings.tooltip_blocknet_core_label_msg, delay=1, follow=True,
-                              bg_color=tooltip_bg_color,
-                              border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.blockdx_label,
-                              message=widgets_strings.tooltip_blockdx_label_msg,
-                              delay=1,
-                              follow=True,
-                              bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.xlite_label,
-                              message=widgets_strings.tooltip_xlite_label_msg,
-                              delay=1,
-                              follow=True,
-                              bg_color=tooltip_bg_color, border_width=2, justify="left")
-        self.binary_manager.frame_manager.install_delete_blocknet_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.install_delete_blocknet_button,
-            message='', delay=1, width=1, follow=True,
-            bg_color=tooltip_bg_color,
-            border_width=2, justify="left")
-        self.binary_manager.frame_manager.install_delete_blockdx_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.install_delete_blockdx_button,
-            message=global_variables.blockdx_release_url,
-            delay=1, width=1, follow=True,
-            bg_color=tooltip_bg_color,
-            border_width=2, justify="left")
-        self.binary_manager.frame_manager.install_delete_xlite_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.install_delete_xlite_button,
-            message=global_variables.xlite_release_url,
-            delay=1, follow=True, bg_color=tooltip_bg_color,
-            border_width=2, justify="left")
-        self.binary_manager.frame_manager.blocknet_start_close_button_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.blocknet_start_close_button,
-            delay=1, follow=True,
-            bg_color=tooltip_bg_color,
-            border_width=2, justify="left")
-        self.binary_manager.frame_manager.blockdx_start_close_button_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.blockdx_start_close_button,
-            delay=1, follow=True,
-            bg_color=tooltip_bg_color,
-            border_width=2, justify="left")
-        self.binary_manager.frame_manager.xlite_start_close_button_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.xlite_start_close_button,
-            delay=1, follow=True,
-            bg_color=tooltip_bg_color,
-            border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.blocknet_manager.frame_manager.label,
-                              message=widgets_strings.tooltip_blocknet_core_label_msg,
-                              delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
-
-        CTkToolTip.CTkToolTip(self.blockdx_manager.frame_manager.label,
-                              message=widgets_strings.tooltip_blockdx_label_msg,
-                              delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
+        self.tooltip_manager.register_tooltip(self.blocknet_core_frame,
+                                              msg=widgets_strings.tooltip_howtouse,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.blockdx_frame,
+                                              msg=widgets_strings.tooltip_howtouse,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.xlite_frame,
+                                              msg=widgets_strings.tooltip_howtouse,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.bins_download_frame,
+                                              msg=widgets_strings.tooltip_howtouse,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.bins_title_frame,
+                                              msg=widgets_strings.tooltip_bins_title_msg,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.header_label,
+                                              msg=widgets_strings.tooltip_bins_title_msg,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.xlite_manager.frame_manager.xlite_label,
+                                              msg=widgets_strings.tooltip_xlite_label_msg,
+                                              delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blocknet_label,
+                                              msg=widgets_strings.tooltip_blocknet_core_label_msg, delay=1,
+                                              follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blockdx_label,
+                                              msg=widgets_strings.tooltip_blockdx_label_msg,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.xlite_label,
+                                              msg=widgets_strings.tooltip_xlite_label_msg,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_blocknet_button,
+                                              msg='', delay=1, width=1, follow=True, bg_color=tooltip_bg_color,
+                                              border_width=2, justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_blockdx_button,
+                                              msg=global_variables.blockdx_release_url,
+                                              delay=1, width=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_xlite_button,
+                                              msg=global_variables.xlite_release_url,
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blocknet_start_close_button,
+                                              msg='',
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blockdx_start_close_button,
+                                              msg='',
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.xlite_start_close_button,
+                                              msg='',
+                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
+                                              justify="left")
+        self.tooltip_manager.register_tooltip(self.blocknet_manager.frame_manager.label,
+                                              msg=widgets_strings.tooltip_blocknet_core_label_msg,
+                                              delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
+        self.tooltip_manager.register_tooltip(self.blockdx_manager.frame_manager.label,
+                                              msg=widgets_strings.tooltip_blockdx_label_msg,
+                                              delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
 
     def init_grid(self):
         x = 0
@@ -349,7 +346,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
     async def coroutine_bins_check_aio_folder(self):
         blocknet_pruned_version = self.blocknet_manager.blocknet_version[0].replace('v', '')
         blockdx_pruned_version = self.blockdx_manager.version[0].replace('v', '')
-        xlite_pruned_version = self.xlite_version[0].replace('v', '')
+        xlite_pruned_version = self.xlite_manager.xlite_version[0].replace('v', '')
 
         blocknet_present = False
         blockdx_present = False

@@ -17,7 +17,7 @@ class BlockDXManager:
         self.process_running = False
         self.is_config_sync = None
 
-    def setup(self):
+    async def setup(self):
         self.frame_manager = BlockDxFrameManager(self, self.master_frame, self.title_frame)
 
     def blockdx_check_config(self):
