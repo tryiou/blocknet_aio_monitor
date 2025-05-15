@@ -1,4 +1,4 @@
-from gui.blocknet_core_frame_manager import BlocknetCoreFrameManager
+from gui.blocknet_frame_manager import BlocknetCoreFrameManager
 from utilities import global_variables
 from utilities.blocknet_core import BlocknetUtility
 

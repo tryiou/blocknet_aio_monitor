@@ -13,9 +13,9 @@ class XliteManager:
         self.frame_manager = None
         self.utility = XliteUtility()
 
-        self.xlite_process_running = False
-        self.xlite_daemon_process_running = False
-        self.xlite_password = None
+        self.process_running = False
+        self.daemon_process_running = False
+        self.stored_password = None
 
     def setup(self):
         self.frame_manager = XliteFrameManager(self, self.master_frame, self.title_frame)

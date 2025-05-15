@@ -1,7 +1,7 @@
 import logging
 import os
 
-from gui.block_dx_frame_manager import BlockDxFrameManager
+from gui.blockdx_frame_manager import BlockDxFrameManager
 from utilities import global_variables
 from utilities.blockdx import BlockdxUtility
 
@@ -13,9 +13,9 @@ class BlockDXManager:
         self.title_frame = title_frame
         self.master_frame = master_frame
         self.utility = BlockdxUtility()
-        self.blockdx_version = [global_variables.blockdx_release_url.split('/')[7]]
-        self.blockdx_process_running = False
-        self.is_blockdx_config_sync = None
+        self.version = [global_variables.blockdx_release_url.split('/')[7]]
+        self.process_running = False
+        self.is_config_sync = None
 
     def setup(self):
         self.frame_manager = BlockDxFrameManager(self, self.master_frame, self.title_frame)

@@ -15,7 +15,7 @@ class BinaryManager:
         self.master_frame = master_frame
         self.frame_manager = None
 
-        self.bins_last_aio_folder_check_time = None
+        self.last_aio_folder_check_time = None
 
         self.disable_start_blocknet_button = False
         self.disable_start_xlite_button = False
@@ -29,16 +29,16 @@ class BinaryManager:
         self.frame_manager = BinaryFrameManager(self, self.master_frame, self.title_frame)
 
     def start_or_close_xlite(self):
-        img = self.parent.stop_greyed_img if self.parent.xlite_manager.xlite_process_running else self.parent.start_greyed_img
+        img = self.parent.stop_greyed_img if self.parent.xlite_manager.process_running else self.parent.start_greyed_img
         utils.disable_button(self.frame_manager.xlite_start_close_button, img=img)
         self.disable_start_xlite_button = True
-        if self.parent.xlite_manager.xlite_process_running:
+        if self.parent.xlite_manager.process_running:
             self.parent.xlite_t1 = Thread(target=self.parent.xlite_manager.utility.close_xlite)
             self.parent.xlite_t1.start()
         else:
             utils.disable_button(self.frame_manager.xlite_start_close_button, img=self.parent.start_greyed_img)
-            if self.parent.xlite_password:
-                env_vars = [{"CC_WALLET_PASS": self.parent.xlite_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
+            if self.parent.stored_password:
+                env_vars = [{"CC_WALLET_PASS": self.parent.stored_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
             else:
                 env_vars = []
             self.parent.xlite_t2 = Thread(
@@ -48,7 +48,7 @@ class BinaryManager:
 
     def start_or_close_blocknet(self):
         img = self.parent.stop_greyed_img if self.parent.blocknet_manager.blocknet_process_running else self.parent.start_greyed_img
-        utils.disable_button(self.frame_manager.bin_blocknet_start_close_button, img=img)
+        utils.disable_button(self.frame_manager.blocknet_start_close_button, img=img)
         self.disable_start_blocknet_button = True
         if self.parent.blocknet_manager.blocknet_process_running:
             self.parent.blocknet_t1 = Thread(target=self.parent.blocknet_manager.utility.close_blocknet)
@@ -60,10 +60,10 @@ class BinaryManager:
         self.parent.after(self.parent.time_disable_button, self.enable_blocknet_start_button)
 
     def start_or_close_blockdx(self):
-        img = self.parent.stop_greyed_img if self.parent.blockdx_manager.blockdx_process_running else self.parent.start_greyed_img
+        img = self.parent.stop_greyed_img if self.parent.blockdx_manager.process_running else self.parent.start_greyed_img
         utils.disable_button(self.frame_manager.blockdx_start_close_button, img=img)
         self.disable_start_blockdx_button = True
-        if self.parent.blockdx_manager.blockdx_process_running:
+        if self.parent.blockdx_manager.process_running:
             self.parent.blockdx_t1 = Thread(target=self.parent.blockdx_manager.utility.close_blockdx)
             self.parent.blockdx_t1.start()
         else:
@@ -73,14 +73,14 @@ class BinaryManager:
         self.parent.after(self.parent.time_disable_button, self.enable_blockdx_start_button)
 
     def install_delete_blocknet_command(self):
-        blocknet_boolvar = self.frame_manager.blocknet_bin_installed_boolvar.get()
+        blocknet_boolvar = self.frame_manager.blocknet_installed_boolvar.get()
         if blocknet_boolvar:
             self.delete_blocknet_command()
         else:
             self.download_blocknet_command()
 
     def download_blocknet_command(self):
-        utils.disable_button(self.frame_manager.bins_install_delete_blocknet_button, img=self.parent.install_greyed_img)
+        utils.disable_button(self.frame_manager.install_delete_blocknet_button, img=self.parent.install_greyed_img)
         self.download_blocknet_thread = Thread(target=self.parent.blocknet_manager.utility.download_blocknet_bin,
                                                daemon=True)
         self.download_blocknet_thread.start()
@@ -97,20 +97,20 @@ class BinaryManager:
                         shutil.rmtree(item_path)
 
     def install_delete_blockdx_command(self):
-        blockdx_boolvar = self.frame_manager.blockdx_bin_installed_boolvar.get()
+        blockdx_boolvar = self.frame_manager.blockdx_installed_boolvar.get()
         if blockdx_boolvar:
             self.delete_blockdx_command()
         else:
             self.download_blockdx_command()
 
     def download_blockdx_command(self):
-        utils.disable_button(self.frame_manager.bins_install_delete_blockdx_button, img=self.parent.install_greyed_img)
+        utils.disable_button(self.frame_manager.install_delete_blockdx_button, img=self.parent.install_greyed_img)
         self.download_blockdx_thread = Thread(target=self.parent.blockdx_manager.utility.download_blockdx_bin,
                                               daemon=True)
         self.download_blockdx_thread.start()
 
     def delete_blockdx_command(self):
-        blockdx_pruned_version = self.parent.blockdx_version[0].replace('v', '')
+        blockdx_pruned_version = self.parent.version[0].replace('v', '')
         for item in os.listdir(global_variables.aio_folder):
             item_path = os.path.join(global_variables.aio_folder, item)
             if global_variables.system == 'Darwin':
@@ -127,14 +127,14 @@ class BinaryManager:
                             shutil.rmtree(item_path)
 
     def install_delete_xlite_command(self):
-        xlite_boolvar = self.frame_manager.xlite_bin_installed_boolvar.get()
+        xlite_boolvar = self.frame_manager.xlite_installed_boolvar.get()
         if xlite_boolvar:
             self.delete_xlite_command()
         else:
             self.download_xlite_command()
 
     def download_xlite_command(self):
-        utils.disable_button(self.frame_manager.bins_install_delete_xlite_button, img=self.parent.install_greyed_img)
+        utils.disable_button(self.frame_manager.install_delete_xlite_button, img=self.parent.install_greyed_img)
         self.download_xlite_thread = Thread(target=self.parent.xlite_manager.utility.download_xlite_bin, daemon=True)
         self.download_xlite_thread.start()
 
@@ -167,7 +167,7 @@ class BinaryManager:
 
     def bins_should_check_aio_folder(self, max_delay=5):
         current_time = time.time()
-        if not self.bins_last_aio_folder_check_time or current_time - self.bins_last_aio_folder_check_time >= max_delay:
-            self.bins_last_aio_folder_check_time = current_time
+        if not self.last_aio_folder_check_time or current_time - self.last_aio_folder_check_time >= max_delay:
+            self.last_aio_folder_check_time = current_time
             return True
         return False

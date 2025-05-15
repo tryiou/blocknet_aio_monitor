@@ -16,8 +16,8 @@ from utilities import global_variables
 from utilities import utils
 import widgets_strings
 from gui.binary_manager import BinaryManager
-from gui.block_dx_manager import BlockDXManager
-from gui.blocknet_core_manager import BlocknetManager
+from gui.blockdx_manager import BlockDXManager
+from gui.blocknet_manager import BlocknetManager
 from gui.xlite_manager import XliteManager
 
 asyncio_logger = logging.getLogger('asyncio')
@@ -60,16 +60,16 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.cfg = utils.load_cfg_json()
         self.adjust_theme()
         self.custom_path = None
-        self.xlite_password = None
+        self.stored_password = None
         if self.cfg:
             if 'custom_path' in self.cfg:
                 self.custom_path = self.cfg['custom_path']
             if 'salt' in self.cfg and 'xl_pass' in self.cfg:
                 try:
-                    self.xlite_password = utils.decrypt_password(self.cfg['xl_pass'], self.cfg['salt'].encode())
+                    self.stored_password = utils.decrypt_password(self.cfg['xl_pass'], self.cfg['salt'].encode())
                 except Exception as e:
                     logging.error(f"Error decrypting XLite password: {e}")
-                    self.xlite_password = None
+                    self.stored_password = None
 
         self.binary_manager = None
         self.blocknet_manager = None
@@ -188,7 +188,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
         CTkToolTip.CTkToolTip(self.bins_title_frame, message=widgets_strings.tooltip_bins_title_msg, delay=1,
                               follow=True,
                               bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.bins_header_label,
+        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.header_label,
                               message=widgets_strings.tooltip_bins_title_msg,
                               delay=1,
                               follow=True,
@@ -198,38 +198,38 @@ class Blocknet_AIO_GUI(ctk.CTk):
                               delay=1.0,
                               border_width=2, follow=True,
                               bg_color=tooltip_bg_color)
-        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.bins_blocknet_label,
+        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.blocknet_label,
                               message=widgets_strings.tooltip_blocknet_core_label_msg, delay=1, follow=True,
                               bg_color=tooltip_bg_color,
                               border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.bins_blockdx_label,
+        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.blockdx_label,
                               message=widgets_strings.tooltip_blockdx_label_msg,
                               delay=1,
                               follow=True,
                               bg_color=tooltip_bg_color, border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.bins_xlite_label,
+        CTkToolTip.CTkToolTip(self.binary_manager.frame_manager.xlite_label,
                               message=widgets_strings.tooltip_xlite_label_msg,
                               delay=1,
                               follow=True,
                               bg_color=tooltip_bg_color, border_width=2, justify="left")
-        self.binary_manager.frame_manager.bins_install_delete_blocknet_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.bins_install_delete_blocknet_button,
+        self.binary_manager.frame_manager.install_delete_blocknet_tooltip = CTkToolTip.CTkToolTip(
+            self.binary_manager.frame_manager.install_delete_blocknet_button,
             message='', delay=1, width=1, follow=True,
             bg_color=tooltip_bg_color,
             border_width=2, justify="left")
-        self.binary_manager.frame_manager.bins_install_delete_blockdx_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.bins_install_delete_blockdx_button,
+        self.binary_manager.frame_manager.install_delete_blockdx_tooltip = CTkToolTip.CTkToolTip(
+            self.binary_manager.frame_manager.install_delete_blockdx_button,
             message=global_variables.blockdx_release_url,
             delay=1, width=1, follow=True,
             bg_color=tooltip_bg_color,
             border_width=2, justify="left")
-        self.binary_manager.frame_manager.bins_install_delete_xlite_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.bins_install_delete_xlite_button,
+        self.binary_manager.frame_manager.install_delete_xlite_tooltip = CTkToolTip.CTkToolTip(
+            self.binary_manager.frame_manager.install_delete_xlite_button,
             message=global_variables.xlite_release_url,
             delay=1, follow=True, bg_color=tooltip_bg_color,
             border_width=2, justify="left")
         self.binary_manager.frame_manager.blocknet_start_close_button_tooltip = CTkToolTip.CTkToolTip(
-            self.binary_manager.frame_manager.bin_blocknet_start_close_button,
+            self.binary_manager.frame_manager.blocknet_start_close_button,
             delay=1, follow=True,
             bg_color=tooltip_bg_color,
             border_width=2, justify="left")
@@ -243,11 +243,11 @@ class Blocknet_AIO_GUI(ctk.CTk):
             delay=1, follow=True,
             bg_color=tooltip_bg_color,
             border_width=2, justify="left")
-        CTkToolTip.CTkToolTip(self.blocknet_manager.frame_manager.blocknet_core_label,
+        CTkToolTip.CTkToolTip(self.blocknet_manager.frame_manager.label,
                               message=widgets_strings.tooltip_blocknet_core_label_msg,
                               delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
 
-        CTkToolTip.CTkToolTip(self.blockdx_manager.frame_manager.blockdx_label,
+        CTkToolTip.CTkToolTip(self.blockdx_manager.frame_manager.label,
                               message=widgets_strings.tooltip_blockdx_label_msg,
                               delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
 
@@ -348,7 +348,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
     async def coroutine_bins_check_aio_folder(self):
         blocknet_pruned_version = self.blocknet_manager.blocknet_version[0].replace('v', '')
-        blockdx_pruned_version = self.blockdx_manager.blockdx_version[0].replace('v', '')
+        blockdx_pruned_version = self.blockdx_manager.version[0].replace('v', '')
         xlite_pruned_version = self.xlite_version[0].replace('v', '')
 
         blocknet_present = False
@@ -403,10 +403,10 @@ class Blocknet_AIO_GUI(ctk.CTk):
                             logging.info(f"deleting outdated version: {item_path}")
                             shutil.rmtree(item_path)
 
-        self.binary_manager.frame_manager.blocknet_bin_installed_boolvar.set(blocknet_present)
-        self.binary_manager.frame_manager.blockdx_bin_installed_boolvar.set(blockdx_present)
-        self.binary_manager.frame_manager.xlite_bin_installed_boolvar.set(xlite_present)
-        self.binary_manager.frame_manager.bins_last_aio_folder_check_time = time.time()
+        self.binary_manager.frame_manager.blocknet_installed_boolvar.set(blocknet_present)
+        self.binary_manager.frame_manager.blockdx_installed_boolvar.set(blockdx_present)
+        self.binary_manager.frame_manager.xlite_installed_boolvar.set(xlite_present)
+        self.binary_manager.frame_manager.last_aio_folder_check_time = time.time()
 
     async def coroutine_check_processes(self):
         # Check Blocknet process
@@ -467,15 +467,15 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.blocknet_manager.utility.blocknet_pids = blocknet_processes
 
         # Update Block DX process status and store the PIDs
-        self.blockdx_manager.blockdx_process_running = bool(blockdx_processes)
+        self.blockdx_manager.process_running = bool(blockdx_processes)
         self.blockdx_manager.utility.blockdx_pids = blockdx_processes
 
         # Update Xlite process status and store the PIDs
-        self.xlite_manager.xlite_process_running = bool(xlite_processes)
+        self.xlite_manager.process_running = bool(xlite_processes)
         self.xlite_manager.utility.xlite_pids = xlite_processes
 
         # Update Xlite-daemon process status and store the PIDs
-        self.xlite_manager.xlite_daemon_process_running = bool(xlite_daemon_processes)
+        self.xlite_manager.daemon_process_running = bool(xlite_daemon_processes)
         self.xlite_manager.utility.xlite_daemon_pids = xlite_daemon_processes
 
 
