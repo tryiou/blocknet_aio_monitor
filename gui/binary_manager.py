@@ -28,49 +28,51 @@ class BinaryManager:
     def setup(self):
         self.frame_manager = BinaryFrameManager(self, self.master_frame, self.title_frame)
 
-    def start_or_close_xlite(self):
-        img = self.parent.stop_greyed_img if self.parent.xlite_manager.process_running else self.parent.start_greyed_img
-        utils.disable_button(self.frame_manager.xlite_start_close_button, img=img)
-        self.disable_start_xlite_button = True
-        if self.parent.xlite_manager.process_running:
-            self.parent.xlite_t1 = Thread(target=self.parent.xlite_manager.utility.close_xlite)
-            self.parent.xlite_t1.start()
+    def _start_or_close_binary(self, process_running, stop_func, start_func, button, disable_flag):
+        img = self.parent.stop_greyed_img if process_running else self.parent.start_greyed_img
+        utils.disable_button(button, img=img)
+        setattr(self, disable_flag,
+                True)  # Disable the button flag
+        if process_running:
+            Thread(target=stop_func).start()
         else:
-            utils.disable_button(self.frame_manager.xlite_start_close_button, img=self.parent.start_greyed_img)
-            if self.parent.stored_password:
-                env_vars = [{"CC_WALLET_PASS": self.parent.stored_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
-            else:
-                env_vars = []
-            self.parent.xlite_t2 = Thread(
-                target=lambda: self.parent.xlite_manager.utility.start_xlite(env_vars=env_vars))
-            self.parent.xlite_t2.start()
-        self.parent.after(self.parent.time_disable_button, self.enable_xlite_start_button)
+            Thread(target=start_func).start()
+        self.parent.after(self.parent.time_disable_button, self._enable_binary_start_button, disable_flag)
+
+    def _enable_binary_start_button(self, disable_flag):
+        setattr(self, disable_flag, False)
 
     def start_or_close_blocknet(self):
-        img = self.parent.stop_greyed_img if self.parent.blocknet_manager.blocknet_process_running else self.parent.start_greyed_img
-        utils.disable_button(self.frame_manager.blocknet_start_close_button, img=img)
-        self.disable_start_blocknet_button = True
-        if self.parent.blocknet_manager.blocknet_process_running:
-            self.parent.blocknet_t1 = Thread(target=self.parent.blocknet_manager.utility.close_blocknet)
-            self.parent.blocknet_t1.start()
-        else:
-            self.parent.blocknet_manager.check_config()
-            self.parent.blocknet_t2 = Thread(target=self.parent.blocknet_manager.utility.start_blocknet)
-            self.parent.blocknet_t2.start()
-        self.parent.after(self.parent.time_disable_button, self.enable_blocknet_start_button)
+        self.parent.blocknet_manager.check_config()
+        self._start_or_close_binary(
+            process_running=self.parent.blocknet_manager.blocknet_process_running,
+            stop_func=self.parent.blocknet_manager.utility.close_blocknet,
+            start_func=self.parent.blocknet_manager.utility.start_blocknet,
+            button=self.frame_manager.blocknet_start_close_button,
+            disable_flag='disable_start_blocknet_button'
+        )
 
     def start_or_close_blockdx(self):
-        img = self.parent.stop_greyed_img if self.parent.blockdx_manager.process_running else self.parent.start_greyed_img
-        utils.disable_button(self.frame_manager.blockdx_start_close_button, img=img)
-        self.disable_start_blockdx_button = True
-        if self.parent.blockdx_manager.process_running:
-            self.parent.blockdx_t1 = Thread(target=self.parent.blockdx_manager.utility.close_blockdx)
-            self.parent.blockdx_t1.start()
+        self._start_or_close_binary(
+            process_running=self.parent.blockdx_manager.process_running,
+            stop_func=self.parent.blockdx_manager.utility.close_blockdx,
+            start_func=self.parent.blockdx_manager.utility.start_blockdx,
+            button=self.frame_manager.blockdx_start_close_button,
+            disable_flag='disable_start_blockdx_button'
+        )
+
+    def start_or_close_xlite(self):
+        if self.parent.stored_password:
+            env_vars = [{"CC_WALLET_PASS": self.parent.stored_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
         else:
-            self.parent.blockdx_manager.blockdx_check_config()
-            self.parent.blockdx_t2 = Thread(target=self.parent.blockdx_manager.utility.start_blockdx)
-            self.parent.blockdx_t2.start()
-        self.parent.after(self.parent.time_disable_button, self.enable_blockdx_start_button)
+            env_vars = []
+        self._start_or_close_binary(
+            process_running=self.parent.xlite_manager.process_running,
+            stop_func=self.parent.xlite_manager.utility.close_xlite,
+            start_func=lambda: self.parent.xlite_manager.utility.start_xlite(env_vars=env_vars),
+            button=self.frame_manager.xlite_start_close_button,
+            disable_flag='disable_start_xlite_button'
+        )
 
     def install_delete_blocknet_command(self):
         blocknet_boolvar = self.frame_manager.blocknet_installed_boolvar.get()
@@ -110,7 +112,7 @@ class BinaryManager:
         self.download_blockdx_thread.start()
 
     def delete_blockdx_command(self):
-        blockdx_pruned_version = self.parent.version[0].replace('v', '')
+        blockdx_pruned_version = self.parent.blockdx_manager.version[0].replace('v', '')
         for item in os.listdir(global_variables.aio_folder):
             item_path = os.path.join(global_variables.aio_folder, item)
             if global_variables.system == 'Darwin':

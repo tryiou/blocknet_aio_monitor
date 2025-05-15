@@ -91,8 +91,8 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.init_setup()
 
     def setup_management_sections(self):
-        self.blocknet_manager.setup()
         self.binary_manager.setup()
+        self.blocknet_manager.setup()
         self.blockdx_manager.setup()
         self.xlite_manager.setup()
 
