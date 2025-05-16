@@ -22,11 +22,11 @@ class BlockDXManager:
 
     def blockdx_check_config(self):
         # Get required data
-        if bool(self.parent.blocknet_manager.utility.data_folder and self.parent.blocknet_manager.utility.blocknet_conf_local):
+        if bool(self.root_gui.blocknet_manager.utility.data_folder and self.root_gui.blocknet_manager.utility.blocknet_conf_local):
             xbridgeconfpath = os.path.normpath(
-                os.path.join(self.parent.blocknet_manager.utility.data_folder, "xbridge.conf"))
+                os.path.join(self.root_gui.blocknet_manager.utility.data_folder, "xbridge.conf"))
             logging.info(f"xbridgeconfpath: {xbridgeconfpath}")
-            rpc_user = self.parent.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get('rpcuser')
-            rpc_password = self.parent.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get(
+            rpc_user = self.root_gui.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get('rpcuser')
+            rpc_password = self.root_gui.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get(
                 'rpcpassword')
             self.utility.compare_and_update_local_conf(xbridgeconfpath, rpc_user, rpc_password)
