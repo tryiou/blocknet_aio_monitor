@@ -1,11 +1,6 @@
-import os
-
 import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
-import widgets_strings
-from config.conf_data import xlite_bin_path, blockdx_bin_path, blocknet_bin_path
-from utilities import utils, global_variables
 
 
 class BinaryFrameManager:
@@ -14,7 +9,6 @@ class BinaryFrameManager:
         self.parent = parent
         self.master_frame = master_frame
         self.title_frame = title_frame
-        self.tooltip_manager = self.root_gui.tooltip_manager
 
         self.header_label = ctk.CTkLabel(self.title_frame,
                                          text="Binaries Control panel:")
@@ -117,27 +111,6 @@ class BinaryFrameManager:
                                                       command=self.parent.start_or_close_xlite,
                                                       corner_radius=25)
 
-    def update_blocknet_start_close_button(self):
-        var = widgets_strings.close_string if self.root_gui.blocknet_manager.blocknet_process_running else widgets_strings.start_string
-        self.blocknet_start_close_button_string_var.set(var)
-
-        if self.root_gui.blocknet_manager.blocknet_process_running:
-            self.tooltip_manager.update_tooltip(widget=self.blocknet_start_close_button,
-                                                msg=widgets_strings.close_string)
-        else:
-            self.tooltip_manager.update_tooltip(widget=self.blocknet_start_close_button,
-                                                msg=widgets_strings.start_string)
-
-        enabled = (not self.root_gui.blocknet_manager.utility.downloading_bin and
-                   not self.parent.disable_start_blocknet_button and
-                   not self.root_gui.blocknet_manager.utility.bootstrap_checking)
-        if enabled:
-            img = self.root_gui.stop_img if self.root_gui.blocknet_manager.blocknet_process_running else self.root_gui.start_img
-            utils.enable_button(self.blocknet_start_close_button, img=img)
-        else:
-            img = self.root_gui.stop_greyed_img if self.root_gui.blocknet_manager.blocknet_process_running else self.root_gui.start_greyed_img
-            utils.disable_button(self.blocknet_start_close_button, img=img)
-
     def grid_widgets(self, x, y):
         # bin
         self.header_label.grid(row=x, column=y, padx=5, pady=0, sticky="nw")
@@ -166,136 +139,3 @@ class BinaryFrameManager:
         self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=padx_main_frame, sticky='e')
         # Button for starting or closing Xlite
         self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=padx_main_frame, pady=(2, 5), sticky='e')
-
-    def update_blockdx_start_close_button(self):
-        # blockdx_start_close_button_string_var
-        var = widgets_strings.close_string if self.root_gui.blockdx_manager.process_running else widgets_strings.start_string
-        self.blockdx_start_close_button_string_var.set(var)
-
-        enabled = (self.root_gui.blockdx_manager.process_running or (
-                not self.root_gui.blockdx_manager.utility.downloading_bin and
-                self.root_gui.blocknet_manager.utility.valid_rpc) and
-                   not self.parent.disable_start_blockdx_button)
-        if enabled:
-            if self.root_gui.blockdx_manager.process_running:
-                self.tooltip_manager.update_tooltip(widget=self.blockdx_start_close_button,
-                                                    msg=widgets_strings.close_string)
-                img = self.root_gui.stop_img
-            else:
-                self.tooltip_manager.update_tooltip(widget=self.blockdx_start_close_button,
-                                                    msg=widgets_strings.start_string)
-                img = self.root_gui.start_img
-            utils.enable_button(self.blockdx_start_close_button, img=img)
-
-        else:
-            if self.root_gui.blockdx_manager.process_running:
-                img = self.root_gui.stop_greyed_img
-                self.tooltip_manager.update_tooltip(widget=self.blockdx_start_close_button,
-                                                    msg=widgets_strings.close_string)
-            else:
-                self.tooltip_manager.update_tooltip(widget=self.blockdx_start_close_button,
-                                                    msg=widgets_strings.blockdx_missing_blocknet_config_string)
-                img = self.root_gui.start_greyed_img
-            utils.disable_button(self.blockdx_start_close_button, img=img)
-
-    async def update_bins_buttons(self):
-
-        self.update_blocknet_start_close_button()
-        self.update_blockdx_start_close_button()
-        self.update_xlite_start_close_button()
-
-        blocknet_boolvar = self.blocknet_installed_boolvar.get()
-        blockdx_boolvar = self.blockdx_installed_boolvar.get()
-        xlite_boolvar = self.xlite_installed_boolvar.get()
-
-        percent_buff = self.root_gui.blocknet_manager.utility.binary_percent_download
-        dl_string = f"{int(percent_buff)}%" if percent_buff else ""
-        var_blocknet = dl_string if self.root_gui.blocknet_manager.utility.downloading_bin else ""
-        blocknet_folder = os.path.join(global_variables.aio_folder, blocknet_bin_path[0])
-
-        if blocknet_boolvar:
-            var_blocknet = ""
-            self.tooltip_manager.update_tooltip(widget=self.install_delete_blocknet_button, msg=blocknet_folder)
-            button_condition = self.root_gui.blocknet_manager.blocknet_process_running or self.root_gui.blocknet_manager.utility.downloading_bin
-        else:
-            self.tooltip_manager.update_tooltip(widget=self.install_delete_blocknet_button,
-                                                msg=global_variables.blocknet_release_url)
-            button_condition = self.root_gui.blocknet_manager.utility.downloading_bin
-
-        if button_condition:
-            utils.disable_button(self.install_delete_blocknet_button,
-                                 img=self.root_gui.delete_greyed_img if blocknet_boolvar else self.root_gui.install_greyed_img)
-        else:
-            utils.enable_button(self.install_delete_blocknet_button,
-                                img=self.root_gui.delete_img if blocknet_boolvar else self.root_gui.install_img)
-
-        percent_buff = self.root_gui.blockdx_manager.utility.binary_percent_download
-        dl_string = f"{int(percent_buff)}%" if percent_buff else ""
-        var_blockdx = dl_string if self.root_gui.blockdx_manager.utility.downloading_bin else ""
-        blockdx_folder = os.path.join(global_variables.aio_folder, blockdx_bin_path.get(global_variables.system))
-
-        if blockdx_boolvar:
-            var_blockdx = ""
-            self.tooltip_manager.update_tooltip(widget=self.install_delete_blockdx_button,
-                                                msg=blockdx_folder)
-            button_condition = self.root_gui.blockdx_manager.process_running or self.root_gui.blockdx_manager.utility.downloading_bin
-        else:
-            self.tooltip_manager.update_tooltip(widget=self.install_delete_blockdx_button,
-                                                msg=global_variables.blockdx_release_url)
-            button_condition = self.root_gui.blockdx_manager.utility.downloading_bin
-
-        if button_condition:
-            utils.disable_button(self.install_delete_blockdx_button,
-                                 img=self.root_gui.delete_greyed_img if blockdx_boolvar else self.root_gui.install_greyed_img)
-        else:
-            utils.enable_button(self.install_delete_blockdx_button,
-                                img=self.root_gui.delete_img if blockdx_boolvar else self.root_gui.install_img)
-
-        percent_buff = self.root_gui.xlite_manager.utility.binary_percent_download
-        dl_string = f"{int(percent_buff)}%" if percent_buff else ""
-        var_xlite = dl_string if self.root_gui.xlite_manager.utility.downloading_bin else ""
-        folder = os.path.join(global_variables.aio_folder, xlite_bin_path.get(global_variables.system))
-
-        if xlite_boolvar:
-            var_xlite = ""
-            self.tooltip_manager.update_tooltip(widget=self.install_delete_xlite_button,
-                                                msg=folder)
-            button_condition = self.root_gui.xlite_manager.process_running or self.root_gui.xlite_manager.utility.downloading_bin
-        else:
-            self.tooltip_manager.update_tooltip(widget=self.install_delete_xlite_button,
-                                                msg=global_variables.xlite_release_url)
-            button_condition = self.root_gui.xlite_manager.utility.downloading_bin
-
-        if button_condition:
-            utils.disable_button(self.install_delete_xlite_button,
-                                 img=self.root_gui.delete_greyed_img if xlite_boolvar else self.root_gui.install_greyed_img)
-        else:
-            utils.enable_button(self.install_delete_xlite_button,
-                                img=self.root_gui.delete_img if xlite_boolvar else self.root_gui.install_img)
-
-        self.install_delete_blocknet_string_var.set(var_blocknet)
-        self.install_delete_blockdx_string_var.set(var_blockdx)
-        self.install_delete_xlite_string_var.set(var_xlite)
-
-    def update_xlite_start_close_button(self):
-        # xlite_start_close_button_string_var
-        var = widgets_strings.close_string if self.root_gui.xlite_manager.process_running else widgets_strings.start_string
-        self.xlite_start_close_button_string_var.set(var)
-
-        if self.root_gui.xlite_manager.process_running:
-            self.tooltip_manager.update_tooltip(widget=self.xlite_start_close_button,
-                                                msg=widgets_strings.close_string)
-        else:
-            self.tooltip_manager.update_tooltip(widget=self.xlite_start_close_button,
-                                                msg=widgets_strings.start_string)
-
-        # xlite_start_close_button
-        disable_start_close_button = self.root_gui.xlite_manager.utility.downloading_bin or self.parent.disable_start_xlite_button
-
-        if not disable_start_close_button:
-            img = self.root_gui.stop_img if self.root_gui.xlite_manager.process_running else self.root_gui.start_img
-            # self.xlite_start_close_button.configure(image=img)
-            utils.enable_button(self.xlite_start_close_button, img=img)
-        else:
-            img = self.root_gui.stop_greyed_img if self.root_gui.xlite_manager.process_running else self.root_gui.start_greyed_img
-            utils.disable_button(self.xlite_start_close_button, img=img)

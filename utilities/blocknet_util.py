@@ -107,16 +107,11 @@ class BlocknetUtility:
 
     async def check_blocknet_rpc(self):
         while self.running:
+            self.valid_rpc = False
             if self.blocknet_rpc:
                 result = self.blocknet_rpc.send_rpc_request('getnetworkinfo')
                 if result:
                     self.valid_rpc = True
-                else:
-                    self.valid_rpc = False
-            else:
-                self.valid_rpc = False
-                # logging.error("Blocknet RPC client is not initialized.")
-            # logging.debug(f"valid_rpc: {self.valid_rpc}")
             await asyncio.sleep(1)
 
     def init_blocknet_rpc(self):

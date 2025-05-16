@@ -88,7 +88,3 @@ class BlockDxFrameManager:
 
         else:
             self.valid_config_checkbox_state.set(False)
-
-    async def update_status_blockdx(self):
-        self.update_blockdx_process_status_checkbox()
-        self.update_blockdx_config_button_checkbox()

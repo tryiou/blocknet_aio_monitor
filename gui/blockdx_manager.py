@@ -3,7 +3,7 @@ import os
 
 from gui.blockdx_frame_manager import BlockDxFrameManager
 from utilities import global_variables
-from utilities.blockdx import BlockdxUtility
+from utilities.blockdx_util import BlockdxUtility
 
 
 class BlockDXManager:
@@ -19,6 +19,7 @@ class BlockDXManager:
 
     async def setup(self):
         self.frame_manager = BlockDxFrameManager(self, self.master_frame, self.title_frame)
+        self.root_gui.after(0, self.update_status_blockdx)
 
     def blockdx_check_config(self):
         # Get required data
@@ -30,3 +31,8 @@ class BlockDXManager:
             rpc_password = self.root_gui.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get(
                 'rpcpassword')
             self.utility.compare_and_update_local_conf(xbridgeconfpath, rpc_user, rpc_password)
+
+    def update_status_blockdx(self):
+        self.frame_manager.update_blockdx_process_status_checkbox()
+        self.frame_manager.update_blockdx_config_button_checkbox()
+        self.root_gui.after(1000, self.update_status_blockdx)

@@ -134,14 +134,6 @@ class BlocknetCoreFrameManager:
         else:
             utils.disable_button(self.custom_path_button)
 
-    async def update_status_blocknet_core(self):
-        self.update_blocknet_bootstrap_button()
-        self.update_blocknet_process_status_checkbox()
-        self.update_blocknet_custom_path_button()
-        self.update_blocknet_conf_status_checkbox()
-        self.update_blocknet_data_path_status_checkbox()
-        self.update_blocknet_rpc_connection_checkbox()
-
     def update_blocknet_conf_status_checkbox(self):
         # blocknet_conf_status_checkbox_state
         conf_exist_and_parsed = bool(

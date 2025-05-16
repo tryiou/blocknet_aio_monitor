@@ -2,7 +2,7 @@ import logging
 
 from gui.xlite_frame_manager import XliteFrameManager
 from utilities import global_variables
-from utilities.xlite import XliteUtility
+from utilities.xlite_util import XliteUtility
 
 
 class XliteManager:
@@ -21,6 +21,7 @@ class XliteManager:
 
     async def setup(self):
         self.frame_manager = XliteFrameManager(self, self.master_frame, self.title_frame)
+        self.root_gui.after(0, self.update_status_xlite)
 
     def refresh_xlite_confs(self):
         self.utility.parse_xlite_conf()
@@ -35,3 +36,12 @@ class XliteManager:
             self.root_gui.disable_daemons_conf_check = True
         if self.root_gui.disable_daemons_conf_check and not self.utility.valid_coins_rpc:
             self.root_gui.disable_daemons_conf_check = False
+
+    def update_status_xlite(self):
+        self.detect_new_xlite_install_and_add_to_xbridge()
+        self.frame_manager.update_xlite_process_status_checkbox()
+        self.frame_manager.update_xlite_store_password_button()
+        self.frame_manager.update_xlite_daemon_process_status()
+        self.frame_manager.update_xlite_valid_config_checkbox()
+        self.frame_manager.update_xlite_daemon_valid_config_checkbox()
+        self.root_gui.after(1000, self.update_status_xlite)

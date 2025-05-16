@@ -2,8 +2,6 @@ import asyncio
 import logging
 import os
 import signal
-import time
-from threading import Thread
 
 import PIL._tkinter_finder
 import customtkinter as ctk
@@ -42,18 +40,8 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.transparent_img = None
         self.theme_img = None
 
-        self.last_process_check_time = None
         self.disable_daemons_conf_check = False
 
-        # threads
-        self.update_status_process_folder_thread = None
-        self.update_status_gui_thread = None
-        self.blocknet_t1 = None
-        self.blocknet_t2 = None
-        self.xlite_t2 = None
-        self.xlite_t1 = None
-        self.blockdx_t2 = None
-        self.blockdx_t1 = None
 
         self.cfg = utils.load_cfg_json()
         self.adjust_theme()
@@ -88,6 +76,8 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
         self.tooltip_manager = TooltipManager(self)
 
+        self.after(2000, self.check_processes)
+
     async def setup_management_sections(self):
         await asyncio.gather(
             self.binary_manager.setup(),
@@ -112,11 +102,6 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.setup_tooltips()
         self.init_grid()
 
-        self.update_status_gui_thread = Thread(target=self.update_status_gui, daemon=True)
-        self.update_status_gui_thread.start()
-
-        self.update_status_process_folder_thread = Thread(target=self.update_status_process_folder, daemon=True)
-        self.update_status_process_folder_thread.start()
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         signal.signal(signal.SIGINT, self.handle_signal)
@@ -309,39 +294,16 @@ class Blocknet_AIO_GUI(ctk.CTk):
         # Define a separate async function to run all
         async def run_all():
             await asyncio.gather(
-                async_run(self.blocknet_manager.frame_manager.update_status_blocknet_core),
-                async_run(self.blockdx_manager.frame_manager.update_status_blockdx),
-                async_run(self.xlite_manager.frame_manager.update_status_xlite),
+                # async_run(self.blocknet_manager.frame_manager.update_status_blocknet_core),
+                # async_run(self.blockdx_manager.frame_manager.update_status_blockdx),
+                # async_run(self.xlite_manager.frame_manager.update_status_xlite),
                 async_run(self.binary_manager.frame_manager.update_bins_buttons)
             )
 
         # Run all within the asyncio event loop
         asyncio.run(run_all())
 
-    def update_status_process_folder(self):
-        async def async_run(func, delay=1):
-            while True:
-                await func()
-                await asyncio.sleep(delay)
-
-        # Define a separate async function to run all
-        async def run_all():
-            await asyncio.gather(
-                async_run(self.binary_manager.bins_check_aio_folder, delay=2),
-                async_run(self.check_processes, delay=2)
-            )
-
-        # Run all within the asyncio event loop
-        asyncio.run(run_all())
-
-    def should_check_processes(self, max_delay=5):
-        current_time = time.time()
-        if not self.last_process_check_time or current_time - self.last_process_check_time >= max_delay:
-            self.last_process_check_time = current_time
-            return True
-        return False
-
-    async def check_processes(self):
+    def check_processes(self):
         # Check Blocknet process
         if self.blocknet_manager.utility.blocknet_process is not None:
             process_status = self.blocknet_manager.utility.blocknet_process.poll()
@@ -410,6 +372,8 @@ class Blocknet_AIO_GUI(ctk.CTk):
         # Update Xlite-daemon process status and store the PIDs
         self.xlite_manager.daemon_process_running = bool(xlite_daemon_processes)
         self.xlite_manager.utility.xlite_daemon_pids = xlite_daemon_processes
+
+        self.after(2000, self.check_processes)
 
 
 def run_gui():
