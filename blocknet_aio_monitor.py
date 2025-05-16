@@ -88,7 +88,6 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.xlite_title_frame = None
 
         self.tooltip_manager = TooltipManager(self)
-        self.init_setup()
 
     async def setup_management_sections(self):
         await asyncio.gather(
@@ -479,6 +478,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
 def run_gui():
     app = Blocknet_AIO_GUI()
     try:
+        app.init_setup()
         app.mainloop()
     except KeyboardInterrupt:
         print("GUI execution terminated by user.")
