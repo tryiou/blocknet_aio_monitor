@@ -106,7 +106,7 @@ class BlocknetUtility:
                 if result:
                     self.valid_rpc = True
                 # logging.info(result)
-            time.sleep(1)
+            time.sleep(2)
 
     def init_blocknet_rpc(self):
         # Retrieve RPC user, password, and port from blocknet_conf_local with error handling

@@ -320,7 +320,7 @@ class BinaryManager:
         self.frame_manager.install_delete_blocknet_string_var.set(var_blocknet)
         self.frame_manager.install_delete_blockdx_string_var.set(var_blockdx)
         self.frame_manager.install_delete_xlite_string_var.set(var_xlite)
-        self.root_gui.after(1000, self.update_bins_buttons)
+        self.root_gui.after(2000, self.update_bins_buttons)
 
     def update_blocknet_start_close_button(self):
         var = widgets_strings.close_string if self.root_gui.blocknet_manager.blocknet_process_running else widgets_strings.start_string

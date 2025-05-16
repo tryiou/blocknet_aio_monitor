@@ -44,4 +44,4 @@ class XliteManager:
         self.frame_manager.update_xlite_daemon_process_status()
         self.frame_manager.update_xlite_valid_config_checkbox()
         self.frame_manager.update_xlite_daemon_valid_config_checkbox()
-        self.root_gui.after(1000, self.update_status_xlite)
+        self.root_gui.after(2000, self.update_status_xlite)

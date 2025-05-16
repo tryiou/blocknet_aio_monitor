@@ -36,4 +36,4 @@ class BlocknetManager:
         self.frame_manager.update_blocknet_conf_status_checkbox()
         self.frame_manager.update_blocknet_data_path_status_checkbox()
         self.frame_manager.update_blocknet_rpc_connection_checkbox()
-        self.root_gui.after(1000, self.update_status_blocknet_core)
+        self.root_gui.after(2000, self.update_status_blocknet_core)

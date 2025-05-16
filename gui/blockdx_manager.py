@@ -35,4 +35,4 @@ class BlockDXManager:
     def update_status_blockdx(self):
         self.frame_manager.update_blockdx_process_status_checkbox()
         self.frame_manager.update_blockdx_config_button_checkbox()
-        self.root_gui.after(1000, self.update_status_blockdx)
+        self.root_gui.after(2000, self.update_status_blockdx)
