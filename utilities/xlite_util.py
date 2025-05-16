@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import os
@@ -134,11 +133,6 @@ class XliteUtility:
         self.downloading_bin = False
         self.start_threads()
 
-    def check_xlite_conf(self):
-        while self.running and not (self.xlite_conf_local and 'APP_VERSION' in self.xlite_conf_local):
-            self.parse_xlite_conf()
-            time.sleep(10)
-
     def check_xlite_daemon_confs_sequence(self, silent=True):
         self.parse_xlite_daemon_conf(silent)
         if self.xlite_daemon_confs_local:
@@ -153,7 +147,7 @@ class XliteUtility:
             self.check_xlite_daemon_confs_sequence(silent=True)
             time.sleep(10)
 
-    def check_valid_coins_rpc(self, runonce=False):
+    def check_valid_xlite_coins_rpc(self, runonce=False):
         while self.running:
             # logging.debug(f"valid_coins_rpc: {self.valid_coins_rpc}, runonce: {runonce}")
             valid = False
@@ -178,11 +172,9 @@ class XliteUtility:
             time.sleep(5)
 
     def start_threads(self):
-        thread = threading.Thread(target=self.check_xlite_conf)
-        thread.start()
         thread = threading.Thread(target=self.check_xlite_daemon_confs)
         thread.start()
-        thread = threading.Thread(target=self.check_valid_coins_rpc)
+        thread = threading.Thread(target=self.check_valid_xlite_coins_rpc)
         thread.start()
 
     def parse_xlite_conf(self):
@@ -195,7 +187,7 @@ class XliteUtility:
             try:
                 with open(file_path, 'r') as file:
                     meta_data = json.load(file)
-                    logging.info(f"XLITE: Loaded JSON data from {file_path}: {meta_data}")
+                    logging.info(f"XLITE: Loaded JSON data from [{file_path}]")  #: {meta_data}")
             except Exception as e:
                 logging.error(f"Error parsing {file_path}: {e}, repairing file")
         else:
@@ -234,7 +226,8 @@ class XliteUtility:
                 self.xlite_daemon_confs_local[coin] = "ERROR PARSING"
                 logging.error(f"Error parsing {json_file_path}: {e}")
         if not silent:
-            logging.info(f"XLITE-DAEMON: Parsed every coins conf {self.xlite_daemon_confs_local}")
+            logging.info(
+                f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(self.xlite_daemon_confs_local.keys())}")
 
     def start_xlite(self, env_vars=[]):
         if global_variables.system == "Windows":

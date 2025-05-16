@@ -44,9 +44,9 @@ class BlockdxUtility:
             try:
                 with open(file_path, 'r') as file:
                     meta_data = json.load(file)
-                    logging.info(f"BLOCK-DX: Loaded JSON data from {file_path}: {meta_data}")
+                    logging.info(f"BLOCK-DX: Loaded JSON data ok: [{file_path}]")
             except Exception as e:
-                logging.error(f"Error parsing {file_path}: {e}, repairing file")
+                logging.error(f"Error parsing [{file_path}]: {e}, repairing file")
         else:
             logging.warning(f"{file_path} doesn't exist")
             if not os.path.exists(data_folder):

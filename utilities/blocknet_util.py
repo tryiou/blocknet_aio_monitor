@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import os
@@ -215,7 +214,7 @@ class BlocknetUtility:
         conf_file_path = os.path.join(self.data_folder, file)
         if os.path.exists(conf_file_path):
             self.blocknet_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.info(f"BLOCKNET: Parsed {conf_file_path} file successfully: {self.blocknet_conf_local}")
+            logging.info(f"BLOCKNET: Parsed ok: [{conf_file_path}]")
         else:
             self.blocknet_conf_local = {}
             logging.warning(f"{conf_file_path} file does not exist.")
@@ -224,7 +223,7 @@ class BlocknetUtility:
         conf_file_path = os.path.join(self.data_folder, "xbridge.conf")
         if os.path.exists(conf_file_path):
             self.xbridge_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.info(f"BLOCKNET: Parsed {conf_file_path} file successfully: {self.xbridge_conf_local}")
+            logging.info(f"BLOCKNET: Parsed ok: [{conf_file_path}]")
         else:
             self.xbridge_conf_local = {}
             logging.warning(f"{conf_file_path} file does not exist.")
@@ -298,7 +297,7 @@ class BlocknetUtility:
 
         # logging.info(f"Old local configuration:\n{old_local_json}")
         # logging.info(f"Updated local configuration:\n{new_local_json}")
-        logging.info(new_local_json)
+        # logging.info(new_local_json)
         if old_local_json != new_local_json:
             logging.info("Local blocknet.conf has been updated. Saving...")
             self.save_blocknet_conf()
@@ -621,7 +620,7 @@ def retrieve_remote_conf(remote_url, subfolder, expected_filename):
                 conf_data = f.read()
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
-                logging.info(f"REMOTE: found and parsed successfully: {local_conf_file}")
+                logging.info(f"REMOTE: found and parsed ok: [{local_conf_file}]")
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse: {local_conf_file}")
@@ -640,10 +639,10 @@ def download_remote_conf(url, filepath):
             if parsed_conf:
                 # Save the remote configuration to a local file
                 save_conf_to_file(parsed_conf, filepath)
-                logging.info(f"retrieved and parsed successfully: {filepath} ")
+                logging.info(f"retrieved and parsed ok: [{filepath}]")
                 return parsed_conf
             else:
-                logging.error(f"Failed to parse: {filepath} ")
+                logging.error(f"Failed to parse {filepath} ")
                 return None
         else:
             logging.error(
@@ -677,7 +676,7 @@ def retrieve_xb_manifest():
             os.makedirs(os.path.dirname(local_manifest_file), exist_ok=True)
             with open(local_manifest_file, 'w') as f:
                 f.write(json.dumps(parsed_json, indent=4))  # Save the JSON data to local file
-            logging.info(f"REMOTE: Retrieved and parsed successfully: {local_manifest_file}")
+            logging.info(f"REMOTE: Retrieved and parsed ok: [{local_manifest_file}]")
             return parsed_json
         else:
             logging.error(f"Failed to retrieve remote configuration file: {remote_manifest_url} {response.status_code}")

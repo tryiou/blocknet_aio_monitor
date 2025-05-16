@@ -4,7 +4,6 @@ import os
 from threading import enumerate, current_thread
 
 import customtkinter as ctk
-import requests
 from cryptography.fernet import Fernet
 
 from utilities import global_variables
@@ -24,10 +23,10 @@ def load_cfg_json():
     if os.path.exists(filename):
         with open(filename, 'r') as file:
             cfg_data = json.load(file)
-        logging.info(f"Configuration file '{filename}' loaded.")
+        logging.info(f"Configuration file loaded ok: [{filename}]")
         return cfg_data
     else:
-        logging.info(f"Configuration file '{filename}' not found.")
+        logging.info(f"Configuration file not found: [{filename}]")
         return None
 
 
@@ -50,7 +49,7 @@ def remove_cfg_json_key(key):
         with open(filename, 'r') as file:
             cfg_data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        logging.error(f"Failed to load JSON file: {filename}")
+        logging.error(f"Failed to load JSON file: [{filename}]")
         return
 
     # Check if the key exists in the dictionary
@@ -59,9 +58,9 @@ def remove_cfg_json_key(key):
         del cfg_data[key]
         with open(filename, 'w') as file:
             json.dump(cfg_data, file)
-        logging.info(f"Key '{key}' was removed from configuration file: {filename}")
+        logging.info(f"Key '{key}' was removed from configuration file: [{filename}]")
     else:
-        logging.warning(f"Key '{key}' not found in configuration file: {filename}")
+        logging.warning(f"Key '{key}' not found in configuration file: [{filename}]")
 
 
 def save_cfg_json(key, data):
@@ -83,7 +82,7 @@ def save_cfg_json(key, data):
     # Save to file
     with open(filename, 'w') as file:
         json.dump(cfg_data, file)
-    logging.info(f"{key} {data} was saved to configuration file: {filename}")
+    logging.info(f"{key} {data} was saved to configuration file: [{filename}]")
 
 
 def generate_key():
@@ -117,36 +116,3 @@ def disable_button(button, img=None):
         button.configure(state=ctk.DISABLED)
     if img:
         button.configure(image=img)
-
-
-def send_rpc_request(self, method=None, params=None):
-    url = f"http://localhost:{self.rpc_port}"
-    headers = {'content-type': 'application/json'}
-    auth = (self.rpc_user, self.rpc_password)
-    data = {
-        "jsonrpc": "2.0",
-        "method": method,
-        "params": params if params is not None else [],
-        "id": 1,
-    }
-    try:
-        # logging.debug(
-        # f"Sending RPC request to URL: {url}, Method: {data['method']}, Params: {data['params']}, Auth: {auth}")
-        response = requests.post(url, json=data, headers=headers, auth=auth)
-        # Check status code explicitly
-        if response.status_code != 200:
-            # logging.error(f"Error sending RPC request: HTTP status code {response.status_code}")
-            return None
-
-        json_answer = response.json()
-        logging.debug(f"RPC request successful. Response: {json}")
-        if 'result' in json_answer:
-            return json_answer['result']
-        else:
-            logging.error(f"No result in json: {json_answer}")
-    except requests.RequestException as e:
-        logging.error(f"Error sending RPC request: {e}")
-        return None
-    except Exception as ex:
-        logging.exception(f"An unexpected error occurred while sending RPC request: {ex}")
-        return None
