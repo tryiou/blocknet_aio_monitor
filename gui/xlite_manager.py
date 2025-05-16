@@ -6,8 +6,8 @@ from utilities.xlite import XliteUtility
 
 
 class XliteManager:
-    def __init__(self, parent, master_frame, title_frame):
-        self.parent = parent
+    def __init__(self, root_gui, master_frame, title_frame):
+        self.root_gui = root_gui
         self.title_frame = title_frame
         self.master_frame = master_frame
 
@@ -27,11 +27,11 @@ class XliteManager:
         self.utility.parse_xlite_daemon_conf()
 
     def detect_new_xlite_install_and_add_to_xbridge(self):
-        if not self.parent.disable_daemons_conf_check and self.utility.valid_coins_rpc:
-            self.parent.blocknet_manager.utility.check_xbridge_conf(self.utility.xlite_daemon_confs_local)
-            if self.parent.blocknet_manager.blocknet_process_running and self.parent.blocknet_manager.utility.valid_rpc:
+        if not self.root_gui.disable_daemons_conf_check and self.utility.valid_coins_rpc:
+            self.root_gui.blocknet_manager.utility.check_xbridge_conf(self.utility.xlite_daemon_confs_local)
+            if self.root_gui.blocknet_manager.blocknet_process_running and self.root_gui.blocknet_manager.utility.valid_rpc:
                 logging.debug("dxloadxbridgeConf")
-                self.parent.blocknet_manager.utility.blocknet_rpc.send_rpc_request("dxloadxbridgeConf")
-            self.parent.disable_daemons_conf_check = True
-        if self.parent.disable_daemons_conf_check and not self.utility.valid_coins_rpc:
-            self.parent.disable_daemons_conf_check = False
+                self.root_gui.blocknet_manager.utility.blocknet_rpc.send_rpc_request("dxloadxbridgeConf")
+            self.root_gui.disable_daemons_conf_check = True
+        if self.root_gui.disable_daemons_conf_check and not self.utility.valid_coins_rpc:
+            self.root_gui.disable_daemons_conf_check = False

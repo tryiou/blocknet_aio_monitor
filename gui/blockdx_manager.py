@@ -7,9 +7,9 @@ from utilities.blockdx import BlockdxUtility
 
 
 class BlockDXManager:
-    def __init__(self, parent, master_frame, title_frame):
+    def __init__(self, root_gui, master_frame, title_frame):
         self.frame_manager = None
-        self.parent = parent
+        self.root_gui = root_gui
         self.title_frame = title_frame
         self.master_frame = master_frame
         self.utility = BlockdxUtility()

@@ -90,7 +90,7 @@ class XliteFrameManager:
             # Prevent the right-click event from propagating further
             utils.remove_cfg_json_key("salt")
             utils.remove_cfg_json_key("xl_pass")
-            self.stored_password = None
+            self.parent.stored_password = None
             # Delete CC_WALLET_PASS variable
             if "CC_WALLET_PASS" in os.environ:
                 os.environ.pop("CC_WALLET_PASS")

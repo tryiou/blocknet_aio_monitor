@@ -11,7 +11,7 @@ from utilities import utils, global_variables
 
 class BlocknetCoreFrameManager:
     def __init__(self, parent, master_frame, title_frame):
-        self.root = parent.parent
+        self.root_gui = parent.root_gui
         self.parent = parent
         self.master_frame = master_frame
         self.title_frame = title_frame
@@ -43,7 +43,7 @@ class BlocknetCoreFrameManager:
         # Button for downloading blocknet bootstrap
         self.download_bootstrap_string_var = ctk.StringVar(value="")
         self.download_bootstrap_button = ctk.CTkButton(self.title_frame,
-                                                       image=self.root.transparent_img,
+                                                       image=self.root_gui.transparent_img,
                                                        textvariable=self.download_bootstrap_string_var,
                                                        command=self.download_bootstrap_command,
                                                        width=button_width)
@@ -103,9 +103,9 @@ class BlocknetCoreFrameManager:
         enabled = (self.parent.utility.data_folder and not bootstrap_download_in_progress and
                    not self.parent.blocknet_process_running)
         if enabled:
-            utils.enable_button(self.download_bootstrap_button, img=self.root.install_img)
+            utils.enable_button(self.download_bootstrap_button, img=self.root_gui.install_img)
         else:
-            utils.disable_button(self.download_bootstrap_button, img=self.root.install_greyed_img)
+            utils.disable_button(self.download_bootstrap_button, img=self.root_gui.install_greyed_img)
         if bootstrap_download_in_progress:
             if self.parent.utility.bootstrap_percent_download:
                 var = f"{self.parent.utility.bootstrap_percent_download:.1f}%"
@@ -178,9 +178,9 @@ class BlocknetCoreFrameManager:
     def open_custom_path_dialog(self):
         from config.conf_data import blocknet_default_paths
         expanded_path = None
-        print(f"custom_path: {self.root.custom_path}")
+        print(f"custom_path: {self.root_gui.custom_path}")
 
-        if self.root.custom_path is None:
+        if self.root_gui.custom_path is None:
             # Get the default path based on the system
             path = blocknet_default_paths.get(global_variables.system)
             if path:
@@ -201,13 +201,13 @@ class BlocknetCoreFrameManager:
                     initialdir = None
         else:
             # Use the custom path if provided
-            initialdir = self.root.custom_path
+            initialdir = self.root_gui.custom_path
 
         print(f"initialdir: {initialdir}")
 
         # Open the directory selection dialog
         custom_path = ctk.filedialog.askdirectory(
-            parent=self.root,
+            parent=self.root_gui,
             title="Select Custom Path for Blocknet Core Datadir",
             mustexist=False,
             initialdir=initialdir
@@ -217,6 +217,6 @@ class BlocknetCoreFrameManager:
             self.on_custom_path_set(custom_path)
 
     def download_bootstrap_command(self):
-        utils.disable_button(self.download_bootstrap_button, img=self.root.install_greyed_img)
+        utils.disable_button(self.download_bootstrap_button, img=self.root_gui.install_greyed_img)
         self.parent.bootstrap_thread = Thread(target=self.parent.utility.download_bootstrap, daemon=True)
         self.parent.bootstrap_thread.start()

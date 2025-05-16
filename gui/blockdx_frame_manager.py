@@ -10,7 +10,7 @@ from gui.constants import panel_checkboxes_width
 
 class BlockDxFrameManager:
     def __init__(self, parent, master_frame, title_frame):
-        self.root = parent.parent
+        self.root_gui = parent.root_gui
         self.parent = parent
         self.master_frame = master_frame
         self.title_frame = title_frame
@@ -59,18 +59,18 @@ class BlockDxFrameManager:
     def update_blockdx_config_button_checkbox(self):
         # blockdx_valid_config_checkbox_state
         # blockdx_check_config_button
-        valid_core_setup = bool(self.root.blocknet_manager.utility.data_folder) and bool(
-            self.root.blocknet_manager.utility.blocknet_conf_local)
-        if valid_core_setup and self.root.blocknet_manager.utility.valid_rpc:
+        valid_core_setup = bool(self.root_gui.blocknet_manager.utility.data_folder) and bool(
+            self.root_gui.blocknet_manager.utility.blocknet_conf_local)
+        if valid_core_setup and self.root_gui.blocknet_manager.utility.valid_rpc:
             var = widgets_strings.blockdx_valid_config_string if self.parent.is_config_sync else widgets_strings.blockdx_not_valid_config_string
             self.valid_config_checkbox_string_var.set(var)
         else:
             self.valid_config_checkbox_string_var.set(widgets_strings.blockdx_missing_blocknet_config_string)
 
         if valid_core_setup:
-            xbridgeconfpath = os.path.join(self.root.blocknet_manager.utility.data_folder, "xbridge.conf")
-            rpc_user = self.root.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get('rpcuser')
-            rpc_password = self.root.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get(
+            xbridgeconfpath = os.path.join(self.root_gui.blocknet_manager.utility.data_folder, "xbridge.conf")
+            rpc_user = self.root_gui.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get('rpcuser')
+            rpc_password = self.root_gui.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get(
                 'rpcpassword')
 
             # blockdx_valid_config_checkbox_state
@@ -84,7 +84,7 @@ class BlockDxFrameManager:
                     blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets', [])
             )
             self.valid_config_checkbox_state.set(
-                (self.parent.is_config_sync and self.root.blocknet_manager.utility.valid_rpc))
+                (self.parent.is_config_sync and self.root_gui.blocknet_manager.utility.valid_rpc))
 
         else:
             self.valid_config_checkbox_state.set(False)
