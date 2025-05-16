@@ -8,6 +8,7 @@ import string
 import subprocess
 import tarfile
 import threading
+import time
 import zipfile
 from subprocess import check_output
 
@@ -58,7 +59,7 @@ class BlocknetRPCClient:
                 return json_answer['result']
             else:
                 logging.error(f"No result in json: {json_answer}")
-        except requests.exceptions.RequestException as e:
+        except requests.RequestException as e:
             # logging.error(f"Error sending RPC request: {e}")
             return None
         except Exception as ex:
@@ -92,27 +93,21 @@ class BlocknetUtility:
         self.parse_blocknet_conf()
         self.parse_xbridge_conf()
         self.init_blocknet_rpc()
-        self.start_async_tasks()
+        self.start_rpc_check_thread()
 
-    def start_async_tasks(self):
-        def blocknet_async_loop():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(
-                asyncio.gather(self.check_blocknet_rpc()))  # self.check_blocknet_process(),
-            loop.close()
-
-        thread = threading.Thread(target=blocknet_async_loop)
+    def start_rpc_check_thread(self):
+        thread = threading.Thread(target=self.check_blocknet_rpc)
         thread.start()
 
-    async def check_blocknet_rpc(self):
+    def check_blocknet_rpc(self):
         while self.running:
             self.valid_rpc = False
             if self.blocknet_rpc:
                 result = self.blocknet_rpc.send_rpc_request('getnetworkinfo')
                 if result:
                     self.valid_rpc = True
-            await asyncio.sleep(1)
+                # logging.info(result)
+            time.sleep(1)
 
     def init_blocknet_rpc(self):
         # Retrieve RPC user, password, and port from blocknet_conf_local with error handling

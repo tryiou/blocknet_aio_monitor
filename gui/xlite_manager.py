@@ -14,7 +14,7 @@ class XliteManager:
         self.frame_manager = None
         self.utility = XliteUtility()
 
-        self.xlite_version = [global_variables.xlite_release_url.split('/')[7]]
+        self.version = [global_variables.xlite_release_url.split('/')[7]]
         self.process_running = False
         self.daemon_process_running = False
         self.stored_password = None

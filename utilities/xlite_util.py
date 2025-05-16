@@ -132,13 +132,12 @@ class XliteUtility:
         self.parse_xlite_conf()
         self.parse_xlite_daemon_conf()
         self.downloading_bin = False
-        self.start_async_tasks()
+        self.start_threads()
 
-    async def check_xlite_conf(self):
+    def check_xlite_conf(self):
         while self.running and not (self.xlite_conf_local and 'APP_VERSION' in self.xlite_conf_local):
             self.parse_xlite_conf()
-            # logging.debug("check_xlite_conf")
-            await asyncio.sleep(1)
+            time.sleep(10)
 
     def check_xlite_daemon_confs_sequence(self, silent=True):
         self.parse_xlite_daemon_conf(silent)
@@ -149,51 +148,41 @@ class XliteUtility:
                 password = self.xlite_daemon_confs_local[coin]['rpcPassword']
                 self.coins_rpc[coin] = XliteRPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
 
-    async def check_xlite_daemon_confs(self):
+    def check_xlite_daemon_confs(self):
         while self.running and not self.valid_coins_rpc:
-            await asyncio.sleep(3)
             self.check_xlite_daemon_confs_sequence(silent=True)
-            await self.check_valid_coins_rpc(runonce=True)
+            time.sleep(10)
 
-    async def check_valid_coins_rpc(self, runonce=False):
+    def check_valid_coins_rpc(self, runonce=False):
         while self.running:
+            # logging.debug(f"valid_coins_rpc: {self.valid_coins_rpc}, runonce: {runonce}")
+            valid = False
             if self.coins_rpc:
                 for coin, rpc_server in self.coins_rpc.items():
-                    valid = False
                     if coin != "master" and coin != "TBLOCK":
                         # logging.info(self.xlite_daemon_confs_local[coin]['rpcEnabled'])
                         if self.xlite_daemon_confs_local[coin]['rpcEnabled'] is True:
                             res = rpc_server.send_rpc_request("getinfo")
-                            # logging.info(f"coin {coin} result:{res}")
                             if res is not None:
                                 valid = True
                         if not valid:
+                            # logging.debug(f"coin {coin} not valid")
                             break
-                if valid:
-                    self.valid_coins_rpc = True
-                else:
-                    self.valid_coins_rpc = False
+            if valid:
+                self.valid_coins_rpc = True
             else:
                 self.valid_coins_rpc = False
             if runonce:
                 return
-            # logging.info(f"valid_master_rpc: {self.valid_master_rpc}")
-            await asyncio.sleep(5)
 
-    def start_async_tasks(self):
-        def xlite_async_loop():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(
-                asyncio.gather(
-                    self.check_xlite_conf(),
-                    self.check_xlite_daemon_confs(),
-                    self.check_valid_coins_rpc()
-                )  # self.check_blocknet_process(),
-            )
-            loop.close()
+            time.sleep(5)
 
-        thread = threading.Thread(target=xlite_async_loop)
+    def start_threads(self):
+        thread = threading.Thread(target=self.check_xlite_conf)
+        thread.start()
+        thread = threading.Thread(target=self.check_xlite_daemon_confs)
+        thread.start()
+        thread = threading.Thread(target=self.check_valid_coins_rpc)
         thread.start()
 
     def parse_xlite_conf(self):
@@ -303,14 +292,13 @@ class XliteUtility:
         if self.xlite_process:
             try:
                 self.xlite_process.terminate()
-                # logging.info(f"Terminating Xlite subprocess.")
                 self.xlite_process.wait(timeout=10)  # Wait for the process to terminate with a timeout of 60 seconds
-                logging.info(f"Closed Xlite subprocess.")
+                logging.info(f"Closed Xlite")
                 self.xlite_process = None
             except subprocess.TimeoutExpired:
-                logging.info(f"Force terminating Xlite subprocess.")
+                logging.info(f"Force terminating Xlite")
                 self.kill_xlite()
-                logging.info(f"Xlite subprocess has been force terminated.")
+                logging.info(f"Xlite has been force terminated.")
                 self.xlite_process = None
             except Exception as e:
                 logging.error(f"Error: {e}")
@@ -323,7 +311,7 @@ class XliteUtility:
         if self.xlite_process:
             try:
                 self.xlite_process.kill()
-                logging.info(f"Killed Xlite subprocess.")
+                logging.info(f"Killed Xlite")
                 self.xlite_process = None
                 return
             except Exception as e:
@@ -352,7 +340,6 @@ class XliteUtility:
 
     def close_xlite_daemon_pids(self):
 
-        logging.info(f"close_xlite_daemon_pids: {self.xlite_daemon_pids}")
         # Close the Xlite-daemon processes using their PIDs
         for pid in self.xlite_daemon_pids:
             try:
@@ -372,6 +359,7 @@ class XliteUtility:
                     logging.info(f"Xlite-daemon process with PID {pid} has been force terminated.")
             except Exception as e:
                 logging.error(f"Error: {e}")
+        logging.info(f"Closed Xlite daemon")
 
     def download_xlite_bin(self):
         self.downloading_bin = True

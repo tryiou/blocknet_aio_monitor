@@ -35,13 +35,13 @@ class BinaryFrameManager:
         self.xlite_installed_boolvar = ctk.BooleanVar(value=False)
 
         self.blocknet_version_optionmenu = ctk.CTkOptionMenu(self.master_frame,
-                                                             values=self.root_gui.blocknet_manager.blocknet_version,
+                                                             values=self.root_gui.blocknet_manager.version,
                                                              state='disabled')
         self.blockdx_version_optionmenu = ctk.CTkOptionMenu(self.master_frame,
                                                             values=self.root_gui.blockdx_manager.version,
                                                             state='disabled')
         self.xlite_version_optionmenu = ctk.CTkOptionMenu(self.master_frame,
-                                                          values=self.root_gui.xlite_manager.xlite_version,
+                                                          values=self.root_gui.xlite_manager.version,
                                                           state='disabled')
         self.blocknet_found_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                   text='',

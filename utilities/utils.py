@@ -4,6 +4,7 @@ import os
 from threading import enumerate, current_thread
 
 import customtkinter as ctk
+import requests
 from cryptography.fernet import Fernet
 
 from utilities import global_variables
@@ -34,7 +35,7 @@ def terminate_all_threads():
     logging.info("Terminating all threads...")
     for thread in enumerate():
         if thread != current_thread():
-            logging.info(f"Terminating thread: {thread.name}")
+            # logging.info(f"Terminating thread: {thread.name}")
             thread.join(timeout=0.25)  # Terminate thread
             logging.info(f"Thread {thread.name} terminated")
 
@@ -116,3 +117,36 @@ def disable_button(button, img=None):
         button.configure(state=ctk.DISABLED)
     if img:
         button.configure(image=img)
+
+
+def send_rpc_request(self, method=None, params=None):
+    url = f"http://localhost:{self.rpc_port}"
+    headers = {'content-type': 'application/json'}
+    auth = (self.rpc_user, self.rpc_password)
+    data = {
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": params if params is not None else [],
+        "id": 1,
+    }
+    try:
+        # logging.debug(
+        # f"Sending RPC request to URL: {url}, Method: {data['method']}, Params: {data['params']}, Auth: {auth}")
+        response = requests.post(url, json=data, headers=headers, auth=auth)
+        # Check status code explicitly
+        if response.status_code != 200:
+            # logging.error(f"Error sending RPC request: HTTP status code {response.status_code}")
+            return None
+
+        json_answer = response.json()
+        logging.debug(f"RPC request successful. Response: {json}")
+        if 'result' in json_answer:
+            return json_answer['result']
+        else:
+            logging.error(f"No result in json: {json_answer}")
+    except requests.RequestException as e:
+        logging.error(f"Error sending RPC request: {e}")
+        return None
+    except Exception as ex:
+        logging.exception(f"An unexpected error occurred while sending RPC request: {ex}")
+        return None

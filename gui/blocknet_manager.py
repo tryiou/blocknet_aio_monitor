@@ -9,7 +9,7 @@ class BlocknetManager:
         self.root_gui = root_gui
         self.title_frame = title_frame
         self.master_frame = master_frame
-        self.blocknet_version = [global_variables.blocknet_release_url.split('/')[7]]
+        self.version = [global_variables.blocknet_release_url.split('/')[7]]
         self.blocknet_process_running = False
 
         self.bootstrap_thread = None

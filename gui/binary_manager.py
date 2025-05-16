@@ -99,7 +99,7 @@ class BinaryManager:
         self.download_blocknet_thread.start()
 
     def delete_blocknet_command(self):
-        blocknet_pruned_version = self.root_gui.blocknet_manager.blocknet_version[0].replace('v', '')
+        blocknet_pruned_version = self.root_gui.blocknet_manager.version[0].replace('v', '')
         for item in os.listdir(global_variables.aio_folder):
             item_path = os.path.join(global_variables.aio_folder, item)
             if os.path.isdir(item_path):
@@ -152,8 +152,7 @@ class BinaryManager:
         self.download_xlite_thread.start()
 
     def delete_xlite_command(self):
-
-        xlite_pruned_version = self.root_gui.xlite_version[0].replace('v', '')
+        xlite_pruned_version = self.root_gui.xlite_manager.version[0].replace('v', '')
         for item in os.listdir(global_variables.aio_folder):
             item_path = os.path.join(global_variables.aio_folder, item)
             if global_variables.system == 'Darwin':
@@ -179,9 +178,9 @@ class BinaryManager:
         self.disable_start_xlite_button = False
 
     def bins_check_aio_folder(self):
-        blocknet_pruned_version = self.root_gui.blocknet_manager.blocknet_version[0].replace('v', '')
+        blocknet_pruned_version = self.root_gui.blocknet_manager.version[0].replace('v', '')
         blockdx_pruned_version = self.root_gui.blockdx_manager.version[0].replace('v', '')
-        xlite_pruned_version = self.root_gui.xlite_manager.xlite_version[0].replace('v', '')
+        xlite_pruned_version = self.root_gui.xlite_manager.version[0].replace('v', '')
 
         blocknet_present = False
         blockdx_present = False

@@ -42,7 +42,6 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
         self.disable_daemons_conf_check = False
 
-
         self.cfg = utils.load_cfg_json()
         self.adjust_theme()
         self.custom_path = None
@@ -76,8 +75,6 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
         self.tooltip_manager = TooltipManager(self)
 
-        self.after(2000, self.check_processes)
-
     async def setup_management_sections(self):
         await asyncio.gather(
             self.binary_manager.setup(),
@@ -98,10 +95,10 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.setup_load_images()
         self.init_frames()
         self.create_managers()
+        self.after(0, self.check_processes)
         asyncio.run(self.setup_management_sections())
         self.setup_tooltips()
         self.init_grid()
-
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         signal.signal(signal.SIGINT, self.handle_signal)
@@ -285,53 +282,13 @@ class Blocknet_AIO_GUI(ctk.CTk):
         ctk.set_appearance_mode(new_theme)
         utils.save_cfg_json("theme", new_theme)
 
-    def update_status_gui(self):
-        async def async_run(func, delay=1):
-            while True:
-                await func()
-                await asyncio.sleep(delay)
-
-        # Define a separate async function to run all
-        async def run_all():
-            await asyncio.gather(
-                # async_run(self.blocknet_manager.frame_manager.update_status_blocknet_core),
-                # async_run(self.blockdx_manager.frame_manager.update_status_blockdx),
-                # async_run(self.xlite_manager.frame_manager.update_status_xlite),
-                async_run(self.binary_manager.frame_manager.update_bins_buttons)
-            )
-
-        # Run all within the asyncio event loop
-        asyncio.run(run_all())
-
     def check_processes(self):
-        # Check Blocknet process
-        if self.blocknet_manager.utility.blocknet_process is not None:
-            process_status = self.blocknet_manager.utility.blocknet_process.poll()
-            if process_status is not None:
-                logging.info(f"Blocknet process has terminated with return code {process_status}")
-                self.blocknet_manager.utility.blocknet_process = None
-
-        # Check Block DX process
-        if self.blockdx_manager.utility.blockdx_process is not None:
-            process_status = self.blockdx_manager.utility.blockdx_process.poll()
-            if process_status is not None:
-                logging.info(f"Block-DX process has terminated with return code {process_status}")
-                self.blockdx_manager.utility.blockdx_process = None
-
-        # Check Xlite process
-        if self.xlite_manager.utility.xlite_process is not None:
-            process_status = self.xlite_manager.utility.xlite_process.poll()
-            if process_status is not None:
-                logging.info(f"XLite process has terminated with return code {process_status}")
-                self.xlite_manager.utility.xlite_process = None
-
-        # Check Xlite process
-        if self.xlite_manager.utility.xlite_daemon_process is not None:
-            process_status = self.xlite_manager.utility.xlite_daemon_process.poll()
-            if process_status is not None:
-                logging.info(f"XLite-daemon process has terminated with return code {process_status}")
-                self.xlite_manager.utility.xlite_daemon_process = None
-
+        blocknet_bin = global_variables.blocknet_bin
+        blockdx_bin = global_variables.blockdx_bin[-1] if global_variables.system == "Darwin" \
+            else global_variables.blockdx_bin
+        xlite_bin = global_variables.xlite_bin[-1] if global_variables.system == "Darwin" \
+            else global_variables.xlite_bin
+        xlite_daemon_bin = global_variables.xlite_daemon_bin
         blocknet_processes = []
         blockdx_processes = []
         xlite_processes = []
@@ -341,18 +298,16 @@ class Blocknet_AIO_GUI(ctk.CTk):
             # Get all processes
             for proc in process_iter(['pid', 'name']):
                 # Check if any process matches the Blocknet process name
-                if global_variables.blocknet_bin == proc.info['name']:
+                if blocknet_bin == proc.info['name']:
                     blocknet_processes.append(proc.info['pid'])
                 # Check if any process matches the Block DX process name
-                if (global_variables.blockdx_bin[
-                    -1] if global_variables.system == "Darwin" else global_variables.blockdx_bin) == proc.info['name']:
+                if blockdx_bin == proc.info['name']:
                     blockdx_processes.append(proc.info['pid'])
                 # Check if any process matches the Xlite process name
-                if (global_variables.xlite_bin[
-                    -1] if global_variables.system == "Darwin" else global_variables.xlite_bin) == proc.info['name']:
+                if xlite_bin == proc.info['name']:
                     xlite_processes.append(proc.info['pid'])
                 # Check if any process matches the Xlite-daemon process name
-                if global_variables.xlite_daemon_bin == proc.info['name']:
+                if xlite_daemon_bin == proc.info['name']:
                     xlite_daemon_processes.append(proc.info['pid'])
         except Exception as e:
             logging.warning(f"Error while checking processes: {e}")
