@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import shutil
 import signal
 import time
 from threading import Thread
@@ -328,7 +327,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
         # Define a separate async function to run all
         async def run_all():
             await asyncio.gather(
-                async_run(self.bins_check_aio_folder, delay=2),
+                async_run(self.binary_manager.bins_check_aio_folder, delay=2),
                 async_run(self.check_processes, delay=2)
             )
 
@@ -341,68 +340,6 @@ class Blocknet_AIO_GUI(ctk.CTk):
             self.last_process_check_time = current_time
             return True
         return False
-
-    async def bins_check_aio_folder(self):
-        blocknet_pruned_version = self.blocknet_manager.blocknet_version[0].replace('v', '')
-        blockdx_pruned_version = self.blockdx_manager.version[0].replace('v', '')
-        xlite_pruned_version = self.xlite_manager.xlite_version[0].replace('v', '')
-
-        blocknet_present = False
-        blockdx_present = False
-        xlite_present = False
-
-        for item in os.listdir(global_variables.aio_folder):
-            if global_variables.system == "Darwin":
-                blockdx_filename = os.path.basename(global_variables.blockdx_release_url)
-                xlite_filename = os.path.basename(global_variables.xlite_release_url)
-                item_path = os.path.join(global_variables.aio_folder, item)
-                if os.path.isdir(item_path):
-                    if 'blocknet-' in item:
-                        if blocknet_pruned_version in item:
-                            blocknet_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            shutil.rmtree(item_path)
-                elif os.path.isfile(item_path):
-                    if 'BLOCK-DX-' in item:
-                        if blockdx_filename in item:
-                            blockdx_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            os.remove(item_path)
-                    elif 'XLite-' in item:
-                        if xlite_filename in item:
-                            xlite_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            os.remove(item_path)
-            else:
-                item_path = os.path.join(global_variables.aio_folder, item)
-                if os.path.isdir(item_path):
-                    # if a wrong version is found, delete it.
-                    if 'blocknet-' in item:
-                        if blocknet_pruned_version in item:
-                            blocknet_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            shutil.rmtree(item_path)
-                    elif 'BLOCK-DX-' in item:
-                        if blockdx_pruned_version in item:
-                            blockdx_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            shutil.rmtree(item_path)
-                    elif 'XLite-' in item:
-                        if xlite_pruned_version in item:
-                            xlite_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            shutil.rmtree(item_path)
-
-        self.binary_manager.frame_manager.blocknet_installed_boolvar.set(blocknet_present)
-        self.binary_manager.frame_manager.blockdx_installed_boolvar.set(blockdx_present)
-        self.binary_manager.frame_manager.xlite_installed_boolvar.set(xlite_present)
-        self.binary_manager.frame_manager.last_aio_folder_check_time = time.time()
 
     async def check_processes(self):
         # Check Blocknet process
