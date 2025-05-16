@@ -171,7 +171,7 @@ class XliteFrameManager:
         var = widgets_strings.xlite_daemon_valid_config_string if valid_config else widgets_strings.xlite_daemon_not_valid_config_string
         self.daemon_valid_config_checkbox_string_var.set(var)
 
-    async def coroutine_update_status_xlite(self):
+    async def update_status_xlite(self):
         self.parent.detect_new_xlite_install_and_add_to_xbridge()
         self.update_xlite_process_status_checkbox()
         self.update_xlite_store_password_button()

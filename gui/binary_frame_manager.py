@@ -198,7 +198,7 @@ class BinaryFrameManager:
                 img = self.root_gui.start_greyed_img
             utils.disable_button(self.blockdx_start_close_button, img=img)
 
-    async def coroutine_update_bins_buttons(self):
+    async def update_bins_buttons(self):
 
         self.update_blocknet_start_close_button()
         self.update_blockdx_start_close_button()

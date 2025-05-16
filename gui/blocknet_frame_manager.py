@@ -134,7 +134,7 @@ class BlocknetCoreFrameManager:
         else:
             utils.disable_button(self.custom_path_button)
 
-    async def coroutine_update_status_blocknet_core(self):
+    async def update_status_blocknet_core(self):
         self.update_blocknet_bootstrap_button()
         self.update_blocknet_process_status_checkbox()
         self.update_blocknet_custom_path_button()

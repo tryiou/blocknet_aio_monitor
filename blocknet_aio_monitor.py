@@ -302,38 +302,38 @@ class Blocknet_AIO_GUI(ctk.CTk):
         utils.save_cfg_json("theme", new_theme)
 
     def update_status_gui(self):
-        async def run_coroutine(coroutine_func, delay=1):
+        async def async_run(func, delay=1):
             while True:
-                await coroutine_func()
+                await func()
                 await asyncio.sleep(delay)
 
-        # Define a separate async function to run all coroutines
-        async def run_all_coroutines():
+        # Define a separate async function to run all
+        async def run_all():
             await asyncio.gather(
-                run_coroutine(self.blocknet_manager.frame_manager.coroutine_update_status_blocknet_core),
-                run_coroutine(self.blockdx_manager.frame_manager.coroutine_update_status_blockdx),
-                run_coroutine(self.xlite_manager.frame_manager.coroutine_update_status_xlite),
-                run_coroutine(self.binary_manager.frame_manager.coroutine_update_bins_buttons)
+                async_run(self.blocknet_manager.frame_manager.update_status_blocknet_core),
+                async_run(self.blockdx_manager.frame_manager.update_status_blockdx),
+                async_run(self.xlite_manager.frame_manager.update_status_xlite),
+                async_run(self.binary_manager.frame_manager.update_bins_buttons)
             )
 
-        # Run all coroutines within the asyncio event loop
-        asyncio.run(run_all_coroutines())
+        # Run all within the asyncio event loop
+        asyncio.run(run_all())
 
     def update_status_process_folder(self):
-        async def run_coroutine(coroutine_func, delay=1):
+        async def async_run(func, delay=1):
             while True:
-                await coroutine_func()
+                await func()
                 await asyncio.sleep(delay)
 
-        # Define a separate async function to run all coroutines
-        async def run_all_coroutines():
+        # Define a separate async function to run all
+        async def run_all():
             await asyncio.gather(
-                run_coroutine(self.coroutine_bins_check_aio_folder, delay=2),
-                run_coroutine(self.coroutine_check_processes, delay=2)
+                async_run(self.bins_check_aio_folder, delay=2),
+                async_run(self.check_processes, delay=2)
             )
 
-        # Run all coroutines within the asyncio event loop
-        asyncio.run(run_all_coroutines())
+        # Run all within the asyncio event loop
+        asyncio.run(run_all())
 
     def should_check_processes(self, max_delay=5):
         current_time = time.time()
@@ -342,7 +342,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
             return True
         return False
 
-    async def coroutine_bins_check_aio_folder(self):
+    async def bins_check_aio_folder(self):
         blocknet_pruned_version = self.blocknet_manager.blocknet_version[0].replace('v', '')
         blockdx_pruned_version = self.blockdx_manager.version[0].replace('v', '')
         xlite_pruned_version = self.xlite_manager.xlite_version[0].replace('v', '')
@@ -404,7 +404,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.binary_manager.frame_manager.xlite_installed_boolvar.set(xlite_present)
         self.binary_manager.frame_manager.last_aio_folder_check_time = time.time()
 
-    async def coroutine_check_processes(self):
+    async def check_processes(self):
         # Check Blocknet process
         if self.blocknet_manager.utility.blocknet_process is not None:
             process_status = self.blocknet_manager.utility.blocknet_process.poll()
