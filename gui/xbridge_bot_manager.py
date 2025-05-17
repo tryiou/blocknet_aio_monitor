@@ -1,17 +1,19 @@
 import logging
 import os
+import subprocess
 import threading
+
 from utilities.git_repo_management import GitRepoManagement
+from utilities.global_variables import aio_folder
 
 
 class XBridgeBotManager:
-    def __init__(self, repo_url: str = "https://github.com/tryiou/xbridge_trading_bots"):
-        from utilities.global_variables import aio_folder
+    def __init__(self, repo_url: str = "https://github.com/tryiou/xbridge_trading_bots", current_branch: str = "main"):
         self.repo_url = repo_url
         self.target_dir = os.path.join(aio_folder, "xbridge_trading_bots")
         self.execution_enabled = False
-        self.current_branch = "main"
-        self.repo_management = None
+        self.current_branch = current_branch
+        self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=self.current_branch)
         self.thread = None
         self.process = None
 
@@ -33,6 +35,7 @@ class XBridgeBotManager:
 
     def install_or_update(self, branch: str) -> None:
         """Install or update repo from given branch"""
+
         if self.thread and self.thread.is_alive():
             logging.warning("Install/update already in progress")
             return
@@ -48,17 +51,18 @@ class XBridgeBotManager:
             name=f"XBridgeBotInstaller-{branch}"
         )
         self.thread.start()
+        # self.thread.join()
         logging.info(f"Started installer thread {self.thread.name}")
 
     def _do_install_update(self, branch: str) -> None:
         try:
             logging.info(f"Attempting to install/update from {self.repo_url} to {self.target_dir}")
             self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=branch)
-            
+
             if not os.path.exists(self.target_dir):
                 logging.info(f"Creating target directory: {self.target_dir}")
                 os.makedirs(self.target_dir, exist_ok=True)
-            
+
             self.repo_management.setup()
             self.current_branch = branch
             logging.info(f"Successfully updated to branch {branch}")
@@ -79,7 +83,7 @@ class XBridgeBotManager:
                     logging.info("Successfully deleted repository")
                 else:
                     logging.warning("Delete requested but directory does not exist")
-                
+
                 # Reset state
                 self.repo_management = None
                 self.current_branch = "main"
@@ -111,6 +115,12 @@ class XBridgeBotManager:
         if self.repo_management and self.process:
             try:
                 self.process.terminate()
+                try:
+                    self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                logging.info("Script execution stopped")
+                self.process = None
             except Exception as e:
                 logging.error(f"Error stopping script: {e}")
 

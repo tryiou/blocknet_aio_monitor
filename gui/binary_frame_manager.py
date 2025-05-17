@@ -1,7 +1,10 @@
+import logging
+
 import customtkinter as ctk
-from gui.xbridge_bot_manager import XBridgeBotManager
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
+import utilities.utils
+from gui.xbridge_bot_manager import XBridgeBotManager
 
 
 class BinaryFrameManager:
@@ -10,6 +13,7 @@ class BinaryFrameManager:
         self.parent = parent
         self.master_frame = master_frame
         self.title_frame = title_frame
+        self.xbridge_bot_manager = XBridgeBotManager()
 
         self.header_label = ctk.CTkLabel(self.title_frame,
                                          text="Binaries Control panel:")
@@ -118,41 +122,44 @@ class BinaryFrameManager:
         self.bots_label = ctk.CTkLabel(self.master_frame, text="XBridge Bots:")
         self.bots_installed_boolvar = ctk.BooleanVar(value=False)
         self.bots_version_optionmenu = ctk.CTkOptionMenu(self.master_frame,
-                                                         values=['main'],
+                                                         values=self.xbridge_bot_manager.get_available_branches(),
                                                          state='normal')
         self.bots_found_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                               text='',
                                                               variable=self.bots_installed_boolvar,
                                                               state='disabled',
                                                               corner_radius=25)
-        self.install_delete_bots_string_var = ctk.StringVar(value='Install')
+        # Bots buttons
         self.install_delete_bots_button = ctk.CTkButton(self.master_frame,
                                                         state='normal',
+                                                        text="",
                                                         image=self.root_gui.transparent_img,
                                                         command=self.install_update_bots_command,
-                                                        textvariable=self.install_delete_bots_string_var,
                                                         width=bin_button_width,
                                                         corner_radius=25)
-        self.bots_toggle_execution_string_var = ctk.StringVar(value='Start')
         self.bots_toggle_execution_button = ctk.CTkButton(self.master_frame,
                                                           image=self.root_gui.transparent_img,
+                                                          text="",
                                                           command=self.toggle_bots_execution_command,
-                                                          textvariable=self.bots_toggle_execution_string_var,
                                                           width=bin_button_width,
                                                           corner_radius=25)
-        
-        self.xbridge_bot_manager = XBridgeBotManager()
 
     def install_update_bots_command(self):
         """Handle install/update button click - left click installs/updates, right click deletes"""
         if self.xbridge_bot_manager and self.bots_version_optionmenu.get():
+            utilities.utils.disable_button(self.install_delete_bots_button, self.root_gui.install_greyed_img)
+            utilities.utils.disable_button(self.bots_toggle_execution_button, self.root_gui.start_greyed_img)
             self.xbridge_bot_manager.install_or_update(self.bots_version_optionmenu.get())
 
     def toggle_bots_execution_command(self):
         """Handle execution toggle button click"""
-        if self.xbridge_bot_manager:
-            new_state = self.xbridge_bot_manager.toggle_execution()
-            self.bots_toggle_execution_string_var.set('Stop' if new_state else 'Start')
+        branch = self.bots_version_optionmenu.get()
+        if self.xbridge_bot_manager and branch:
+            utilities.utils.disable_button(self.install_delete_bots_button, self.root_gui.install_greyed_img)
+            utilities.utils.disable_button(self.bots_toggle_execution_button, self.root_gui.start_greyed_img)
+            if self.xbridge_bot_manager.repo_management is None or self.xbridge_bot_manager.current_branch != branch:
+                self.xbridge_bot_manager.install_or_update(branch)
+            self.xbridge_bot_manager.toggle_execution()
 
     def grid_widgets(self, x, y):
         # bin

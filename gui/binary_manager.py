@@ -33,6 +33,7 @@ class BinaryManager:
         self.root_gui.after(0, self.update_blocknet_buttons)
         self.root_gui.after(0, self.update_blockdx_buttons)
         self.root_gui.after(0, self.update_xlite_buttons)
+        self.root_gui.after(0, self.update_xbridge_bots_buttons)  # Add this line
 
     def _start_or_close_binary(self, process_running, stop_func, start_func, button, disable_flag):
         img = self.root_gui.stop_greyed_img if process_running else self.root_gui.start_greyed_img
@@ -464,3 +465,52 @@ class BinaryManager:
         else:
             img = self.root_gui.stop_greyed_img if self.root_gui.xlite_manager.process_running else self.root_gui.start_greyed_img
             utils.disable_button(self.frame_manager.xlite_start_close_button, img=img)
+
+    def update_xbridge_bots_buttons(self):
+        # XBridge Bots
+        self.update_xbridge_bots_start_close_button()
+        bots_boolvar = self.frame_manager.bots_installed_boolvar.get()
+        # Determine tooltip message based on installation status
+        if bots_boolvar:
+            self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
+                                                msg=self.frame_manager.xbridge_bot_manager.target_dir)
+            button_condition = self.frame_manager.xbridge_bot_manager.process or self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
+        else:
+            self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
+                                                msg=self.frame_manager.xbridge_bot_manager.repo_url)
+            button_condition = self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
+
+            # Set install/delete button image based on state
+        if button_condition:
+            utils.disable_button(self.frame_manager.install_delete_bots_button,
+                                 img=self.root_gui.delete_greyed_img if bots_boolvar else self.root_gui.install_greyed_img)
+        else:
+            utils.enable_button(self.frame_manager.install_delete_bots_button,
+                                img=self.root_gui.delete_img if bots_boolvar else self.root_gui.install_img)
+
+            # Update the button text variable (though we're using images now)
+        # self.frame_manager.install_delete_bots_string_var.set(var_bots)
+
+        # Schedule next update
+        self.root_gui.after(2000, self.update_xbridge_bots_buttons)
+
+    def update_xbridge_bots_start_close_button(self):
+
+        # Update tooltip message
+        if self.frame_manager.xbridge_bot_manager.process:
+            self.tooltip_manager.update_tooltip(widget=self.frame_manager.bots_toggle_execution_button,
+                                                msg=widgets_strings.close_string)
+        else:
+            self.tooltip_manager.update_tooltip(widget=self.frame_manager.bots_toggle_execution_button,
+                                                msg=widgets_strings.start_string)
+
+            # Determine if button should be enabled/disabled based on download status
+
+        disable_start_close_button = self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
+
+        if not disable_start_close_button:
+            img = self.root_gui.stop_img if self.frame_manager.xbridge_bot_manager.process else self.root_gui.start_img
+            utils.enable_button(self.frame_manager.bots_toggle_execution_button, img=img)
+        else:
+            img = self.root_gui.stop_greyed_img if self.frame_manager.xbridge_bot_manager.process else self.root_gui.start_greyed_img
+            utils.disable_button(self.frame_manager.bots_toggle_execution_button, img=img)
