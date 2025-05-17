@@ -1,7 +1,6 @@
 import logging
 import os
 import shutil
-import time
 from threading import Thread
 
 import widgets_strings
@@ -17,8 +16,6 @@ class BinaryManager:
         self.master_frame = master_frame
         self.frame_manager = None
 
-        self.last_aio_folder_check_time = None
-
         self.disable_start_blocknet_button = False
         self.disable_start_xlite_button = False
         self.disable_start_blockdx_button = False
@@ -33,7 +30,9 @@ class BinaryManager:
         self.frame_manager = BinaryFrameManager(self, self.master_frame, self.title_frame)
 
         self.root_gui.after(0, self.bins_check_aio_folder)
-        self.root_gui.after(0, self.update_bins_buttons)
+        self.root_gui.after(0, self.update_blocknet_buttons)
+        self.root_gui.after(0, self.update_blockdx_buttons)
+        self.root_gui.after(0, self.update_xlite_buttons)
 
     def _start_or_close_binary(self, process_running, stop_func, start_func, button, disable_flag):
         img = self.root_gui.stop_greyed_img if process_running else self.root_gui.start_greyed_img
@@ -178,6 +177,84 @@ class BinaryManager:
         self.disable_start_xlite_button = False
 
     def bins_check_aio_folder(self):
+        logging.info("bins_check_aio_folder")
+
+        # Get system information and versions
+        is_darwin = global_variables.system == "Darwin"
+        aio_folder = global_variables.aio_folder
+
+        # Define version info for each application
+        apps_info = {
+            "blocknet": {
+                "version": self._prune_version(self.root_gui.blocknet_manager.version),
+                "dir_prefix": "blocknet-",
+                "is_dir": True,
+                "darwin_file": None,
+                "boolvar": self.root_gui.binary_manager.frame_manager.blocknet_installed_boolvar
+            },
+            "blockdx": {
+                "version": self._prune_version(self.root_gui.blockdx_manager.version),
+                "dir_prefix": "BLOCK-DX-",
+                "is_dir": not is_darwin,
+                "darwin_file": os.path.basename(global_variables.blockdx_release_url) if is_darwin else None,
+                "boolvar": self.root_gui.binary_manager.frame_manager.blockdx_installed_boolvar
+            },
+            "xlite": {
+                "version": self._prune_version(self.root_gui.xlite_manager.version),
+                "dir_prefix": "XLite-",
+                "is_dir": not is_darwin,
+                "darwin_file": os.path.basename(global_variables.xlite_release_url) if is_darwin else None,
+                "boolvar": self.root_gui.binary_manager.frame_manager.xlite_installed_boolvar
+            }
+        }
+
+        # Check each application
+        for app_name, app_info in apps_info.items():
+            app_info["found"] = False
+
+        # Scan the AIO folder for matching items
+        for item in os.listdir(aio_folder):
+            full_path = os.path.join(aio_folder, item)
+            # logging.info(f"item: {item}")
+
+            for app_name, app_info in apps_info.items():
+                if app_info["dir_prefix"] in item:
+                    self._check_app_version(app_name, app_info, item, full_path, is_darwin)
+
+        # Update GUI with results
+        for app_info in apps_info.values():
+            # logging.info(app_info)
+            app_info["boolvar"].set(app_info["found"])
+
+        # Schedule next check
+        self.root_gui.after(10000, self.bins_check_aio_folder)
+
+    def _prune_version(self, version):
+        """Remove 'v' prefix from version string."""
+        return version[0].replace('v', '')
+
+    def _log_incorrect_target(self, target):
+        """Log incorrect version found."""
+        # logging.info(f"incorrect version: {target}")
+        # shutil.rmtree(target) if os.path.isdir(target) else os.remove(target)
+        return
+
+    def _check_app_version(self, app_name, app_info, item, full_path, is_darwin):
+        """Check if the item matches the expected version for the given app."""
+        if app_info["is_dir"] and os.path.isdir(full_path):
+            # Directory check for non-Darwin or blocknet
+            if app_info["version"] in item:
+                app_info["found"] = True
+            else:
+                self._log_incorrect_target(full_path)
+        elif not app_info["is_dir"] and os.path.isfile(full_path):
+            # File check for Darwin (macOS) for blockdx and xlite
+            if app_info["darwin_file"] in item:
+                app_info["found"] = True
+            else:
+                self._log_incorrect_target(full_path)
+
+    def bins_check_aio_folder_original(self):
         blocknet_pruned_version = self.root_gui.blocknet_manager.version[0].replace('v', '')
         blockdx_pruned_version = self.root_gui.blockdx_manager.version[0].replace('v', '')
         xlite_pruned_version = self.root_gui.xlite_manager.version[0].replace('v', '')
@@ -237,25 +314,17 @@ class BinaryManager:
         self.root_gui.binary_manager.frame_manager.blocknet_installed_boolvar.set(blocknet_present)
         self.root_gui.binary_manager.frame_manager.blockdx_installed_boolvar.set(blockdx_present)
         self.root_gui.binary_manager.frame_manager.xlite_installed_boolvar.set(xlite_present)
-        self.root_gui.binary_manager.frame_manager.last_aio_folder_check_time = time.time()
 
-        self.root_gui.after(2000, self.bins_check_aio_folder)
+        self.root_gui.after(2000, self.bins_check_aio_folder_original)
 
-    def update_bins_buttons(self):
-
+    def update_blocknet_buttons(self):
+        # BLOCKNET
         self.update_blocknet_start_close_button()
-        self.update_blockdx_start_close_button()
-        self.update_xlite_start_close_button()
-
         blocknet_boolvar = self.frame_manager.blocknet_installed_boolvar.get()
-        blockdx_boolvar = self.frame_manager.blockdx_installed_boolvar.get()
-        xlite_boolvar = self.frame_manager.xlite_installed_boolvar.get()
-
         percent_buff = self.root_gui.blocknet_manager.utility.binary_percent_download
         dl_string = f"{int(percent_buff)}%" if percent_buff else ""
         var_blocknet = dl_string if self.root_gui.blocknet_manager.utility.downloading_bin else ""
         blocknet_folder = os.path.join(global_variables.aio_folder, blocknet_bin_path[0])
-
         if blocknet_boolvar:
             var_blocknet = ""
             self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_blocknet_button,
@@ -272,12 +341,17 @@ class BinaryManager:
         else:
             utils.enable_button(self.frame_manager.install_delete_blocknet_button,
                                 img=self.root_gui.delete_img if blocknet_boolvar else self.root_gui.install_img)
+        self.frame_manager.install_delete_blocknet_string_var.set(var_blocknet)
+        self.root_gui.after(2000, self.update_blocknet_buttons)
 
+    def update_blockdx_buttons(self):
+        # BLOCK-DX
+        self.update_blockdx_start_close_button()
+        blockdx_boolvar = self.frame_manager.blockdx_installed_boolvar.get()
         percent_buff = self.root_gui.blockdx_manager.utility.binary_percent_download
         dl_string = f"{int(percent_buff)}%" if percent_buff else ""
         var_blockdx = dl_string if self.root_gui.blockdx_manager.utility.downloading_bin else ""
         blockdx_folder = os.path.join(global_variables.aio_folder, blockdx_bin_path.get(global_variables.system))
-
         if blockdx_boolvar:
             var_blockdx = ""
             self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_blockdx_button,
@@ -295,11 +369,17 @@ class BinaryManager:
             utils.enable_button(self.frame_manager.install_delete_blockdx_button,
                                 img=self.root_gui.delete_img if blockdx_boolvar else self.root_gui.install_img)
 
+        self.frame_manager.install_delete_blockdx_string_var.set(var_blockdx)
+        self.root_gui.after(2000, self.update_blockdx_buttons)
+
+    def update_xlite_buttons(self):
+        # Xlite
+        self.update_xlite_start_close_button()
+        xlite_boolvar = self.frame_manager.xlite_installed_boolvar.get()
         percent_buff = self.root_gui.xlite_manager.utility.binary_percent_download
         dl_string = f"{int(percent_buff)}%" if percent_buff else ""
         var_xlite = dl_string if self.root_gui.xlite_manager.utility.downloading_bin else ""
         folder = os.path.join(global_variables.aio_folder, xlite_bin_path.get(global_variables.system))
-
         if xlite_boolvar:
             var_xlite = ""
             self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_xlite_button,
@@ -316,11 +396,8 @@ class BinaryManager:
         else:
             utils.enable_button(self.frame_manager.install_delete_xlite_button,
                                 img=self.root_gui.delete_img if xlite_boolvar else self.root_gui.install_img)
-
-        self.frame_manager.install_delete_blocknet_string_var.set(var_blocknet)
-        self.frame_manager.install_delete_blockdx_string_var.set(var_blockdx)
         self.frame_manager.install_delete_xlite_string_var.set(var_xlite)
-        self.root_gui.after(2000, self.update_bins_buttons)
+        self.root_gui.after(2000, self.update_xlite_buttons)
 
     def update_blocknet_start_close_button(self):
         var = widgets_strings.close_string if self.root_gui.blocknet_manager.blocknet_process_running else widgets_strings.start_string
