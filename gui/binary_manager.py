@@ -167,17 +167,8 @@ class BinaryManager:
                             logging.info(f"deleting {item_path}")
                             shutil.rmtree(item_path)
 
-    def enable_blocknet_start_button(self):
-        self.disable_start_blocknet_button = False
-
-    def enable_blockdx_start_button(self):
-        self.disable_start_blockdx_button = False
-
-    def enable_xlite_start_button(self):
-        self.disable_start_xlite_button = False
-
     def bins_check_aio_folder(self):
-        logging.info("bins_check_aio_folder")
+        # logging.info("bins_check_aio_folder")
 
         # Get system information and versions
         is_darwin = global_variables.system == "Darwin"
@@ -219,7 +210,7 @@ class BinaryManager:
 
             for app_name, app_info in apps_info.items():
                 if app_info["dir_prefix"] in item:
-                    self._check_app_version(app_name, app_info, item, full_path, is_darwin)
+                    self._check_app_version(app_info, item, full_path)
 
         # Update GUI with results
         for app_info in apps_info.values():
@@ -227,7 +218,7 @@ class BinaryManager:
             app_info["boolvar"].set(app_info["found"])
 
         # Schedule next check
-        self.root_gui.after(10000, self.bins_check_aio_folder)
+        self.root_gui.after(5000, self.bins_check_aio_folder)
 
     def _prune_version(self, version):
         """Remove 'v' prefix from version string."""
@@ -239,7 +230,7 @@ class BinaryManager:
         # shutil.rmtree(target) if os.path.isdir(target) else os.remove(target)
         return
 
-    def _check_app_version(self, app_name, app_info, item, full_path, is_darwin):
+    def _check_app_version(self, app_info, item, full_path):
         """Check if the item matches the expected version for the given app."""
         if app_info["is_dir"] and os.path.isdir(full_path):
             # Directory check for non-Darwin or blocknet
