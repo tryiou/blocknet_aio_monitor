@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -6,6 +7,19 @@ from pathlib import Path
 from typing import List, Optional
 
 import pygit2
+
+
+def get_python_path():
+    """Get the path to the extracted Python interpreter when running as PyInstaller bundle."""
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller >= 3.0
+        return os.path.join(sys._MEIPASS, 'python')
+    elif '_MEIPASS' in os.environ:
+        # PyInstaller < 3.0
+        return os.path.join(os.environ['_MEIPASS'], 'python')
+    else:
+        # Running as normal Python script
+        return sys.executable
 
 
 class GitRepoManagement:
@@ -128,7 +142,9 @@ class GitRepoManagement:
         abs_script_path = (self.target_dir / script_path).resolve()
         if not abs_script_path.exists():
             self._fail(f"Script not found: {abs_script_path}")
-        python_path = sys.executable
+
+        python_path = get_python_path()
+
         cmd = [str(python_path), str(abs_script_path)] + script_args
 
         logging.info(f"Running script: {' '.join(cmd)}")
