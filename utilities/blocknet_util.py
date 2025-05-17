@@ -100,11 +100,13 @@ class BlocknetUtility:
 
     def check_blocknet_rpc(self):
         while self.running:
-            self.valid_rpc = False
+            valid = False
             if self.blocknet_rpc:
                 result = self.blocknet_rpc.send_rpc_request('getnetworkinfo')
                 if result:
-                    self.valid_rpc = True
+                    valid = True
+            self.valid_rpc = valid
+
                 # logging.info(result)
             time.sleep(2)
 
