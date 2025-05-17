@@ -410,7 +410,6 @@ class BlocknetUtility:
             }
 
         new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
-        logging.debug(f"\nold_local_json: {old_local_json}\nnew_local_json: {new_local_json}")
         if old_local_json != new_local_json:
             logging.info("Local xbridge.conf has been updated. Saving...")
             self.save_xbridge_conf()
