@@ -255,16 +255,16 @@ class BlocknetUtility:
         if section_name not in self.blocknet_conf_local:
             self.blocknet_conf_local[section_name] = {}
 
-        if 'rpcthreads' not in self.blocknet_conf_local[section_name] or self.blocknet_conf_local[section_name][
-            'rpcthreads'] < 32:
+        if 'rpcthreads' not in self.blocknet_conf_local[section_name] or int(
+                self.blocknet_conf_local[section_name]['rpcthreads']) < 32:
             self.blocknet_conf_local[section_name]['rpcthreads'] = 32
 
-        if 'rpcworkqueue' not in self.blocknet_conf_local[section_name] or self.blocknet_conf_local[section_name][
-            'rpcworkqueue'] < 64:
+        if 'rpcworkqueue' not in self.blocknet_conf_local[section_name] or int(
+            self.blocknet_conf_local[section_name]['rpcworkqueue']) < 64:
             self.blocknet_conf_local[section_name]['rpcworkqueue'] = 64
 
-        if 'rpcxbridgetimeout' not in self.blocknet_conf_local[section_name] or self.blocknet_conf_local[section_name][
-            'rpcxbridgetimeout'] < 120:
+        if 'rpcxbridgetimeout' not in self.blocknet_conf_local[section_name] or int(
+                self.blocknet_conf_local[section_name]['rpcxbridgetimeout']) < 120:
             self.blocknet_conf_local[section_name]['rpcxbridgetimeout'] = 120
 
         addnode_value = self.blocknet_conf_local[section_name].get('addnode', [])
