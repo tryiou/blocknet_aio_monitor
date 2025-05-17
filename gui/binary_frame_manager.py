@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from gui.xbridge_bot_manager import XBridgeBotManager
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 
@@ -58,6 +59,7 @@ class BinaryFrameManager:
                                                                variable=self.xlite_installed_boolvar,
                                                                state='disabled',
                                                                corner_radius=25)
+
         bin_button_width = 90
         self.install_delete_blocknet_string_var = ctk.StringVar(value='')
         self.install_delete_blocknet_button = ctk.CTkButton(self.master_frame,
@@ -86,6 +88,7 @@ class BinaryFrameManager:
                                                          width=bin_button_width,
                                                          # text="",
                                                          corner_radius=25)
+
         self.blocknet_start_close_button_string_var = ctk.StringVar(value='')
         self.blocknet_start_close_button = ctk.CTkButton(self.master_frame,
                                                          image=self.root_gui.transparent_img,
@@ -110,6 +113,46 @@ class BinaryFrameManager:
                                                       text="",
                                                       command=self.parent.start_or_close_xlite,
                                                       corner_radius=25)
+        # Bots buttons
+
+        self.bots_label = ctk.CTkLabel(self.master_frame, text="XBridge Bots:")
+        self.bots_installed_boolvar = ctk.BooleanVar(value=False)
+        self.bots_version_optionmenu = ctk.CTkOptionMenu(self.master_frame,
+                                                         values=['main'],
+                                                         state='normal')
+        self.bots_found_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
+                                                              text='',
+                                                              variable=self.bots_installed_boolvar,
+                                                              state='disabled',
+                                                              corner_radius=25)
+        self.install_delete_bots_string_var = ctk.StringVar(value='Install')
+        self.install_delete_bots_button = ctk.CTkButton(self.master_frame,
+                                                        state='normal',
+                                                        image=self.root_gui.transparent_img,
+                                                        command=self.install_update_bots_command,
+                                                        textvariable=self.install_delete_bots_string_var,
+                                                        width=bin_button_width,
+                                                        corner_radius=25)
+        self.bots_toggle_execution_string_var = ctk.StringVar(value='Start')
+        self.bots_toggle_execution_button = ctk.CTkButton(self.master_frame,
+                                                          image=self.root_gui.transparent_img,
+                                                          command=self.toggle_bots_execution_command,
+                                                          textvariable=self.bots_toggle_execution_string_var,
+                                                          width=bin_button_width,
+                                                          corner_radius=25)
+        
+        self.xbridge_bot_manager = XBridgeBotManager()
+
+    def install_update_bots_command(self):
+        """Handle install/update button click - left click installs/updates, right click deletes"""
+        if self.xbridge_bot_manager and self.bots_version_optionmenu.get():
+            self.xbridge_bot_manager.install_or_update(self.bots_version_optionmenu.get())
+
+    def toggle_bots_execution_command(self):
+        """Handle execution toggle button click"""
+        if self.xbridge_bot_manager:
+            new_state = self.xbridge_bot_manager.toggle_execution()
+            self.bots_toggle_execution_string_var.set('Stop' if new_state else 'Start')
 
     def grid_widgets(self, x, y):
         # bin
@@ -117,14 +160,14 @@ class BinaryFrameManager:
         self.button_switch_theme.grid(row=x, column=y + 5, padx=2, pady=2, sticky='e')
         self.blocknet_label.grid(row=x + 1, column=y, padx=5, pady=2, sticky="e")
         self.blockdx_label.grid(row=x + 2, column=y, padx=5, pady=2, sticky="e")
-        self.xlite_label.grid(row=x + 3, column=y, padx=5, pady=(2, 5), sticky="e")
+        self.xlite_label.grid(row=x + 3, column=y, padx=5, pady=2, sticky="e")
         sticky = 'ew'
         self.blocknet_version_optionmenu.grid(row=x + 1, column=y + 1, padx=5, sticky=sticky)
         self.blockdx_version_optionmenu.grid(row=x + 2, column=y + 1, padx=5, sticky=sticky)
-        self.xlite_version_optionmenu.grid(row=x + 3, column=y + 1, padx=5, pady=(2, 5), sticky=sticky)
+        self.xlite_version_optionmenu.grid(row=x + 3, column=y + 1, padx=5, pady=2, sticky=sticky)
         self.blocknet_found_checkbox.grid(row=x + 1, column=y + 2, padx=5, sticky=sticky)
         self.blockdx_found_checkbox.grid(row=x + 2, column=y + 2, padx=5, sticky=sticky)
-        self.xlite_found_checkbox.grid(row=x + 3, column=y + 2, padx=5, pady=(2, 5), sticky=sticky)
+        self.xlite_found_checkbox.grid(row=x + 3, column=y + 2, padx=5, pady=2, sticky=sticky)
         button_sticky = 'ew'
         padx_main_frame = (70, 8)
         self.install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=padx_main_frame,
@@ -138,4 +181,10 @@ class BinaryFrameManager:
         # Button for starting or closing Block-dx
         self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=padx_main_frame, sticky='e')
         # Button for starting or closing Xlite
-        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=padx_main_frame, pady=(2, 5), sticky='e')
+        self.xlite_start_close_button.grid(row=x + 3, column=y + 4, padx=padx_main_frame, pady=2, sticky='e')
+        self.bots_label.grid(row=x + 4, column=y, padx=5, pady=(2, 5), sticky="e")
+        self.bots_version_optionmenu.grid(row=x + 4, column=y + 1, padx=5, pady=(2, 5), sticky=sticky)
+        self.bots_found_checkbox.grid(row=x + 4, column=y + 2, padx=5, pady=(2, 5), sticky=sticky)
+        self.install_delete_bots_button.grid(row=x + 4, column=y + 3, padx=(70, 8), pady=2,
+                                             sticky=button_sticky)
+        self.bots_toggle_execution_button.grid(row=x + 4, column=y + 4, padx=padx_main_frame, pady=(2, 5), sticky='e')

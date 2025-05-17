@@ -1,7 +1,8 @@
 import os
 import subprocess
 import sys
-import venv  # Missing import added
+import time
+import venv
 
 
 class GitRepoManagement:
@@ -28,7 +29,9 @@ class GitRepoManagement:
         if script_args is None:
             script_args = []
 
-        abs_script_path = os.path.join(self.target_dir, script_path)
+        # Ensure we're using absolute paths throughout
+        abs_target_dir = os.path.abspath(self.target_dir)
+        abs_script_path = os.path.abspath(os.path.join(abs_target_dir, script_path))
         if not os.path.isfile(abs_script_path):
             self._fail(f"Script not found: {abs_script_path}")
 
@@ -37,18 +40,65 @@ class GitRepoManagement:
         return self._run_command_with_output(cmd, cwd=self.target_dir)
 
     def clone_or_update_repo(self):
-        if os.path.isdir(self.target_dir):
-            print(f"Repository exists at '{self.target_dir}'. Pulling latest changes on branch '{self.branch}'...")
-            self._run_command(["git", "fetch"], cwd=self.target_dir)
-            self._run_command(["git", "checkout", self.branch], cwd=self.target_dir)
-            self._run_command(["git", "pull", "origin", self.branch], cwd=self.target_dir)
+        target_dir = os.path.abspath(self.target_dir)
+        git_dir = os.path.join(target_dir, ".git")
+        
+        if os.path.exists(target_dir):
+            # Verify if it's actually a working git repository
+            is_valid_repo = False
+            if os.path.isdir(git_dir):
+                try:
+                    # Check git rev-parse to validate repository integrity
+                    print(f"Validating git repository at '{target_dir}'...")
+                    self._run_command(["git", "rev-parse", "--is-inside-work-tree"], cwd=target_dir)
+                    is_valid_repo = True
+                except subprocess.CalledProcessError:
+                    print(f"Directory {target_dir} appears to be a corrupt git repo")
+            
+            if not is_valid_repo:
+                print(f"Recreating invalid/missing git repository at {target_dir}")
+                import shutil
+                try:
+                    # More thorough cleanup
+                    if os.path.exists(target_dir):
+                        shutil.rmtree(target_dir, ignore_errors=True)
+                        # Double-check removal
+                        for i in range(3):  # Try multiple times if needed
+                            if not os.path.exists(target_dir):
+                                break
+                            time.sleep(0.1)
+                            shutil.rmtree(target_dir, ignore_errors=True)
+                except Exception as e:
+                    self._fail(f"Failed to cleanup directory {target_dir}: {e}")
+                
+                # Create fresh directory
+                os.makedirs(target_dir, exist_ok=True)
+                print(f"Cloning fresh repository to {target_dir}")
+                self._run_command(["git", "clone", "--branch", self.branch, self.repo_url, target_dir])
+                return
+                
+            # If we got here, it's a valid repo - update it
+            try:
+                print(f"Updating existing repository at '{target_dir}'")
+                self._run_command(["git", "fetch", "--all"], cwd=target_dir)
+                self._run_command(["git", "checkout", self.branch], cwd=target_dir)
+                self._run_command(["git", "reset", "--hard", f"origin/{self.branch}"], cwd=target_dir)
+                self._run_command(["git", "pull", "--ff-only"], cwd=target_dir)
+            except subprocess.CalledProcessError as e:
+                self._fail(f"Failed to update repository: {e}")
+                
         else:
-            print(f"Cloning repository from {self.repo_url} (branch: {self.branch})...")
-            self._run_command(["git", "clone", "--branch", self.branch, self.repo_url, self.target_dir])
+            print(f"Cloning new repository to {target_dir}")
+            os.makedirs(target_dir, exist_ok=True)
+            self._run_command(["git", "clone", "--branch", self.branch, self.repo_url, target_dir])
 
     def create_virtualenv(self):
+        """Create virtual environment inside the target directory"""
+        print(f"Creating virtual environment in target directory: {self.target_dir}")
+        print(f"Full venv path: {os.path.abspath(self.venv_dir)}")
+        
         if os.path.isdir(self.venv_dir):
-            print(f"Virtual environment already exists at '{self.venv_dir}'. Skipping creation.")
+            print(f"Virtual environment already exists at '{os.path.abspath(self.venv_dir)}'. Skipping creation.")
             return
 
         print(f"Creating virtual environment at '{self.venv_dir}'...")
@@ -172,18 +222,39 @@ class GitRepoManagement:
 
     def _run_command(self, cmd_list, error_message=None, cwd=None):
         try:
-            # Ensure all path strings are absolute paths
+            # Ensure all path strings are absolute paths but skip URLs
             for i, cmd in enumerate(cmd_list):
-                if isinstance(cmd, str) and os.path.sep in cmd and not os.path.isabs(cmd):
+                if (isinstance(cmd, str) and 
+                    os.path.sep in cmd and 
+                    not os.path.isabs(cmd) and 
+                    not cmd.startswith(("http://", "https://"))):
                     cmd_list[i] = os.path.abspath(cmd)
 
             # For PyInstaller compatibility, ensure we're using absolute paths for executables
             if isinstance(cmd_list[0], str):
                 if cmd_list[0] in ["git", "pip", "pip3", "python", "python3"] and not os.path.isabs(cmd_list[0]):
-                    # Try to find the executable in PATH
-                    executable = self._find_executable(cmd_list[0])
-                    if executable:
-                        cmd_list[0] = executable
+                    # First try to find the executable in our venv
+                    bin_dir = "Scripts" if sys.platform == "win32" else "bin"
+                    venv_executable = os.path.join(self.venv_dir, bin_dir, cmd_list[0])
+                    if os.path.isfile(venv_executable):
+                        cmd_list[0] = venv_executable
+                    else:
+                        # Fall back to system PATH
+                        executable = self._find_executable(cmd_list[0])
+                        if executable:
+                            cmd_list[0] = executable
+                            
+                    # Special handling for git commands with repository URLs
+                    if cmd_list[0] == "git" and len(cmd_list) > 2 and "clone" in cmd_list:
+                        # Don't modify repository URL arguments
+                        for i in range(1, len(cmd_list)):
+                            if cmd_list[i] in ["fetch", "pull", "clone"] and i+1 < len(cmd_list):
+                                # Skip URL modification for the next argument
+                                i += 1
+                                break
+
+            # Add debug logging for the actual command being executed
+            print(f"Final command being executed: {cmd_list}")
 
             # Print command for debugging
             cmd_str = " ".join(str(c) for c in cmd_list)
