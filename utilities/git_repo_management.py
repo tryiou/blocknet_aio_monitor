@@ -1,19 +1,19 @@
 import logging
 import shutil
+import subprocess
 import sys
 import venv
-import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-import git  # GitPython package
+import pygit2
 
 
 class GitRepoManagement:
     """
     Manages a Git repository with an associated virtual environment.
     Enforces the use of the virtual environment for all operations.
-    Uses GitPython instead of system Git commands.
+    Uses pygit2 instead of GitPython for Git operations.
     """
 
     def __init__(self, repo_url: str, target_dir: str, branch: str = "main"):
@@ -52,7 +52,7 @@ class GitRepoManagement:
         return True
 
     def clone_or_update_repo(self) -> None:
-        """Clone a new repository or update an existing one using GitPython."""
+        """Clone a new repository or update an existing one using pygit2."""
         if not self.target_dir.exists():
             self._clone_repo()
             return
@@ -63,25 +63,58 @@ class GitRepoManagement:
 
         # Repository exists, update it
         try:
-            self.repo = git.Repo(self.target_dir)
-            origin = self.repo.remotes.origin
-            origin.fetch()
+            self.repo = pygit2.Repository(str(self.target_dir))
+
+            # Fetch updates from remote
+            remote_name = "origin"
+            remote = self.repo.remotes[remote_name]
+            remote.fetch()
+
+            # Get the remote reference for the branch
+            remote_branch_ref = f"refs/remotes/{remote_name}/{self.branch}"
+            remote_branch = None
+            try:
+                remote_branch = self.repo.references[remote_branch_ref]
+            except KeyError:
+                self._fail(f"Branch {self.branch} does not exist remotely")
 
             # Check if branch exists locally
+            local_branch_ref = f"refs/heads/{self.branch}"
             try:
-                self.repo.git.checkout(self.branch)
-            except git.GitCommandError:
+                local_branch = self.repo.references[local_branch_ref]
+                # Checkout the branch
+                self.repo.checkout(f"refs/heads/{self.branch}")
+            except KeyError:
                 # If branch doesn't exist locally but exists remotely, create it
-                remote_branch = f"origin/{self.branch}"
-                if remote_branch in [ref.name for ref in self.repo.refs]:
-                    self.repo.git.checkout('-b', self.branch, remote_branch)
+                if remote_branch:
+                    # Create local branch pointing to the same commit as remote branch
+                    self.repo.create_branch(self.branch, self.repo.get(remote_branch.target))
+                    self.repo.checkout(f"refs/heads/{self.branch}")
                 else:
                     self._fail(f"Branch {self.branch} does not exist locally or remotely")
 
-            # Pull updates
-            origin.pull(ff_only=True)
+            # Get the latest commit from remote branch
+            remote_commit_id = remote_branch.target
+            local_branch = self.repo.references[local_branch_ref]
+
+            # Only merge if the branches have diverged
+            if local_branch.target != remote_commit_id:
+                # Get the target commits
+                remote_commit = self.repo.get(remote_commit_id)
+
+                # Check if fast-forward is possible
+                if self.repo.merge_base(local_branch.target, remote_commit_id) == local_branch.target:
+                    # Fast-forward update
+                    local_branch.set_target(remote_commit_id)
+                    # Reset the working directory to match
+                    self.repo.checkout_tree(remote_commit)
+                    self.repo.head.set_target(remote_commit_id)
+                else:
+                    # Not a fast-forward merge
+                    self._fail("Cannot perform fast-forward merge. Repository may have local changes.")
+
             logging.info(f"Repository updated successfully")
-        except git.GitCommandError as e:
+        except pygit2.GitError as e:
             self._fail(f"Failed to update repository: {e}")
 
     def create_virtualenv(self) -> None:
@@ -152,21 +185,29 @@ class GitRepoManagement:
         return process
 
     def _clone_repo(self) -> None:
-        """Clone a fresh repository using GitPython."""
+        """Clone a fresh repository using pygit2."""
         logging.info(f"Cloning repository to {self.target_dir}")
         self.target_dir.mkdir(exist_ok=True, parents=True)
         try:
-            self.repo = git.Repo.clone_from(
+            # Set up clone options
+            callbacks = pygit2.RemoteCallbacks()
+
+            # Create clone options
+            clone_options = pygit2.GIT_CLONE_CHECKOUT
+
+            # Perform the clone
+            self.repo = pygit2.clone_repository(
                 self.repo_url,
                 str(self.target_dir),
-                branch=self.branch
+                checkout_branch=self.branch,
+                callbacks=callbacks
             )
             logging.info(f"Repository cloned successfully")
-        except git.GitCommandError as e:
+        except pygit2.GitError as e:
             self._fail(f"Failed to clone repository: {e}")
 
     def _recreate_repo(self) -> None:
-        """Remove and recreate the repository directory using GitPython."""
+        """Remove and recreate the repository directory using pygit2."""
         logging.info(f"Recreating repository at {self.target_dir}")
 
         if self.target_dir.exists():
@@ -174,13 +215,18 @@ class GitRepoManagement:
 
         self.target_dir.mkdir(exist_ok=True, parents=True)
         try:
-            self.repo = git.Repo.clone_from(
+            # Set up clone options
+            callbacks = pygit2.RemoteCallbacks()
+
+            # Perform the clone
+            self.repo = pygit2.clone_repository(
                 self.repo_url,
                 str(self.target_dir),
-                branch=self.branch
+                checkout_branch=self.branch,
+                callbacks=callbacks
             )
             logging.info(f"Repository recreated successfully")
-        except git.GitCommandError as e:
+        except pygit2.GitError as e:
             self._fail(f"Failed to recreate repository: {e}")
 
     def _get_venv_executable(self, name: str) -> Optional[Path]:
@@ -228,27 +274,31 @@ class GitRepoManagement:
             return ""  # Will never reach here due to _fail raising SystemExit
 
     def get_remote_branches(self) -> List[str]:
-        """Fetch list of remote branch names using GitPython."""
+        """Fetch list of remote branch names using pygit2."""
         try:
-            if not self.repo:
-                # Initialize repo if not already done
-                if (self.target_dir / ".git").is_dir():
-                    self.repo = git.Repo(self.target_dir)
-                else:
-                    # Create a temporary repo object to get remote info
-                    temp_repo = git.Repo.init(self.target_dir, mkdir=True)
-                    temp_repo.create_remote("origin", self.repo_url)
-                    self.repo = temp_repo
+            # If repo doesn't exist yet, initialize and add remote
+            if not (self.target_dir / ".git").is_dir():
+                self.target_dir.mkdir(exist_ok=True, parents=True)
+                self.repo = pygit2.init_repository(str(self.target_dir))
+                # Add the remote
+                self.repo.remotes.create("origin", self.repo_url)
+            elif not self.repo:
+                # Repository exists, but repo object isn't initialized
+                self.repo = pygit2.Repository(str(self.target_dir))
 
             # Fetch remote refs
-            remote_refs = self.repo.remote().refs
+            remote = self.repo.remotes["origin"]
+            remote.fetch()
 
             # Extract branch names (remove 'origin/' prefix)
-            branches = [ref.name.split('/')[-1] for ref in remote_refs
-                        if ref.name.startswith('origin/') and not ref.name.endswith('HEAD')]
+            branches = []
+            prefix = "refs/remotes/origin/"
+            for ref_name in self.repo.references:
+                if ref_name.startswith(prefix) and not ref_name.endswith('HEAD'):
+                    branches.append(ref_name[len(prefix):])
 
             return branches
-        except git.GitCommandError as e:
+        except pygit2.GitError as e:
             self._fail(f"Failed to fetch remote branches: {e}")
 
     def _fail(self, message: str) -> None:
