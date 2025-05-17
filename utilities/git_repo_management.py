@@ -189,19 +189,31 @@ class GitRepoManagement:
         logging.info(f"Cloning repository to {self.target_dir}")
         self.target_dir.mkdir(exist_ok=True, parents=True)
         try:
-            # Set up clone options
+            # Set up callbacks (empty for now, but could be used for auth)
             callbacks = pygit2.RemoteCallbacks()
 
-            # Create clone options
-            clone_options = pygit2.GIT_CLONE_CHECKOUT
-
-            # Perform the clone
+            # Perform the clone with minimal parameters for cross-platform compatibility
             self.repo = pygit2.clone_repository(
                 self.repo_url,
                 str(self.target_dir),
-                checkout_branch=self.branch,
                 callbacks=callbacks
             )
+
+            # After clone, checkout the specified branch if it's not the default branch
+            try:
+                branch_ref = f"refs/heads/{self.branch}"
+                if branch_ref in self.repo.references:
+                    self.repo.checkout(branch_ref)
+                else:
+                    # Try to create and checkout the branch from origin
+                    remote_ref = f"refs/remotes/origin/{self.branch}"
+                    if remote_ref in self.repo.references:
+                        remote_branch = self.repo.references[remote_ref]
+                        self.repo.create_branch(self.branch, self.repo.get(remote_branch.target))
+                        self.repo.checkout(branch_ref)
+            except pygit2.GitError as e:
+                logging.warning(f"Could not checkout branch {self.branch}: {e}")
+
             logging.info(f"Repository cloned successfully")
         except pygit2.GitError as e:
             self._fail(f"Failed to clone repository: {e}")
@@ -214,20 +226,9 @@ class GitRepoManagement:
             shutil.rmtree(self.target_dir)
 
         self.target_dir.mkdir(exist_ok=True, parents=True)
-        try:
-            # Set up clone options
-            callbacks = pygit2.RemoteCallbacks()
 
-            # Perform the clone
-            self.repo = pygit2.clone_repository(
-                self.repo_url,
-                str(self.target_dir),
-                checkout_branch=self.branch,
-                callbacks=callbacks
-            )
-            logging.info(f"Repository recreated successfully")
-        except pygit2.GitError as e:
-            self._fail(f"Failed to recreate repository: {e}")
+        # Use the existing clone method to keep the implementation consistent
+        self._clone_repo()
 
     def _get_venv_executable(self, name: str) -> Optional[Path]:
         """Get path to an executable in the virtual environment."""
