@@ -3,7 +3,6 @@ import os
 import shutil
 import subprocess
 import sys
-import venv
 import threading
 from pathlib import Path
 from typing import List, Optional
@@ -13,9 +12,9 @@ import pygit2
 
 class SystemPaths:
     """Manages system paths, particularly for PyInstaller environments."""
-    
+
     @staticmethod
-    def get_python_path():
+    def python_path():
         """Get the path to the Python interpreter."""
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
@@ -28,7 +27,7 @@ class SystemPaths:
         return path
 
     @staticmethod
-    def get_pip_path():
+    def pip_path():
         """Get the path to pip."""
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
@@ -42,14 +41,17 @@ class SystemPaths:
 
 class VirtualEnvironment:
     """Manages virtual environment creation and operations."""
-    
+
     def __init__(self, target_dir: Path):
         self.target_dir = target_dir
         self.venv_dir = target_dir / "venv"
-        self.bin_dir = "Scripts" if sys.platform == "win32" else "bin"
-        self.venv_bin_path = self.venv_dir / self.bin_dir
         self.is_windows = sys.platform == "win32"
-    
+
+        self.bin_dir = "Scripts" if self.is_windows else "bin"
+        self.python_exe = "python.exe" if self.is_windows else "python"
+        self.pip_exe = "pip.exe" if self.is_windows else "pip"
+        self.venv_bin_path = self.venv_dir / self.bin_dir
+
     def create(self) -> None:
         """Create a virtual environment if it doesn't exist, using a specific Python interpreter."""
         if self.venv_bin_path.exists():
@@ -62,15 +64,15 @@ class VirtualEnvironment:
             self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
 
             # Use the bundled Python interpreter to create the venv
-            subprocess.check_call([SystemPaths.get_python_path(), "-m", "venv", str(self.venv_dir)])
+            subprocess.check_call([SystemPaths.python_path(), "-m", "venv", str(self.venv_dir)])
 
             # Verify creation
             if not self.venv_bin_path.exists():
                 self._fail("Virtual environment creation failed: missing bin directory")
-            
+
             # Optionally, upgrade pip if needed
             # e.g., subprocess.check_call([self.venv_bin_path / "pip", "install", "--upgrade", "pip"])
-            
+
             logging.info("Virtual environment created successfully")
         except Exception as e:
             self._fail(f"Failed to create virtual environment: {e}")
@@ -85,8 +87,8 @@ class VirtualEnvironment:
     #     try:
     #         # Make sure parent directory exists
     #         self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
-    #         bundled_python = SystemPaths.get_python_path()
-    #         bundled_pip = SystemPaths.get_pip_path()
+    #         bundled_python = SystemPaths.python_path()
+    #         bundled_pip = SystemPaths.pip_path()
     #             # Standard venv creation
     #         venv.create(self.venv_dir, with_pip=True, system_site_packages=False)
 
@@ -96,29 +98,28 @@ class VirtualEnvironment:
     #         logging.info(f"Virtual environment created successfully")
     #     except Exception as e:
     #         self._fail(f"Failed to create virtual environment: {e}")
-    
+
     def _create_pyinstaller_venv(self) -> None:
         """Create a virtual environment when running as PyInstaller bundle."""
         logging.info("Creating venv in PyInstaller context")
         os.makedirs(self.venv_dir, exist_ok=True)
         os.makedirs(self.venv_bin_path, exist_ok=True)
-        
-        # Create symlinks/copies to bundled Python and pip
-        bundled_python = SystemPaths.get_python_path()
-        bundled_pip = SystemPaths.get_pip_path()
-        
-        if os.path.exists(bundled_python):
 
+        # Create symlinks/copies to bundled Python and pip
+        bundled_python = SystemPaths.python_path()
+        bundled_pip = SystemPaths.pip_path()
+
+        if os.path.exists(bundled_python):
             exe = 'python.exe' if sys.platform == "win32" else 'python'
             self._create_executable_link(bundled_python, exe)
-        
+
         if os.path.exists(bundled_pip):
             exe = 'pip.exe' if sys.platform == "win32" else 'pip'
             self._create_executable_link(bundled_pip, exe)
-        
+
         # Create a simple activation script
         self._create_activation_script(bundled_python)
-    
+
     def _create_executable_link(self, source_path: str, exe_name: str) -> None:
         """Create link to executable (symlink on Unix, copy on Windows)."""
         if self.is_windows:
@@ -137,7 +138,7 @@ class VirtualEnvironment:
                     logging.info(f"Created symlink to bundled {exe_name}: {dest_path}")
                 except Exception as e:
                     logging.warning(f"Failed to create symlink to {exe_name}: {e}")
-    
+
     def _create_activation_script(self, python_path: str) -> None:
         """Create activation script for the virtual environment."""
         activate_path = self.venv_bin_path / ("activate.bat" if self.is_windows else "activate")
@@ -146,10 +147,10 @@ class VirtualEnvironment:
                 f.write(f"@echo off\nSET PATH={os.path.dirname(python_path)};%PATH%\n")
             else:
                 f.write(f"#!/bin/bash\nexport PATH={os.path.dirname(python_path)}:$PATH\n")
-        
+
         if not self.is_windows:
             os.chmod(activate_path, 0o755)  # Make executable on Unix
-    
+
     def install_requirements(self, requirements_path: Path) -> None:
         """Install packages from requirements.txt."""
         if not requirements_path.exists():
@@ -160,7 +161,7 @@ class VirtualEnvironment:
 
         pip_path = self.get_pip_path()
         python_path = self.get_python_path()
-        
+
         try:
             if os.path.exists(pip_path):
                 self._run_command([pip_path, "install", "-r", str(requirements_path)])
@@ -169,25 +170,24 @@ class VirtualEnvironment:
             logging.info("Requirements installed successfully")
         except Exception as e:
             self._fail(f"Failed to install requirements: {e}")
-    
-    def get_python_path(self) -> str:                                                                                                                                                                
-        """Get the path to Python executable in the virtual environment."""                                                                                                                          
-        venv_python_path = self.venv_bin_path / self.python_exe                                                                                                                                      
-        if venv_python_path.exists():                                                                                                                                                                
-            logging.info(f"Using virtual environment Python: {venv_python_path}")                                                                                                                    
-            return str(venv_python_path)                                                                                                                                                             
-        else:                                                                                                                                                                                        
-            self._fail(f"Virtual environment Python not found at {venv_python_path}") 
-        
-    def get_pip_path(self) -> str:                                                                                                                                                                   
-        """Get the path to pip executable in the virtual environment."""                                                                                                                             
-        for candidate in self.pip_candidates:                                                                                                                                                        
-            pip_path = self.venv_bin_path / candidate                                                                                                                                                
-            if pip_path.exists():                                                                                                                                                                    
-                logging.info(f"Using virtual environment pip: {pip_path}")                                                                                                                           
-                return str(pip_path)                                                                                                                                                                 
-        self._fail(f"Virtual environment pip not found in {self.venv_bin_path}")  
-    
+
+    def get_python_path(self) -> str:
+        """Get the path to Python executable in the virtual environment."""
+        venv_python_path = self.venv_bin_path / self.python_exe
+        if venv_python_path.exists():
+            logging.info(f"Using virtual environment Python: {venv_python_path}")
+            return str(venv_python_path)
+        else:
+            self._fail(f"Virtual environment Python not found at {venv_python_path}")
+
+    def get_pip_path(self) -> str:
+        """Get the path to pip executable in the virtual environment."""
+        pip_path = self.venv_bin_path / self.pip_exe
+        if pip_path.exists():
+            logging.info(f"Using virtual environment pip: {pip_path}")
+            return str(pip_path)
+        self._fail(f"Virtual environment pip not found in {self.venv_bin_path}")
+
     def _run_command(self, cmd_list: List[str], cwd: Optional[Path] = None) -> None:
         """Run a command and handle errors."""
         try:
@@ -200,7 +200,7 @@ class VirtualEnvironment:
             self._fail(f"Command failed: {e}")
         except FileNotFoundError as e:
             self._fail(f"Command not found: {e}")
-    
+
     def _fail(self, message: str) -> None:
         """Log an error message and exit."""
         logging.error(message)
@@ -209,13 +209,13 @@ class VirtualEnvironment:
 
 class GitRepository:
     """Manages Git operations using pygit2."""
-    
+
     def __init__(self, repo_url: str, target_dir: Path, branch: str = "main"):
         self.repo_url = repo_url
         self.target_dir = target_dir
         self.branch = branch
         self.repo = None
-    
+
     def clone_or_update(self) -> None:
         """Clone a new repository or update an existing one."""
         if not self.target_dir.exists():
@@ -227,7 +227,7 @@ class GitRepository:
             return
 
         self._update_repo()
-    
+
     def _clone_repo(self) -> None:
         """Clone a fresh repository."""
         logging.info(f"Cloning repository to {self.target_dir}")
@@ -244,7 +244,7 @@ class GitRepository:
             logging.info(f"Repository cloned successfully")
         except pygit2.GitError as e:
             self._fail(f"Failed to clone repository: {e}")
-    
+
     def _checkout_branch(self) -> None:
         """Checkout the specified branch."""
         try:
@@ -260,7 +260,7 @@ class GitRepository:
                     self.repo.checkout(branch_ref)
         except pygit2.GitError as e:
             logging.warning(f"Could not checkout branch {self.branch}: {e}")
-    
+
     def _recreate_repo(self) -> None:
         """Remove and recreate the repository directory."""
         logging.info(f"Recreating repository at {self.target_dir}")
@@ -270,7 +270,7 @@ class GitRepository:
 
         self.target_dir.mkdir(exist_ok=True, parents=True)
         self._clone_repo()
-    
+
     def _update_repo(self) -> None:
         """Update an existing repository."""
         try:
@@ -327,7 +327,7 @@ class GitRepository:
             logging.info(f"Repository updated successfully")
         except pygit2.GitError as e:
             self._fail(f"Failed to update repository: {e}")
-    
+
     def get_remote_branches(self) -> List[str]:
         """Fetch list of remote branch names."""
         try:
@@ -355,7 +355,7 @@ class GitRepository:
             return branches
         except pygit2.GitError as e:
             self._fail(f"Failed to fetch remote branches: {e}")
-    
+
     def _fail(self, message: str) -> None:
         """Log an error message and exit."""
         logging.error(message)
@@ -380,7 +380,7 @@ class GitRepoManagement:
         self.target_dir = Path(target_dir).resolve()
         self.git_repo = GitRepository(repo_url, self.target_dir, branch)
         self.venv = VirtualEnvironment(self.target_dir)
-        
+
     def setup(self) -> bool:
         """
         Clone/update the repository and set up the virtual environment.
@@ -421,24 +421,24 @@ class GitRepoManagement:
         cmd = [str(python_path), str(abs_script_path)] + script_args
 
         logging.info(f"Running script with venv Python: {' '.join(cmd)}")
-                                                                                                                                                      
-        process = subprocess.Popen(                                                                                                                                                                                              
-            cmd,                                                                                                                                                                                                                 
-            cwd=self.target_dir,                                                                                                                                                                                                 
-            stdout=subprocess.PIPE,                                                                                                                                                                                              
-            stderr=subprocess.PIPE,                                                                                                                                                                                              
-            text=True                                                                                                                                                                                                            
-        )                                                                                                                                                                                                                        
-                                                                                                                                                                                                                                
+
+        process = subprocess.Popen(
+            cmd,
+            cwd=self.target_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
         # Start a thread to read and print output                                                                                                                                                                                
-        def read_output():                                                                                                                                                                                                       
-            for line in process.stdout:                                                                                                                                                                                          
-                print(line.strip())                                                                                                                                                                                              
-            for line in process.stderr:                                                                                                                                                                                          
-                print(line.strip())                                                                                                                                                                                              
-                                                                                                                                                                                                                                
-        threading.Thread(target=read_output, daemon=True).start() 
-        
+        def read_output():
+            for line in process.stdout:
+                print(line.strip())
+            for line in process.stderr:
+                print(line.strip())
+
+        threading.Thread(target=read_output, daemon=True).start()
+
         return process
 
     def get_remote_branches(self) -> List[str]:
