@@ -50,26 +50,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
           
-          pythonPath=$(which python3.10)
-          pipPath=$(which pip3.10)
-
-          if [[ -z "$pythonPath" ]]; then
-            echo "python3.10 not found in PATH"
-            exit 1
-          fi
-
-          if [[ -z "$pipPath" ]]; then
-            echo "pip3.10 not found in PATH"
-            exit 1
-          fi
-
           scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
 
           cmd=(pyinstaller --noconfirm --onefile \
             --add-data "theme:theme" \
             --add-data "img:img" \
-            --add-data "$pythonPath:bin" \
-            --add-data "$pipPath:bin" \
             --clean \
             "$scriptPath")
 
@@ -79,17 +64,6 @@ jobs:
 
           "${cmd[@]}"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-linux
-
-      #      - name: Build executable on Ubuntu
-      #        run: |
-      #          source venv/bin/activate
-      #          venv/bin/pyinstaller --noconfirm --onefile --windowed \
-      #          --add-data "theme:theme" \
-      #          --add-data "img:img" \
-      #          --add-data "$(which python3.10):bin" \
-      #          --add-data "$(python3.10 -m site --user-site):bin" \
-      #          "${{ github.workspace }}/blocknet_aio_monitor.py"
-      #          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-linux
 
       - uses: actions/upload-artifact@v4
         with:
@@ -134,26 +108,11 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
           
-          pythonPath=$(which python3.10)
-          pipPath=$(which pip3.10)
-          
-          if [[ -z "$pythonPath" ]]; then
-          echo "python3.10 not found in PATH"
-          exit 1
-          fi
-          
-          if [[ -z "$pipPath" ]]; then
-          echo "pip3.10 not found in PATH"
-          exit 1
-          fi
-          
           scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
           
           cmd=(pyinstaller --noconfirm --onefile \
           --add-data "theme:theme" \
           --add-data "img:img" \
-          --add-data "$pythonPath:bin" \
-          --add-data "$pipPath:bin" \
           --clean \
           "$scriptPath")
           
@@ -162,14 +121,6 @@ jobs:
           echo
           
           "${cmd[@]}"
-          #          
-          #          pyinstaller --noconfirm --onefile \                                                                                                                                                                                        
-          #          --add-data "theme:theme" \                                                                                                                                                                                               
-          #          --add-data "img:img" \                                                                                                                                                                                                   
-          #          --add-data "$(which python3.10):bin" \                                                                                                                                                                                
-          #          --add-data "$(python3.10 -m site --user-site):bin" \                                                                                                                                                                     
-          #          "${{ github.workspace }}/blocknet_aio_monitor.py"     
-          #          #--windowed
           
           mkdir -p my_bin
           mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor
@@ -179,7 +130,6 @@ jobs:
           mkdir -p dmg
           hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/blocknet_aio_monitor-macos-base.dmg
           hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-macos.dmg
-
 
       - uses: actions/upload-artifact@v4
         with:
@@ -239,19 +189,13 @@ jobs:
 
       - name: Build executable on Windows
         run: |
-          $pythonPath = (Get-Command python).Path
-          $pipPath = (Get-Command pip).Path
-          
+
           $scriptPath = "$env:GITHUB_WORKSPACE\blocknet_aio_monitor.py"
           
-          $command = "pyinstaller --noconfirm --onefile --log-level=DEBUG --add-data `"theme:theme`" --add-data `"img:img`" --add-data `"$pythonPath`:bin`" --add-data `"$pipPath`:bin`" --clean `"$scriptPath`""
+          $command = "pyinstaller --noconfirm --onefile --log-level=DEBUG --add-data `"theme:theme`" --add-data `"img:img`" --clean `"$scriptPath`""
           
           Write-Host "Running: $command"
           Invoke-Expression $command
-          
-          #          $pythonPath = (Get-Command python).Path
-          #          $pipPath = (Get-Command pip).Path
-          #          pyinstaller --noconfirm --onefile --add-data "theme:theme" --add-data "img:img" --add-data "$pythonPath:python" --add-data "$pipPath:bin" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
 
 
       - name: Rename executable

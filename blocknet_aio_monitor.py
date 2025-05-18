@@ -333,20 +333,20 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
 def run_gui():
     app = Blocknet_AIO_GUI()
-    try:
-        app.init_setup()
-        app.mainloop()
-    except KeyboardInterrupt:
-        print("GUI execution terminated by user.")
-    except Exception as e:
-        # Log the error to a file
-        logging.basicConfig(filename='gui_errors.log', level=logging.ERROR,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
-        logging.error("An error occurred: %s", e)
-
-        # Print a user-friendly error message
-        print("An unexpected error occurred. Please check the log file 'gui_errors.log' for more information.")
-        app.on_close()
+    # try:
+    app.init_setup()
+    app.mainloop()
+    # except KeyboardInterrupt:
+    #     print("GUI execution terminated by user.")
+    # except Exception as e:
+    #     # Log the error to a file
+    #     logging.basicConfig(filename='gui_errors.log', level=logging.ERROR,
+    #                         format='%(asctime)s - %(levelname)s - %(message)s')
+    #     logging.error("An error occurred: %s", e)
+    #
+    #     # Print a user-friendly error message
+    #     print("An unexpected error occurred. Please check the log file 'gui_errors.log' for more information.")
+    #     app.on_close()
 
 
 if __name__ == "__main__":

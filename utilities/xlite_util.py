@@ -10,7 +10,7 @@ import zipfile
 import psutil
 import requests
 
-from config.conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
+# from utilities.conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
 from utilities import global_variables
 
 logging.basicConfig(level=logging.DEBUG)
@@ -29,7 +29,7 @@ if global_variables.system == 'Windows':
             return True
         else:
             logging.info("No vc_redist found. installing")
-            install_vc_redist(vc_redist_win_url)
+            install_vc_redist(global_variables.conf_data.vc_redist_win_url)
 
 
     def check_registry_value(key_path, value_name):
@@ -113,8 +113,8 @@ class XliteUtility:
             self.xlite_exe = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.xlite_url))
             self.dmg_mount_path = f"/Volumes/{global_variables.xlite_volume_name}"
         else:
-            self.xlite_exe = os.path.join(global_variables.aio_folder, xlite_bin_path[global_variables.system],
-                                          global_variables.xlite_bin_name[global_variables.system])
+            self.xlite_exe = os.path.join(global_variables.aio_folder, global_variables.conf_data.xlite_bin_path[global_variables.system],
+                                          global_variables.conf_data.xlite_bin_name[global_variables.system])
         self.binary_percent_download = None
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
@@ -178,7 +178,7 @@ class XliteUtility:
         thread.start()
 
     def parse_xlite_conf(self):
-        data_folder = os.path.expandvars(os.path.expanduser(xlite_default_paths.get(global_variables.system, None)))
+        data_folder = os.path.expandvars(os.path.expanduser(global_variables.conf_data.xlite_default_paths.get(global_variables.system, None)))
         file = "app-settings.json"
         file_path = os.path.join(data_folder, file)
         meta_data = {}
@@ -198,7 +198,7 @@ class XliteUtility:
     def parse_xlite_daemon_conf(self, silent=False):
         # Assuming daemon_data_path and confs_folder are defined earlier in your code
         daemon_data_path = os.path.expandvars(
-            os.path.expanduser(xlite_daemon_default_paths.get(global_variables.system, None)))
+            os.path.expanduser(global_variables.conf_data.xlite_daemon_default_paths.get(global_variables.system, None)))
         confs_folder = os.path.join(daemon_data_path, "settings")
 
         # List all files in the confs_folder
@@ -256,7 +256,7 @@ class XliteUtility:
                     os.system(f'hdiutil attach "{self.xlite_exe}"')
                 else:
                     logging.info("Volume is already mounted.")
-                full_path = os.path.join(self.dmg_mount_path, *global_variables.xlite_bin_name[global_variables.system])
+                full_path = os.path.join(self.dmg_mount_path, *global_variables.conf_data.xlite_bin_name[global_variables.system])
                 logging.info(
                     f"volume_name: {global_variables.xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 self.xlite_process = subprocess.Popen([full_path],
@@ -396,7 +396,7 @@ class XliteUtility:
             # Extract the archive
             if url.endswith(".zip"):
                 with zipfile.ZipFile(tmp_file_path, "r") as zip_ref:
-                    local_path = os.path.join(global_variables.aio_folder, xlite_bin_path[global_variables.system])
+                    local_path = os.path.join(global_variables.aio_folder, global_variables.conf_data.xlite_bin_path[global_variables.system])
                     zip_ref.extractall(local_path)
                 logging.info("Zip file extracted successfully.")
                 os.remove(tmp_file_path)

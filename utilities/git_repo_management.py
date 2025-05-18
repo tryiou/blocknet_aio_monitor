@@ -7,6 +7,13 @@ import threading
 from pathlib import Path
 from typing import List, Optional
 
+from utilities import global_variables
+
+try:
+    import utilities.get_python as get_python
+except ModuleNotFoundError:
+    import get_python
+
 import pygit2
 
 
@@ -19,7 +26,7 @@ class SystemPaths:
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
             bin_dir = "bin"
-            exe = 'python.exe' if sys.platform == "win32" else 'python3.10'
+            exe = 'python.exe' if sys.platform == "win32" else 'python3'
             path = os.path.join(sys._MEIPASS, bin_dir, exe)
         else:
             # Running as normal Python script
@@ -33,7 +40,7 @@ class SystemPaths:
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
             bin_dir = "bin"
-            exe = 'pip.exe' if sys.platform == "win32" else 'pip3.10'
+            exe = 'pip.exe' if sys.platform == "win32" else 'pip3'
             path = os.path.join(sys._MEIPASS, bin_dir, exe)
         else:
             path = shutil.which('pip')
@@ -42,13 +49,11 @@ class SystemPaths:
 
 
 class VirtualEnvironment:
-    """Manages virtual environment creation and operations."""
-
-    def __init__(self, target_dir: Path):
+    def __init__(self, target_dir: Path, portable_python_path: str = None):
         self.target_dir = target_dir
         self.venv_dir = target_dir / "venv"
+        self.portable_python_path = portable_python_path
         self.is_windows = sys.platform == "win32"
-
         self.bin_dir = "Scripts" if self.is_windows else "bin"
         self.python_exe = "python.exe" if self.is_windows else "python"
         self.pip_exe = "pip.exe" if self.is_windows else "pip"
@@ -65,9 +70,12 @@ class VirtualEnvironment:
         try:
             # Make sure parent directory exists
             self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
+            # Use portable Python if provided, else system Python
+            python_path = self.portable_python_path
+            subprocess.check_call([python_path, "-m", "venv", str(self.venv_dir)])
 
-            # Use the bundled Python interpreter to create the venv
-            subprocess.check_call([SystemPaths.python_path(), "-m", "venv", str(self.venv_dir)])
+            # # Use the bundled Python interpreter to create the venv
+            # subprocess.check_call([SystemPaths.python_path(), "-m", "venv", str(self.venv_dir)])
 
             # Verify creation
             if not self.venv_bin_path.exists():
@@ -79,7 +87,6 @@ class VirtualEnvironment:
             logging.info("Virtual environment created successfully")
         except Exception as e:
             self._fail(f"Failed to create virtual environment: {e}")
-
 
     def _create_pyinstaller_venv(self) -> None:
         """Create a virtual environment when running as PyInstaller bundle."""
@@ -348,7 +355,7 @@ class GitRepoManagement:
     Enforces the use of the virtual environment for all operations.
     """
 
-    def __init__(self, repo_url: str, target_dir: str, branch: str = "main"):
+    def __init__(self, repo_url: str, target_dir: str, branch: str = "main", workdir: str = None):
         """
         Initialize repository management.
 
@@ -358,8 +365,10 @@ class GitRepoManagement:
             branch: Git branch to use (default: "main")
         """
         self.target_dir = Path(target_dir).resolve()
+        self.portable_python_dir = Path(workdir) / "portable_python"
+        self.portable_python_path = None
         self.git_repo = GitRepository(repo_url, self.target_dir, branch)
-        self.venv = VirtualEnvironment(self.target_dir)
+        self.venv = None
 
     def setup(self) -> bool:
         """
@@ -369,8 +378,15 @@ class GitRepoManagement:
             True if setup completed successfully
         """
         logging.info(f"Setting up repository in {self.target_dir}")
-
+        # Check if portable Python exists, install if not
+        if not (self.portable_python_dir / "miniforge").exists():
+            logging.info("Portable Python not found. Installing...")
+            installer = get_python.PortablePythonInstaller(self.portable_python_dir)
+            self.portable_python_path = installer.install()
+        self.portable_python_path = self.portable_python_dir / "miniforge" / (
+            "Scripts/python.exe" if global_variables.system == "Windows" else "bin/python")
         self.git_repo.clone_or_update()
+        self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path))
         self.venv.create()
         self.venv.install_requirements(self.target_dir / "requirements.txt")
 
@@ -434,8 +450,8 @@ if __name__ == "__main__":
     git_repo_url = "https://github.com/tryiou/xbridge_trading_bots"
     local_target_dir = "xbridge_trading_bots"
     local_branch = "main"
-
-    manager = GitRepoManagement(git_repo_url, local_target_dir, local_branch)
+    logging.info(f"aio_folder: {global_variables.aio_folder}")
+    manager = GitRepoManagement(git_repo_url, local_target_dir, local_branch, global_variables.aio_folder)
     manager.setup()
 
     # Example of running a script after setup

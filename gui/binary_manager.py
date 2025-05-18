@@ -4,7 +4,6 @@ import shutil
 from threading import Thread
 
 import widgets_strings
-from config.conf_data import xlite_bin_path, blockdx_bin_path, blocknet_bin_path
 from gui.binary_frame_manager import BinaryFrameManager
 from utilities import utils, global_variables
 
@@ -316,7 +315,7 @@ class BinaryManager:
         percent_buff = self.root_gui.blocknet_manager.utility.binary_percent_download
         dl_string = f"{int(percent_buff)}%" if percent_buff else ""
         var_blocknet = dl_string if self.root_gui.blocknet_manager.utility.downloading_bin else ""
-        blocknet_folder = os.path.join(global_variables.aio_folder, blocknet_bin_path[0])
+        blocknet_folder = os.path.join(global_variables.aio_folder, global_variables.conf_data.blocknet_bin_path[0])
         if blocknet_boolvar:
             var_blocknet = ""
             self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_blocknet_button,
@@ -343,7 +342,7 @@ class BinaryManager:
         percent_buff = self.root_gui.blockdx_manager.utility.binary_percent_download
         dl_string = f"{int(percent_buff)}%" if percent_buff else ""
         var_blockdx = dl_string if self.root_gui.blockdx_manager.utility.downloading_bin else ""
-        blockdx_folder = os.path.join(global_variables.aio_folder, blockdx_bin_path.get(global_variables.system))
+        blockdx_folder = os.path.join(global_variables.aio_folder, global_variables.blockdx_curpath)
         if blockdx_boolvar:
             var_blockdx = ""
             self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_blockdx_button,
@@ -371,7 +370,7 @@ class BinaryManager:
         percent_buff = self.root_gui.xlite_manager.utility.binary_percent_download
         dl_string = f"{int(percent_buff)}%" if percent_buff else ""
         var_xlite = dl_string if self.root_gui.xlite_manager.utility.downloading_bin else ""
-        folder = os.path.join(global_variables.aio_folder, xlite_bin_path.get(global_variables.system))
+        folder = os.path.join(global_variables.aio_folder, global_variables.xlite_curpath)
         if xlite_boolvar:
             var_xlite = ""
             self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_xlite_button,

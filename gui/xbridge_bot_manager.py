@@ -13,7 +13,8 @@ class XBridgeBotManager:
         self.target_dir = os.path.join(aio_folder, "xbridge_trading_bots")
         self.execution_enabled = False
         self.current_branch = current_branch
-        self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=self.current_branch)
+        self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=self.current_branch,
+                                                 workdir=aio_folder)
         self.thread = None
         self.process = None
 
@@ -27,7 +28,8 @@ class XBridgeBotManager:
                 return ["main"]
 
             if not self.repo_management:
-                self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=self.current_branch)
+                self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=self.current_branch,
+                                                         workdir=aio_folder)
             return self.repo_management.get_remote_branches()
         except Exception as e:
             logging.error(f"Error fetching branches: {e}")
@@ -57,7 +59,8 @@ class XBridgeBotManager:
     def _do_install_update(self, branch: str) -> None:
         try:
             logging.info(f"Attempting to install/update from {self.repo_url} to {self.target_dir}")
-            self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=branch)
+            self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=branch,
+                                                 workdir=aio_folder)
 
             if not os.path.exists(self.target_dir):
                 logging.info(f"Creating target directory: {self.target_dir}")

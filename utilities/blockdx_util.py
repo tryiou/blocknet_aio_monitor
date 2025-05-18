@@ -10,8 +10,6 @@ import zipfile
 import psutil
 import requests
 
-from config.conf_data import (blockdx_bin_path, blockdx_default_paths, blockdx_selectedWallets_blocknet,
-                              blockdx_base_conf)
 from utilities import global_variables
 
 logging.basicConfig(level=logging.DEBUG)
@@ -23,8 +21,9 @@ class BlockdxUtility:
             self.dmg_mount_path = f"/Volumes/{global_variables.blockdx_volume_name}"
             self.blockdx_exe = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.blockdx_url))
         else:
-            self.blockdx_exe = os.path.join(global_variables.aio_folder, blockdx_bin_path[global_variables.system],
-                                            global_variables.blockdx_bin_name[global_variables.system])
+            self.blockdx_exe = os.path.join(global_variables.aio_folder,
+                                            global_variables.conf_data.blockdx_bin_path[global_variables.system],
+                                            global_variables.conf_data.blockdx_bin_name[global_variables.system])
         self.binary_percent_download = None
         self.process_running = None
         self.blockdx_process = None
@@ -61,7 +60,7 @@ class BlockdxUtility:
         self.parse_blockdx_conf()
         org_data = copy.deepcopy(self.blockdx_conf_local)
         if not self.blockdx_conf_local:
-            meta_data = blockdx_base_conf
+            meta_data = global_variables.conf_data.blockdx_base_conf
         else:
             meta_data = copy.deepcopy(self.blockdx_conf_local)
 
@@ -79,13 +78,14 @@ class BlockdxUtility:
         # Update 'selectedWallets' if needed
         if 'selectedWallets' not in meta_data:
             meta_data['selectedWallets'] = []
-            meta_data['selectedWallets'].append(blockdx_selectedWallets_blocknet)
-            logging.debug(f"Initialized 'selectedWallets' with '{blockdx_selectedWallets_blocknet}' in meta_data")
+            meta_data['selectedWallets'].append(global_variables.conf_data.blockdx_selectedWallets_blocknet)
+            logging.debug(
+                f"Initialized 'selectedWallets' with '{global_variables.conf_data.blockdx_selectedWallets_blocknet}' in meta_data")
         elif not isinstance(meta_data['selectedWallets'], list):
             logging.warning("'selectedWallets' is not a list. Converting to list.")
-            meta_data['selectedWallets'] = [blockdx_selectedWallets_blocknet]
-        elif blockdx_selectedWallets_blocknet not in meta_data['selectedWallets']:
-            meta_data['selectedWallets'].append(blockdx_selectedWallets_blocknet)
+            meta_data['selectedWallets'] = [global_variables.conf_data.blockdx_selectedWallets_blocknet]
+        elif global_variables.conf_data.blockdx_selectedWallets_blocknet not in meta_data['selectedWallets']:
+            meta_data['selectedWallets'].append(global_variables.conf_data.blockdx_selectedWallets_blocknet)
             logging.debug("Updated 'selectedWallets' in meta_data")
 
         # Save file if changes were made
@@ -243,7 +243,8 @@ class BlockdxUtility:
             # Extract the archive
             if url.endswith(".zip"):
                 with zipfile.ZipFile(tmp_file_path, "r") as zip_ref:
-                    local_path = os.path.join(global_variables.aio_folder, blockdx_bin_path[global_variables.system])
+                    local_path = os.path.join(global_variables.aio_folder,
+                                              global_variables.conf_data.blockdx_bin_path[global_variables.system])
                     zip_ref.extractall(local_path)
                 logging.info("Zip file extracted successfully.")
                 os.remove(tmp_file_path)
@@ -262,7 +263,7 @@ class BlockdxUtility:
 
 
 def get_blockdx_data_folder():
-    path = blockdx_default_paths.get(global_variables.system)
+    path = global_variables.conf_data.blockdx_default_paths.get(global_variables.system)
     if path:
         return os.path.expandvars(os.path.expanduser(path))
     else:

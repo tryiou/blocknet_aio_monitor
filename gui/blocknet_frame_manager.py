@@ -168,13 +168,12 @@ class BlocknetCoreFrameManager:
         utils.save_cfg_json('custom_path', custom_path)
 
     def open_custom_path_dialog(self):
-        from config.conf_data import blocknet_default_paths
         expanded_path = None
         print(f"custom_path: {self.root_gui.custom_path}")
 
         if self.root_gui.custom_path is None:
             # Get the default path based on the system
-            path = blocknet_default_paths.get(global_variables.system)
+            path = global_variables.conf_data.blocknet_default_paths.get(global_variables.system)
             if path:
                 expanded_path = os.path.expandvars(os.path.expanduser(path))
             # Check if the expanded path exists

@@ -16,7 +16,7 @@ def configure_tooltip_text(tooltip, msg):
 
 def load_cfg_json():
     local_filename = "cfg.json"
-    local_conf_path = global_variables.aio_blocknet_data_path.get(global_variables.system)
+    local_conf_path = global_variables.aio_folder
     filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
 
     # Check if the file exists

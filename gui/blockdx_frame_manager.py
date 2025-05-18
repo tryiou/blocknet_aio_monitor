@@ -4,8 +4,8 @@ import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
-from config.conf_data import blockdx_selectedWallets_blocknet
 from gui.constants import panel_checkboxes_width
+from utilities import global_variables
 
 
 class BlockDxFrameManager:
@@ -81,7 +81,8 @@ class BlockDxFrameManager:
                     blockdx_conf.get('password') == rpc_password and
                     blockdx_conf.get('xbridgeConfPath') == xbridgeconfpath and
                     isinstance(blockdx_conf.get('selectedWallets'), list) and
-                    blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets', [])
+                    global_variables.conf_data.blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets',
+                                                                                                    [])
             )
             self.valid_config_checkbox_state.set(
                 (self.parent.is_config_sync and self.root_gui.blocknet_manager.utility.valid_rpc))
