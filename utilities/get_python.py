@@ -77,7 +77,22 @@ class PortablePythonInstaller:
         logging.info(f"🔹 Python executable: {python_bin}")
         logging.info(f"🔹 pip: {python_bin} -m pip")
         logging.info(f"🔹 venv: {python_bin} -m venv /path/to/venv")
+        # After successful installation
+        try:
+            # Construct conda path based on OS
+            if self.system == "Windows":
+                conda_path = install_path / "conda.exe"
+            else:
+                conda_path = install_path / "bin" / "conda"
 
+                # Run conda install command
+            logging.info("Installing tk with xft_* support...")
+            conda_cmd = [str(conda_path), "install", "-c", "conda-forge", "tk=*=xft_*", "-y"]
+            subprocess.run(conda_cmd, check=True, cwd=str(install_path))
+
+        except Exception as e:
+            logging.error(f"❌ Conda package installation failed: {e}")
+            raise
         return python_bin
 
 
