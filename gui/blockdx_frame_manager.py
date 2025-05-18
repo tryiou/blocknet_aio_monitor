@@ -4,7 +4,7 @@ import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
-from gui.constants import PANEL_CHECKBOXES_WIDTH, FRAME_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, CHECK_BOXES_STICKY
+from gui.constants import PANEL_CHECKBOXES_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, CHECK_BOXES_STICKY
 from utilities import global_variables
 
 
@@ -44,7 +44,7 @@ class BlockDxFrameManager:
 
     def grid_widgets(self, x, y):
         # block-dx
-        self.label.grid(row=x, column=y,  padx=5, pady=5)
+        self.label.grid(row=x, column=y, padx=5, pady=5)
         self.process_status_checkbox.grid(row=x + 1, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
         self.valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
 

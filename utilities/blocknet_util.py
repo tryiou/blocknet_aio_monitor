@@ -68,7 +68,8 @@ class BlocknetRPCClient:
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
-        self.blocknet_exe = global_variables.os.path.join(global_variables.aio_folder, *global_variables.conf_data.blocknet_bin_path,
+        self.blocknet_exe = global_variables.os.path.join(global_variables.aio_folder,
+                                                          *global_variables.conf_data.blocknet_bin_path,
                                                           global_variables.blocknet_bin)
         self.binary_percent_download = None
         self.parsed_wallet_confs = {}
@@ -107,7 +108,7 @@ class BlocknetUtility:
                     valid = True
             self.valid_rpc = valid
 
-                # logging.info(result)
+            # logging.info(result)
             time.sleep(2)
 
     def init_blocknet_rpc(self):
@@ -262,7 +263,7 @@ class BlocknetUtility:
             self.blocknet_conf_local[section_name]['rpcthreads'] = 32
 
         if 'rpcworkqueue' not in self.blocknet_conf_local[section_name] or int(
-            self.blocknet_conf_local[section_name]['rpcworkqueue']) < 64:
+                self.blocknet_conf_local[section_name]['rpcworkqueue']) < 64:
             self.blocknet_conf_local[section_name]['rpcworkqueue'] = 64
 
         if 'rpcxbridgetimeout' not in self.blocknet_conf_local[section_name] or int(
@@ -522,7 +523,7 @@ class BlocknetUtility:
 
     def download_blocknet_bin(self):
         self.downloading_bin = True
-        url = global_variables.blocknet_releases_urls.get((global_variables.system, global_variables.machine))
+        url = global_variables.conf_data.blocknet_releases_urls.get((global_variables.system, global_variables.machine))
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
@@ -691,7 +692,8 @@ def retrieve_xb_manifest():
             logging.info(f"REMOTE: Retrieved and parsed ok: [{local_manifest_file}]")
             return parsed_json
         else:
-            logging.error(f"Failed to retrieve remote configuration file: {global_variables.conf_data.remote_manifest_url} {response.status_code}")
+            logging.error(
+                f"Failed to retrieve remote configuration file: {global_variables.conf_data.remote_manifest_url} {response.status_code}")
             return None
     except requests.exceptions.RequestException as e:
         logging.error(f"Error retrieving remote configuration file: {e}")

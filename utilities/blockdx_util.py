@@ -126,7 +126,7 @@ class BlockdxUtility:
                 else:
                     logging.info("Volume is already mounted.")
                 full_path = os.path.join(self.dmg_mount_path,
-                                         *global_variables.blockdx_bin_name[global_variables.system])
+                                         *global_variables.conf_data.blockdx_bin_name[global_variables.system])
                 logging.info(
                     f"volume_name: {global_variables.blockdx_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 self.blockdx_process = subprocess.Popen([full_path],
@@ -204,7 +204,7 @@ class BlockdxUtility:
 
     def download_blockdx_bin(self):
         self.downloading_bin = True
-        url = global_variables.blockdx_releases_urls.get((global_variables.system, global_variables.machine))
+        url = global_variables.conf_data.blockdx_releases_urls.get((global_variables.system, global_variables.machine))
 
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")

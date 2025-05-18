@@ -6,7 +6,7 @@ import customtkinter as ctk
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
 from custom_tk_mods import ctkInputDialogMod
-from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, FRAME_WIDTH, CORNER_RADIUS, HEADER_FRAMES_STICKY, \
+from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, CORNER_RADIUS, HEADER_FRAMES_STICKY, \
     CHECK_BOXES_STICKY
 from utilities import utils
 

@@ -1,5 +1,6 @@
 import os
 import platform
+
 try:
     import utilities.conf_data as conf_data
 except ModuleNotFoundError:

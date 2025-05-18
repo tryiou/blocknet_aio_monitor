@@ -5,7 +5,7 @@ import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
-from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, FRAME_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, \
+from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, \
     CHECK_BOXES_STICKY
 from utilities import utils, global_variables
 
@@ -86,8 +86,8 @@ class BlocknetCoreFrameManager:
 
     def grid_widgets(self, x, y):
         # Grid all widgets in this frame
-        self.label.grid(row=x, column=y, columnspan=2,padx=5, pady=5, sticky="w")
-        self.data_path_label.grid(row=x + 1, column=y,  padx=5, pady=5, sticky="w")
+        self.label.grid(row=x, column=y, columnspan=2, padx=5, pady=5, sticky="w")
+        self.data_path_label.grid(row=x + 1, column=y, padx=5, pady=5, sticky="w")
         self.data_path_entry.grid(row=x + 1, column=y + 1, padx=5, pady=5, sticky="we")
         self.custom_path_button.grid(row=x + 1, column=y + 3, padx=5, pady=5, sticky="ew")
         self.download_bootstrap_button.grid(row=x, column=y + 3, padx=5, pady=5, sticky="ew")

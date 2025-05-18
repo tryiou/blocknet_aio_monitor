@@ -5,7 +5,6 @@ aio_blocknet_data_path = {
     "Darwin": "~/Library/Application Support/AIO_Blocknet"
 }
 
-
 blocknet_bootstrap_url = "https://utils.blocknet.org/Blocknet.zip"
 nodes_to_add = [
     "130.185.119.91:41412",

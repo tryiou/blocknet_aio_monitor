@@ -60,7 +60,7 @@ class XBridgeBotManager:
         try:
             logging.info(f"Attempting to install/update from {self.repo_url} to {self.target_dir}")
             self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=branch,
-                                                 workdir=aio_folder)
+                                                     workdir=aio_folder)
 
             if not os.path.exists(self.target_dir):
                 logging.info(f"Creating target directory: {self.target_dir}")

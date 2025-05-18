@@ -251,11 +251,11 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
         self.blockdx_frame.grid(row=x + 2, column=y, padx=padx_main_frame, pady=pady_main_frame,
                                 sticky=MAIN_FRAMES_STICKY)
-        self.blockdx_title_frame.grid(row=0, column=0,columnspan=2,  padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
+        self.blockdx_title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
 
         self.xlite_frame.grid(row=x + 3, column=y, padx=padx_main_frame, pady=pady_main_frame,
                               sticky=MAIN_FRAMES_STICKY)
-        self.xlite_title_frame.grid(row=0, column=0,columnspan=2,  padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
+        self.xlite_title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
 
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))
