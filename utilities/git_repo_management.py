@@ -7,6 +7,8 @@ import threading
 from pathlib import Path
 from typing import List, Optional
 
+import requests
+
 from utilities import global_variables
 
 try:
@@ -231,7 +233,23 @@ class GitRepository:
         except pygit2.GitError as e:
             self._fail(f"Failed to update repository: {e}")
 
-    def get_remote_branches(self) -> List[str]:
+    def get_remote_branches(self) -> list:
+        """Return list of available branches from remote repo using GitHub API"""
+        try:
+            # Replace with your GitHub token (if private repo)
+            # headers = {"Authorization": "token YOUR_GITHUB_TOKEN"}
+            response = requests.get(
+                f"https://api.github.com/repos/{self.repo_url.split('/')[-2]}/{self.repo_url.split('/')[-1]}/branches",
+                # headers=headers
+            )
+            response.raise_for_status()
+            branches = [branch["name"] for branch in response.json()]
+            return branches
+        except Exception as e:
+            logging.error(f"Error fetching branches via API: {e}")
+            return ["main"]  # Fallback
+
+    def get_remote_branches_o(self) -> List[str]:
         """Fetch list of remote branch names."""
         try:
             # If repo doesn't exist yet, initialize and add remote

@@ -1,5 +1,3 @@
-import logging
-
 import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod

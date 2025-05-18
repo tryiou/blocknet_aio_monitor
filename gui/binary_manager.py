@@ -470,14 +470,17 @@ class BinaryManager:
         self.update_xbridge_bots_start_close_button()
         bots_boolvar = self.frame_manager.bots_installed_boolvar.get()
         # Determine tooltip message based on installation status
+        if self.frame_manager.xbridge_bot_manager.process and self.frame_manager.xbridge_bot_manager.process.poll() is not None:
+            self.frame_manager.xbridge_bot_manager.process = None
+
         if bots_boolvar:
-            self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
-                                                msg=self.frame_manager.xbridge_bot_manager.target_dir)
+            # self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
+            #                                     msg=self.frame_manager.xbridge_bot_manager.target_dir)
             button_condition = self.frame_manager.xbridge_bot_manager.process or self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
         else:
-            self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
-                                                msg=self.frame_manager.xbridge_bot_manager.repo_url)
-            button_condition = self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
+            # self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
+            #                                     msg=self.frame_manager.xbridge_bot_manager.repo_url)
+            button_condition = self.frame_manager.xbridge_bot_manager.process or self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
 
             # Set install/delete button image based on state
         if button_condition:
@@ -492,6 +495,10 @@ class BinaryManager:
 
         # Schedule next update
         self.root_gui.after(2000, self.update_xbridge_bots_buttons)
+
+    def update_xbridge_bots_version_optionmenu(self):
+        self.frame_manager.bots_version_optionmenu.configure(
+            values=self.frame_manager.xbridge_bot_manager.get_available_branches())
 
     def update_xbridge_bots_start_close_button(self):
 
