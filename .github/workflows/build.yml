@@ -169,11 +169,11 @@ jobs:
 
       - name: Build executable on Windows
         run: |
-          pyinstaller --noconfirm --onefile --add-data "theme:theme" \
-          --add-data "img:img" \
-          --add-data "venv\Scripts\python.exe:venv\Scripts\" \                                                                                                                               
-          --add-data "venv\Scripts\pip.exe:venv\Scripts\" \
-          "${{ github.workspace }}/blocknet_aio_monitor.py"
+          pyinstaller --noconfirm --onefile --add-data "theme:theme" ^                                                                                                                       
+          --add-data "img:img" ^                                                                                                                                                             
+          --add-data "venv\Scripts\python.exe:venv\Scripts\" ^                                                                                                                               
+          --add-data "venv\Scripts\pip.exe:venv\Scripts\" ^                                                                                                                                  
+          "$(github.workspace)\blocknet_aio_monitor.py"     
 
       - name: Rename executable
         run: |
