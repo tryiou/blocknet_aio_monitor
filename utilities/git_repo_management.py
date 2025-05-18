@@ -18,9 +18,9 @@ class SystemPaths:
         """Get the path to the Python interpreter."""
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
-            bin_dir = "Scripts" if sys.platform == "win32" else "bin"
+            bin_dir = "bin"
             exe = 'python.exe' if sys.platform == "win32" else 'python'
-            path = os.path.join(sys._MEIPASS, 'venv', bin_dir, exe)
+            path = os.path.join(sys._MEIPASS, bin_dir, exe)
         else:
             # Running as normal Python script
             path = sys.executable
@@ -32,9 +32,9 @@ class SystemPaths:
         """Get the path to pip."""
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
-            bin_dir = "Scripts" if sys.platform == "win32" else "bin"
+            bin_dir = "bin"
             exe = 'pip.exe' if sys.platform == "win32" else 'pip'
-            path = os.path.join(sys._MEIPASS, 'venv', bin_dir, exe)
+            path = os.path.join(sys._MEIPASS, bin_dir, exe)
         else:
             path = shutil.which('pip')
         logging.info(f"System pip path: {path}")
@@ -52,6 +52,7 @@ class VirtualEnvironment:
         self.bin_dir = "Scripts" if self.is_windows else "bin"
         self.python_exe = "python.exe" if self.is_windows else "python"
         self.pip_exe = "pip.exe" if self.is_windows else "pip"
+        logging.info(f"venv_bin_path: {self.venv_dir / self.bin_dir}")
         self.venv_bin_path = self.venv_dir / self.bin_dir
 
     def create(self) -> None:
