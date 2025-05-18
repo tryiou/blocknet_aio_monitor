@@ -129,39 +129,39 @@ jobs:
 
       - name: Install dependencies / Build executable on macOS
         run: |
-               python3.10 -m venv venv
-               source venv/bin/activate
-               pip install -r requirements.txt
-               pip install pyinstaller
-               
-               pythonPath=$(which python3.10)
-               pipPath=$(which pip3.10)
-               
-               if [[ -z "$pythonPath" ]]; then
-               echo "python3.10 not found in PATH"
-               exit 1
-               fi
-               
-               if [[ -z "$pipPath" ]]; then
-               echo "pip3.10 not found in PATH"
-               exit 1
-               fi
-               
-               scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
-               
-               cmd=(pyinstaller --noconfirm --onefile \
-               --add-data "theme:theme" \
-               --add-data "img:img" \
-               --add-data "$pythonPath:bin" \
-               --add-data "$pipPath:bin" \
-               --clean \
-               "$scriptPath")
-               
-               echo "Running command:"
-               printf ' %q' "${cmd[@]}"
-               echo
-               
-               "${cmd[@]}"
+          python3.10 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          pip install pyinstaller
+          
+          pythonPath=$(which python3.10)
+          pipPath=$(which pip3.10)
+          
+          if [[ -z "$pythonPath" ]]; then
+          echo "python3.10 not found in PATH"
+          exit 1
+          fi
+          
+          if [[ -z "$pipPath" ]]; then
+          echo "pip3.10 not found in PATH"
+          exit 1
+          fi
+          
+          scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
+          
+          cmd=(pyinstaller --noconfirm --onefile \
+          --add-data "theme:theme" \
+          --add-data "img:img" \
+          --add-data "$pythonPath:bin" \
+          --add-data "$pipPath:bin" \
+          --clean \
+          "$scriptPath")
+          
+          echo "Running command:"
+          printf ' %q' "${cmd[@]}"
+          echo
+          
+          "${cmd[@]}"
           #          
           #          pyinstaller --noconfirm --onefile \                                                                                                                                                                                        
           #          --add-data "theme:theme" \                                                                                                                                                                                               
@@ -170,9 +170,9 @@ jobs:
           #          --add-data "$(python3.10 -m site --user-site):bin" \                                                                                                                                                                     
           #          "${{ github.workspace }}/blocknet_aio_monitor.py"     
           #          #--windowed
-               
-               mkdir -p my_bin
-               mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor
+          
+          mkdir -p my_bin
+          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor
 
       - name: Create DMG file
         run: |
