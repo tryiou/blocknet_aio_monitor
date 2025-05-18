@@ -17,37 +17,6 @@ except ModuleNotFoundError:
 import pygit2
 
 
-class SystemPaths:
-    """Manages system paths, particularly for PyInstaller environments."""
-
-    @staticmethod
-    def python_path():
-        """Get the path to the Python interpreter."""
-        if hasattr(sys, '_MEIPASS'):
-            # PyInstaller 
-            bin_dir = "bin"
-            exe = 'python.exe' if sys.platform == "win32" else 'python3'
-            path = os.path.join(sys._MEIPASS, bin_dir, exe)
-        else:
-            # Running as normal Python script
-            path = sys.executable
-        logging.info(f"System Python path: {path}")
-        return path
-
-    @staticmethod
-    def pip_path():
-        """Get the path to pip."""
-        if hasattr(sys, '_MEIPASS'):
-            # PyInstaller 
-            bin_dir = "bin"
-            exe = 'pip.exe' if sys.platform == "win32" else 'pip3'
-            path = os.path.join(sys._MEIPASS, bin_dir, exe)
-        else:
-            path = shutil.which('pip')
-        logging.info(f"System pip path: {path}")
-        return path
-
-
 class VirtualEnvironment:
     def __init__(self, target_dir: Path, portable_python_path: str = None):
         self.target_dir = target_dir
@@ -73,9 +42,6 @@ class VirtualEnvironment:
             # Use portable Python if provided, else system Python
             python_path = self.portable_python_path
             subprocess.check_call([python_path, "-m", "venv", str(self.venv_dir)])
-
-            # # Use the bundled Python interpreter to create the venv
-            # subprocess.check_call([SystemPaths.python_path(), "-m", "venv", str(self.venv_dir)])
 
             # Verify creation
             if not self.venv_bin_path.exists():
