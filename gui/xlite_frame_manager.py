@@ -6,7 +6,8 @@ import customtkinter as ctk
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
 from custom_tk_mods import ctkInputDialogMod
-from gui.constants import button_width, panel_checkboxes_width
+from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, FRAME_WIDTH, CORNER_RADIUS, HEADER_FRAMES_STICKY, \
+    CHECK_BOXES_STICKY
 from utilities import utils
 
 
@@ -15,27 +16,29 @@ class XliteFrameManager:
         self.parent = parent
         self.master_frame = master_frame
         self.title_frame = title_frame
-        width = 415
-        self.xlite_label = ctk.CTkLabel(self.title_frame, text=widgets_strings.xlite_frame_title_string,
-                                        width=width, anchor='w')
+        xlite_width = 464
+        self.xlite_label = ctk.CTkLabel(self.title_frame,
+                                        text=widgets_strings.xlite_frame_title_string,
+                                        anchor=HEADER_FRAMES_STICKY,
+                                        width=xlite_width)
         # Checkboxes
         self.process_status_checkbox_state = ctk.BooleanVar()
         self.process_status_checkbox_string_var = ctk.StringVar(value='')
         self.process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                   textvariable=self.process_status_checkbox_string_var,
                                                                   variable=self.process_status_checkbox_state,
-                                                                  corner_radius=25,
+                                                                  corner_radius=CORNER_RADIUS,
                                                                   state='disabled',
-                                                                  width=panel_checkboxes_width)
+                                                                  width=PANEL_CHECKBOXES_WIDTH)
 
         self.daemon_process_status_checkbox_state = ctk.BooleanVar()
         self.daemon_process_status_checkbox_string_var = ctk.StringVar(value='')
         self.daemon_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                          textvariable=self.daemon_process_status_checkbox_string_var,
                                                                          variable=self.daemon_process_status_checkbox_state,
-                                                                         corner_radius=25,
+                                                                         corner_radius=CORNER_RADIUS,
                                                                          state='disabled',
-                                                                         width=panel_checkboxes_width)
+                                                                         width=PANEL_CHECKBOXES_WIDTH)
 
         self.reverse_proxy_process_status_checkbox_state = ctk.BooleanVar()
         self.reverse_proxy_process_status_checkbox_string_var = ctk.StringVar(
@@ -43,32 +46,32 @@ class XliteFrameManager:
         self.reverse_proxy_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                                 textvariable=self.reverse_proxy_process_status_checkbox_string_var,
                                                                                 variable=self.reverse_proxy_process_status_checkbox_state,
-                                                                                corner_radius=25,
+                                                                                corner_radius=CORNER_RADIUS,
                                                                                 state='disabled',
-                                                                                width=panel_checkboxes_width)
+                                                                                width=PANEL_CHECKBOXES_WIDTH)
         self.valid_config_checkbox_state = ctk.BooleanVar()
         self.valid_config_checkbox_string_var = ctk.StringVar(value='')
         self.valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                 textvariable=self.valid_config_checkbox_string_var,
                                                                 variable=self.valid_config_checkbox_state,
-                                                                corner_radius=25,
+                                                                corner_radius=CORNER_RADIUS,
                                                                 state='disabled',
-                                                                width=panel_checkboxes_width)
+                                                                width=PANEL_CHECKBOXES_WIDTH)
 
         self.daemon_valid_config_checkbox_state = ctk.BooleanVar()
         self.daemon_valid_config_checkbox_string_var = ctk.StringVar(value='')
         self.daemon_valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                        textvariable=self.daemon_valid_config_checkbox_string_var,
                                                                        variable=self.daemon_valid_config_checkbox_state,
-                                                                       corner_radius=25,
+                                                                       corner_radius=CORNER_RADIUS,
                                                                        state='disabled',
-                                                                       width=panel_checkboxes_width)
+                                                                       width=PANEL_CHECKBOXES_WIDTH)
 
         # Create the Button widget with a text variable
         self.store_password_button_string_var = ctk.StringVar(value='')
         self.store_password_button = ctk.CTkButton(self.title_frame,
                                                    textvariable=self.store_password_button_string_var,
-                                                   width=button_width)
+                                                   width=BUTTON_WIDTH)
 
         # Bind left-click event
         self.store_password_button.bind("<Button-1>",
@@ -122,14 +125,13 @@ class XliteFrameManager:
             # Perform actions for left-click (if needed)
             return "break"
 
-    def grid_widgets(self, x, y, check_boxes_sticky):
+    def grid_widgets(self, x, y):
         # xlite
-        self.xlite_label.grid(row=x, column=y, columnspan=2, padx=5, pady=0)
-        self.process_status_checkbox.grid(row=x + 1, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
-        self.daemon_process_status_checkbox.grid(row=x + 2, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
-        self.valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=10, pady=5, sticky=check_boxes_sticky)
-        self.daemon_valid_config_checkbox.grid(row=x + 2, column=y + 1, padx=10, pady=5,
-                                               sticky=check_boxes_sticky)
+        self.xlite_label.grid(row=x, column=y, padx=5, pady=5)
+        self.process_status_checkbox.grid(row=x + 1, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+        self.daemon_process_status_checkbox.grid(row=x + 2, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+        self.valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+        self.daemon_valid_config_checkbox.grid(row=x + 2, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
         self.store_password_button.grid(row=x, column=y + 3, padx=2, pady=2, sticky="e")
 
     def update_xlite_process_status_checkbox(self):

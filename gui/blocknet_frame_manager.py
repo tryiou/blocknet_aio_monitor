@@ -5,7 +5,8 @@ import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
-from gui.constants import button_width, panel_checkboxes_width
+from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, FRAME_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, \
+    CHECK_BOXES_STICKY
 from utilities import utils, global_variables
 
 
@@ -17,28 +18,26 @@ class BlocknetCoreFrameManager:
         self.title_frame = title_frame
 
         # Create all Blocknet Core widgets here
-        width = 350
         self.label = ctk.CTkLabel(self.title_frame,
                                   text=widgets_strings.blocknet_frame_title_string,
-                                  width=width,
-                                  anchor="w")
+                                  anchor=HEADER_FRAMES_STICKY)  # , width=FRAME_WIDTH)
 
         # Label for Data Path
         self.data_path_label = ctk.CTkLabel(self.title_frame, text="Data Path: ")
 
-        width = 343
+        input_box_width = 387
         self.data_path_entry_string_var = ctk.StringVar(value=self.parent.utility.data_folder)
         self.data_path_entry = ctk.CTkEntry(self.title_frame,
                                             textvariable=self.data_path_entry_string_var,
                                             state='normal',
-                                            width=width)
+                                            width=input_box_width)
         self.data_path_entry.configure(state='readonly')
 
         # Button for setting custom path
         self.custom_path_button = ctk.CTkButton(self.title_frame,
                                                 text=widgets_strings.blocknet_set_custom_path_string,
                                                 command=self.open_custom_path_dialog,
-                                                width=button_width)
+                                                width=BUTTON_WIDTH)
 
         # Button for downloading blocknet bootstrap
         self.download_bootstrap_string_var = ctk.StringVar(value="")
@@ -46,18 +45,17 @@ class BlocknetCoreFrameManager:
                                                        image=self.root_gui.transparent_img,
                                                        textvariable=self.download_bootstrap_string_var,
                                                        command=self.download_bootstrap_command,
-                                                       width=button_width)
+                                                       width=BUTTON_WIDTH)
 
         # Checkboxes
-        width_mod = 15
         self.data_path_status_checkbox_state = ctk.BooleanVar()
         self.data_path_status_checkbox_string_var = ctk.StringVar(value="Data Path")
         self.data_path_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                     textvariable=self.data_path_status_checkbox_string_var,
                                                                     variable=self.data_path_status_checkbox_state,
                                                                     state='disabled',
-                                                                    corner_radius=25,
-                                                                    width=panel_checkboxes_width + width_mod)  # , disabledforeground='black')
+                                                                    corner_radius=CORNER_RADIUS,
+                                                                    width=PANEL_CHECKBOXES_WIDTH)
 
         self.process_status_checkbox_state = ctk.BooleanVar()
         self.process_status_checkbox_string_var = ctk.StringVar(value='')
@@ -65,38 +63,38 @@ class BlocknetCoreFrameManager:
                                                                   textvariable=self.process_status_checkbox_string_var,
                                                                   variable=self.process_status_checkbox_state,
                                                                   state='disabled',
-                                                                  corner_radius=25,
-                                                                  width=panel_checkboxes_width + width_mod)  # , disabledforeground='black')
+                                                                  corner_radius=CORNER_RADIUS,
+                                                                  width=PANEL_CHECKBOXES_WIDTH)
 
         self.conf_status_checkbox_state = ctk.BooleanVar()
         self.conf_status_checkbox_string_var = ctk.StringVar(value='')
         self.conf_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                textvariable=self.conf_status_checkbox_string_var,
                                                                variable=self.conf_status_checkbox_state,
-                                                               corner_radius=25,
+                                                               corner_radius=CORNER_RADIUS,
                                                                state='disabled',
-                                                               width=panel_checkboxes_width)  # , disabledforeground='black')
+                                                               width=PANEL_CHECKBOXES_WIDTH)
 
         self.rpc_connection_checkbox_state = ctk.BooleanVar()
         self.rpc_connection_checkbox_string_var = ctk.StringVar(value='')
         self.rpc_connection_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
                                                                   textvariable=self.rpc_connection_checkbox_string_var,
                                                                   variable=self.rpc_connection_checkbox_state,
-                                                                  corner_radius=25,
+                                                                  corner_radius=CORNER_RADIUS,
                                                                   state='disabled',
-                                                                  width=panel_checkboxes_width)  # , disabledforeground='black')
+                                                                  width=PANEL_CHECKBOXES_WIDTH)  # , disabledforeground='black')
 
-    def grid_widgets(self, x, y, check_boxes_sticky):
+    def grid_widgets(self, x, y):
         # Grid all widgets in this frame
-        self.label.grid(row=x, column=y, columnspan=2, padx=5, pady=0, sticky="w")
-        self.data_path_label.grid(row=x + 1, column=y, padx=5, pady=5, sticky="w")
-        self.data_path_entry.grid(row=x + 1, column=y + 1, padx=(0, 10), pady=5, sticky="ew")
-        self.custom_path_button.grid(row=x + 1, column=y + 3, padx=2, pady=2, sticky="e")
-        self.download_bootstrap_button.grid(row=x, column=y + 3, padx=2, pady=2, sticky="e")
-        self.data_path_status_checkbox.grid(row=x + 2, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
-        self.process_status_checkbox.grid(row=x + 3, column=y, padx=10, pady=5, sticky=check_boxes_sticky)
-        self.conf_status_checkbox.grid(row=x + 2, column=y + 1, padx=10, pady=5, sticky=check_boxes_sticky)
-        self.rpc_connection_checkbox.grid(row=x + 3, column=y + 1, padx=10, pady=5, sticky=check_boxes_sticky)
+        self.label.grid(row=x, column=y, columnspan=2,padx=5, pady=5, sticky="w")
+        self.data_path_label.grid(row=x + 1, column=y,  padx=5, pady=5, sticky="w")
+        self.data_path_entry.grid(row=x + 1, column=y + 1, padx=5, pady=5, sticky="we")
+        self.custom_path_button.grid(row=x + 1, column=y + 3, padx=5, pady=5, sticky="ew")
+        self.download_bootstrap_button.grid(row=x, column=y + 3, padx=5, pady=5, sticky="ew")
+        self.data_path_status_checkbox.grid(row=x + 2, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+        self.process_status_checkbox.grid(row=x + 3, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+        self.conf_status_checkbox.grid(row=x + 2, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+        self.rpc_connection_checkbox.grid(row=x + 3, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
 
     def update_blocknet_bootstrap_button(self):
         bootstrap_download_in_progress = bool(self.parent.utility.bootstrap_checking)

@@ -80,7 +80,7 @@ class BinaryManager:
             process_running=self.root_gui.xlite_manager.process_running,
             stop_func=self.root_gui.xlite_manager.utility.close_xlite,
             start_func=lambda: self.root_gui.xlite_manager.utility.start_xlite(env_vars=env_vars),
-            button=self.frame_manager.xlite_start_close_button,
+            button=self.frame_manager.xlite_toggle_execution_button,
             disable_flag='disable_start_xlite_button'
         )
 
@@ -445,13 +445,13 @@ class BinaryManager:
     def update_xlite_start_close_button(self):
         # xlite_start_close_button_string_var
         var = widgets_strings.close_string if self.root_gui.xlite_manager.process_running else widgets_strings.start_string
-        self.frame_manager.xlite_start_close_button_string_var.set(var)
+        self.frame_manager.xlite_toggle_execution_string_var.set(var)
 
         if self.root_gui.xlite_manager.process_running:
-            self.tooltip_manager.update_tooltip(widget=self.frame_manager.xlite_start_close_button,
+            self.tooltip_manager.update_tooltip(widget=self.frame_manager.xlite_toggle_execution_button,
                                                 msg=widgets_strings.close_string)
         else:
-            self.tooltip_manager.update_tooltip(widget=self.frame_manager.xlite_start_close_button,
+            self.tooltip_manager.update_tooltip(widget=self.frame_manager.xlite_toggle_execution_button,
                                                 msg=widgets_strings.start_string)
 
         # xlite_start_close_button
@@ -460,10 +460,10 @@ class BinaryManager:
         if not disable_start_close_button:
             img = self.root_gui.stop_img if self.root_gui.xlite_manager.process_running else self.root_gui.start_img
             # self.xlite_start_close_button.configure(image=img)
-            utils.enable_button(self.frame_manager.xlite_start_close_button, img=img)
+            utils.enable_button(self.frame_manager.xlite_toggle_execution_button, img=img)
         else:
             img = self.root_gui.stop_greyed_img if self.root_gui.xlite_manager.process_running else self.root_gui.start_greyed_img
-            utils.disable_button(self.frame_manager.xlite_start_close_button, img=img)
+            utils.disable_button(self.frame_manager.xlite_toggle_execution_button, img=img)
 
     def update_xbridge_bots_buttons(self):
         # XBridge Bots

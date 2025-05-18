@@ -65,7 +65,7 @@ def remove_cfg_json_key(key):
 
 def save_cfg_json(key, data):
     local_filename = "cfg.json"
-    local_conf_path = global_variables.aio_blocknet_data_path.get(global_variables.system)
+    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
     filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
 
     # Try loading the existing JSON file

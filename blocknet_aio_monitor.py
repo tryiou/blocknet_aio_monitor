@@ -21,7 +21,7 @@ asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
 pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.WARNING)
-from gui.constants import tooltip_bg_color
+from gui.constants import tooltip_bg_color, MAIN_FRAMES_STICKY, TITLE_FRAMES_STICKY
 
 ctk.set_default_color_theme(global_variables.themepath)
 
@@ -217,7 +217,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
                                               msg='',
                                               delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
                                               justify="left")
-        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.xlite_start_close_button,
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.xlite_toggle_execution_button,
                                               msg='',
                                               delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
                                               justify="left")
@@ -233,25 +233,29 @@ class Blocknet_AIO_GUI(ctk.CTk):
         y = 0
         padx_main_frame = 10
         pady_main_frame = 5
-        check_boxes_sticky = "ew"
         self.grid_frames(x, y, padx_main_frame, pady_main_frame)
         self.binary_manager.frame_manager.grid_widgets(x, y)
-        self.blocknet_manager.frame_manager.grid_widgets(x, y, check_boxes_sticky)
-        self.blockdx_manager.frame_manager.grid_widgets(x, y, check_boxes_sticky)
-        self.xlite_manager.frame_manager.grid_widgets(x, y, check_boxes_sticky)
+        self.blocknet_manager.frame_manager.grid_widgets(x, y)
+        self.blockdx_manager.frame_manager.grid_widgets(x, y)
+        self.xlite_manager.frame_manager.grid_widgets(x, y)
 
     def grid_frames(self, x, y, padx_main_frame, pady_main_frame):
-        self.bins_download_frame.grid(row=x, column=y, padx=padx_main_frame, pady=pady_main_frame, sticky="nsew")
-        self.bins_title_frame.grid(row=x, column=y, columnspan=5, padx=5, pady=5, sticky="ew")
+        self.bins_download_frame.grid(row=x, column=y, padx=padx_main_frame, pady=pady_main_frame,
+                                      sticky=MAIN_FRAMES_STICKY)
+        # bin panel have 5 buttons per row
+        self.bins_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
 
-        self.blocknet_core_frame.grid(row=x + 1, column=y, padx=padx_main_frame, pady=pady_main_frame, sticky="nsew")
-        self.blocknet_title_frame.grid(row=x, column=y, columnspan=5, padx=5, pady=5, sticky="ew")
+        self.blocknet_core_frame.grid(row=x + 1, column=y, padx=padx_main_frame, pady=pady_main_frame,
+                                      sticky=MAIN_FRAMES_STICKY)
+        self.blocknet_title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
 
-        self.blockdx_frame.grid(row=x + 2, column=y, padx=padx_main_frame, pady=pady_main_frame, sticky="nsew")
-        self.blockdx_title_frame.grid(row=0, column=0, columnspan=3, padx=(5, 2), pady=5, sticky="ew")
+        self.blockdx_frame.grid(row=x + 2, column=y, padx=padx_main_frame, pady=pady_main_frame,
+                                sticky=MAIN_FRAMES_STICKY)
+        self.blockdx_title_frame.grid(row=0, column=0,columnspan=2,  padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
 
-        self.xlite_frame.grid(row=x + 3, column=y, padx=padx_main_frame, pady=pady_main_frame, sticky="nsew")
-        self.xlite_title_frame.grid(row=0, column=0, columnspan=4, padx=5, pady=5, sticky="ew")
+        self.xlite_frame.grid(row=x + 3, column=y, padx=padx_main_frame, pady=pady_main_frame,
+                              sticky=MAIN_FRAMES_STICKY)
+        self.xlite_title_frame.grid(row=0, column=0,columnspan=2,  padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
 
     def handle_signal(self, signum, frame):
         print("Signal {} received.".format(signum))

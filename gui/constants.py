@@ -1,4 +1,11 @@
-button_width = 120
-panel_checkboxes_width = 165
-
+BINS_BUTTONS_WIDTH = 90
+BUTTON_WIDTH = 120
+PANEL_CHECKBOXES_WIDTH = 165
+FRAME_WIDTH = 400  # Define a consistent width for all frames
+CORNER_RADIUS = 25
+HEADER_FRAMES_STICKY = "nw"
 tooltip_bg_color = ("#ebebeb", "#051937")
+
+CHECK_BOXES_STICKY = "ew"
+TITLE_FRAMES_STICKY = "ew"
+MAIN_FRAMES_STICKY = "nsew"
