@@ -19,7 +19,7 @@ class SystemPaths:
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
             bin_dir = "bin"
-            exe = 'python.exe' if sys.platform == "win32" else 'python'
+            exe = 'python.exe' if sys.platform == "win32" else 'python3.10'
             path = os.path.join(sys._MEIPASS, bin_dir, exe)
         else:
             # Running as normal Python script
@@ -33,7 +33,7 @@ class SystemPaths:
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
             bin_dir = "bin"
-            exe = 'pip.exe' if sys.platform == "win32" else 'pip'
+            exe = 'pip.exe' if sys.platform == "win32" else 'pip3.10'
             path = os.path.join(sys._MEIPASS, bin_dir, exe)
         else:
             path = shutil.which('pip')
@@ -80,27 +80,6 @@ class VirtualEnvironment:
         except Exception as e:
             self._fail(f"Failed to create virtual environment: {e}")
 
-    # def create_1(self) -> None:
-    #     """Create a virtual environment if it doesn't exist."""
-    #     if self.venv_bin_path.exists():
-    #         logging.info(f"Virtual environment already exists")
-    #         return
-
-    #     logging.info(f"Creating virtual environment at {self.venv_dir}")
-    #     try:
-    #         # Make sure parent directory exists
-    #         self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
-    #         bundled_python = SystemPaths.python_path()
-    #         bundled_pip = SystemPaths.pip_path()
-    #             # Standard venv creation
-    #         venv.create(self.venv_dir, with_pip=True, system_site_packages=False)
-
-    #         if not self.venv_bin_path.exists():
-    #             self._fail(f"Virtual environment creation failed")
-
-    #         logging.info(f"Virtual environment created successfully")
-    #     except Exception as e:
-    #         self._fail(f"Failed to create virtual environment: {e}")
 
     def _create_pyinstaller_venv(self) -> None:
         """Create a virtual environment when running as PyInstaller bundle."""
@@ -113,12 +92,10 @@ class VirtualEnvironment:
         bundled_pip = SystemPaths.pip_path()
 
         if os.path.exists(bundled_python):
-            exe = 'python.exe' if sys.platform == "win32" else 'python'
-            self._create_executable_link(bundled_python, exe)
+            self._create_executable_link(bundled_python, self.python_exe)
 
         if os.path.exists(bundled_pip):
-            exe = 'pip.exe' if sys.platform == "win32" else 'pip'
-            self._create_executable_link(bundled_pip, exe)
+            self._create_executable_link(bundled_pip, self.pip_exe)
 
         # Create a simple activation script
         self._create_activation_script(bundled_python)
