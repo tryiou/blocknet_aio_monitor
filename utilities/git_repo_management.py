@@ -18,8 +18,9 @@ class SystemPaths:
         """Get the path to the Python interpreter."""
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
+            bin_dir = "Scripts" if sys.platform == "win32" else "bin"
             exe = 'python.exe' if sys.platform == "win32" else 'python'
-            path = os.path.join(sys._MEIPASS, 'venv', 'bin', exe)
+            path = os.path.join(sys._MEIPASS, 'venv', bin_dir, exe)
         else:
             # Running as normal Python script
             path = sys.executable
@@ -31,8 +32,9 @@ class SystemPaths:
         """Get the path to pip."""
         if hasattr(sys, '_MEIPASS'):
             # PyInstaller 
+            bin_dir = "Scripts" if sys.platform == "win32" else "bin"
             exe = 'pip.exe' if sys.platform == "win32" else 'pip'
-            path = os.path.join(sys._MEIPASS, 'venv', 'bin', exe)
+            path = os.path.join(sys._MEIPASS, 'venv', bin_dir, exe)
         else:
             path = shutil.which('pip')
         logging.info(f"System pip path: {path}")
