@@ -171,11 +171,9 @@ jobs:
         run: |
           pyinstaller --noconfirm --onefile --add-data "theme:theme" \
           --add-data "img:img" \
-          --add-data "venv/bin/python.exe:venv/bin/" \
-          --add-data "venv/bin/pip.exe:venv/bin/" \
+          --add-data "venv\Scripts\python.exe:venv\Scripts\" \                                                                                                                               
+          --add-data "venv\Scripts\pip.exe:venv\Scripts\" \
           "${{ github.workspace }}/blocknet_aio_monitor.py"
-          # pyinstaller --noconfirm --onefile --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
-          #--windowed
 
       - name: Rename executable
         run: |
