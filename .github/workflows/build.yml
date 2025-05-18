@@ -48,7 +48,12 @@ jobs:
       - name: Build executable on Ubuntu
         run: |
           source venv/bin/activate                                                                                                                                                                                               
-          venv/bin/pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          venv/bin/pyinstaller --noconfirm --onefile --windowed \
+          --add-data "theme:theme" \
+          --add-data "img:img" \
+          --add-data "venv/bin/python:venv/bin/" \
+          --add-data "venv/bin/pip:venv/bin/" \
+          "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-linux
 
       - uses: actions/upload-artifact@v4
@@ -95,8 +100,14 @@ jobs:
           pip install pyinstaller
           python --version
           which python
-          pyinstaller --noconfirm --onefile --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+
+          pyinstaller --noconfirm --onefile --add-data "theme:theme" \
+          --add-data "img:img" \
+          --add-data "venv/bin/python:venv/bin/" \
+          --add-data "venv/bin/pip:venv/bin/" \
+          "${{ github.workspace }}/blocknet_aio_monitor.py"
           #--windowed
+
           mkdir -p my_bin
           mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor
 
@@ -158,7 +169,13 @@ jobs:
 
       - name: Build executable on Windows
         run: |
-          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          pyinstaller --noconfirm --onefile --add-data "theme:theme" \
+          --add-data "img:img" \
+          --add-data "venv/bin/python.exe:venv/bin/" \
+          --add-data "venv/bin/pip.exe:venv/bin/" \
+          "${{ github.workspace }}/blocknet_aio_monitor.py"
+          # pyinstaller --noconfirm --onefile --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          #--windowed
 
       - name: Rename executable
         run: |

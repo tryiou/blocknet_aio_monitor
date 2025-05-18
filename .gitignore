@@ -4,3 +4,5 @@ dist
 .idea
 .aider*
 .env
+__pycache__*
+*.spec
