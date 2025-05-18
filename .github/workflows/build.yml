@@ -38,28 +38,58 @@ jobs:
           python-version: "3.10"
 
       - name: Locate Python and pip
-        run: |                                                                                                                                                                                                                   
+        run: |
           echo "Python path: $(which python3.10)"                                                                                                                                                                                
           echo "Pip path: $(python3.10 -m site --user-site)"        
 
-      - name: Install dependencies
+      - name: Install dependencies and Build executable on Ubuntu
         run: |
           python3.10 -m venv venv  
           python3.10 -m pip install --upgrade pip
           source venv/bin/activate     
           pip install -r requirements.txt
           pip install pyinstaller
+          
+          pythonPath=$(which python3.10)
+          pipPath=$(which pip3.10)
 
-      - name: Build executable on Ubuntu
-        run: |
-          source venv/bin/activate                                                                                                                                                                                               
-          venv/bin/pyinstaller --noconfirm --onefile --windowed \                                                                                                                                                                             
-          --add-data "theme:theme" \                                                                                                                                                                                               
-          --add-data "img:img" \                                                                                                                                                                                                   
-          --add-data "$(which python3.10):bin" \                                                                                                                                                                                
-          --add-data "$(python3.10 -m site --user-site):bin" \                                                                                                                                                                     
-          "${{ github.workspace }}/blocknet_aio_monitor.py"  
+          if [[ -z "$pythonPath" ]]; then
+            echo "python3.10 not found in PATH"
+            exit 1
+          fi
+
+          if [[ -z "$pipPath" ]]; then
+            echo "pip3.10 not found in PATH"
+            exit 1
+          fi
+
+          scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
+
+          cmd=(pyinstaller --noconfirm --onefile \
+            --add-data "theme:theme" \
+            --add-data "img:img" \
+            --add-data "$pythonPath:bin" \
+            --add-data "$pipPath:bin" \
+            --clean \
+            "$scriptPath")
+
+          echo "Running command:"
+          printf ' %q' "${cmd[@]}"
+          echo
+
+          "${cmd[@]}"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-linux
+
+      #      - name: Build executable on Ubuntu
+      #        run: |
+      #          source venv/bin/activate
+      #          venv/bin/pyinstaller --noconfirm --onefile --windowed \
+      #          --add-data "theme:theme" \
+      #          --add-data "img:img" \
+      #          --add-data "$(which python3.10):bin" \
+      #          --add-data "$(python3.10 -m site --user-site):bin" \
+      #          "${{ github.workspace }}/blocknet_aio_monitor.py"
+      #          mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-linux
 
       - uses: actions/upload-artifact@v4
         with:
@@ -97,30 +127,52 @@ jobs:
           brew install python-tk@3.10
           python3.10 -m pip install --upgrade pip
 
-      - name: Locate Python and pip
-        run: |                                                                                                                                                                                                                   
-          echo "Python path: $(which python3.10)"                                                                                                                                                                                
-          echo "Pip path: $(python3.10 -m site --user-site)"   
-
       - name: Install dependencies / Build executable on macOS
         run: |
-          python3.10 -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
-          pip install pyinstaller
-          python --version
-          which python
-
-          pyinstaller --noconfirm --onefile \                                                                                                                                                                                        
-          --add-data "theme:theme" \                                                                                                                                                                                               
-          --add-data "img:img" \                                                                                                                                                                                                   
-          --add-data "$(which python3.10):bin" \                                                                                                                                                                                
-          --add-data "$(python3.10 -m site --user-site):bin" \                                                                                                                                                                     
-          "${{ github.workspace }}/blocknet_aio_monitor.py"     
-          #--windowed
-
-          mkdir -p my_bin
-          mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor
+               python3.10 -m venv venv
+               source venv/bin/activate
+               pip install -r requirements.txt
+               pip install pyinstaller
+               
+               pythonPath=$(which python3.10)
+               pipPath=$(which pip3.10)
+               
+               if [[ -z "$pythonPath" ]]; then
+               echo "python3.10 not found in PATH"
+               exit 1
+               fi
+               
+               if [[ -z "$pipPath" ]]; then
+               echo "pip3.10 not found in PATH"
+               exit 1
+               fi
+               
+               scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
+               
+               cmd=(pyinstaller --noconfirm --onefile \
+               --add-data "theme:theme" \
+               --add-data "img:img" \
+               --add-data "$pythonPath:bin" \
+               --add-data "$pipPath:bin" \
+               --clean \
+               "$scriptPath")
+               
+               echo "Running command:"
+               printf ' %q' "${cmd[@]}"
+               echo
+               
+               "${cmd[@]}"
+          #          
+          #          pyinstaller --noconfirm --onefile \                                                                                                                                                                                        
+          #          --add-data "theme:theme" \                                                                                                                                                                                               
+          #          --add-data "img:img" \                                                                                                                                                                                                   
+          #          --add-data "$(which python3.10):bin" \                                                                                                                                                                                
+          #          --add-data "$(python3.10 -m site --user-site):bin" \                                                                                                                                                                     
+          #          "${{ github.workspace }}/blocknet_aio_monitor.py"     
+          #          #--windowed
+               
+               mkdir -p my_bin
+               mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor
 
       - name: Create DMG file
         run: |
@@ -171,7 +223,7 @@ jobs:
           python-version: "3.10"
 
       - name: Locate Python and pip
-        run: |                                                                                                                                                                                                                   
+        run: |
           $pythonPath = (Get-Command python).Path                                                                                                                                                                                         
           $pipPath = (Get-Command pip).Path                                                                                                                                                                                               
           Write-Host "Python path: $pythonPath"                                                                                                                                                                                           
@@ -186,7 +238,7 @@ jobs:
           pip install pyinstaller
 
       - name: Build executable on Windows
-        run: |            
+        run: |
           $pythonPath = (Get-Command python).Path
           $pipPath = (Get-Command pip).Path
           
@@ -196,11 +248,11 @@ jobs:
           
           Write-Host "Running: $command"
           Invoke-Expression $command
-
-#          $pythonPath = (Get-Command python).Path
-#          $pipPath = (Get-Command pip).Path
-#          pyinstaller --noconfirm --onefile --add-data "theme:theme" --add-data "img:img" --add-data "$pythonPath:python" --add-data "$pipPath:bin" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
           
+          #          $pythonPath = (Get-Command python).Path
+          #          $pipPath = (Get-Command pip).Path
+          #          pyinstaller --noconfirm --onefile --add-data "theme:theme" --add-data "img:img" --add-data "$pythonPath:python" --add-data "$pipPath:bin" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+
 
       - name: Rename executable
         run: |
