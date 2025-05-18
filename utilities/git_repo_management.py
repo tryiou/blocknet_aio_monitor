@@ -88,56 +88,6 @@ class VirtualEnvironment:
         except Exception as e:
             self._fail(f"Failed to create virtual environment: {e}")
 
-    def _create_pyinstaller_venv(self) -> None:
-        """Create a virtual environment when running as PyInstaller bundle."""
-        logging.info("Creating venv in PyInstaller context")
-        os.makedirs(self.venv_dir, exist_ok=True)
-        os.makedirs(self.venv_bin_path, exist_ok=True)
-
-        # Create symlinks/copies to bundled Python and pip
-        bundled_python = SystemPaths.python_path()
-        bundled_pip = SystemPaths.pip_path()
-
-        if os.path.exists(bundled_python):
-            self._create_executable_link(bundled_python, self.python_exe)
-
-        if os.path.exists(bundled_pip):
-            self._create_executable_link(bundled_pip, self.pip_exe)
-
-        # Create a simple activation script
-        self._create_activation_script(bundled_python)
-
-    def _create_executable_link(self, source_path: str, exe_name: str) -> None:
-        """Create link to executable (symlink on Unix, copy on Windows)."""
-        if self.is_windows:
-            dest_path = os.path.join(self.venv_bin_path, f"{exe_name}")
-            if not os.path.exists(dest_path):
-                try:
-                    shutil.copy2(source_path, dest_path)
-                    logging.info(f"Copied bundled {exe_name} to: {dest_path}")
-                except Exception as e:
-                    logging.warning(f"Failed to copy {exe_name}: {e}")
-        else:
-            dest_path = os.path.join(self.venv_bin_path, exe_name)
-            if not os.path.exists(dest_path):
-                try:
-                    os.symlink(source_path, dest_path)
-                    logging.info(f"Created symlink to bundled {exe_name}: {dest_path}")
-                except Exception as e:
-                    logging.warning(f"Failed to create symlink to {exe_name}: {e}")
-
-    def _create_activation_script(self, python_path: str) -> None:
-        """Create activation script for the virtual environment."""
-        activate_path = self.venv_bin_path / ("activate.bat" if self.is_windows else "activate")
-        with open(activate_path, "w") as f:
-            if self.is_windows:
-                f.write(f"@echo off\nSET PATH={os.path.dirname(python_path)};%PATH%\n")
-            else:
-                f.write(f"#!/bin/bash\nexport PATH={os.path.dirname(python_path)}:$PATH\n")
-
-        if not self.is_windows:
-            os.chmod(activate_path, 0o755)  # Make executable on Unix
-
     def install_requirements(self, requirements_path: Path) -> None:
         """Install packages from requirements.txt."""
         if not requirements_path.exists():
