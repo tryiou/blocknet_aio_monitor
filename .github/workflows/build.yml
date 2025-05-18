@@ -51,8 +51,7 @@ jobs:
           venv/bin/pyinstaller --noconfirm --onefile --windowed \
           --add-data "theme:theme" \
           --add-data "img:img" \
-          --add-data "venv/bin/python:venv/bin/" \
-          --add-data "venv/bin/pip:venv/bin/" \
+          --add-data "venv:venv" \
           "${{ github.workspace }}/blocknet_aio_monitor.py"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-linux
 
@@ -103,8 +102,7 @@ jobs:
 
           pyinstaller --noconfirm --onefile --add-data "theme:theme" \
           --add-data "img:img" \
-          --add-data "venv/bin/python:venv/bin/" \
-          --add-data "venv/bin/pip:venv/bin/" \
+          --add-data "venv:venv" \
           "${{ github.workspace }}/blocknet_aio_monitor.py"
           #--windowed
 
@@ -169,7 +167,7 @@ jobs:
 
       - name: Build executable on Windows
         run: |
-          pyinstaller --noconfirm --onefile --add-data "theme:theme" --add-data "img:img" --add-data "venv\Scripts\python.exe:venv\Scripts" --add-data "venv\Scripts\pip.exe:venv\Scripts" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          pyinstaller --noconfirm --onefile --add-data "theme:theme" --add-data "img:img" --add-data "venv:venv" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
       - name: Rename executable
         run: |
           $newName = "${{ github.workspace }}/dist/blocknet_aio_monitor-$env:VERSION_NUMBER-x86-64-windows.exe"
