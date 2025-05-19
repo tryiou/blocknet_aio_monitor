@@ -6,7 +6,7 @@ import customtkinter as ctk
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
 from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, \
-    CHECK_BOXES_STICKY
+    CHECK_BOXES_STICKY, BLOCKNET_DATADIR_INPUT_WIDTH
 from utilities import utils, global_variables
 
 
@@ -25,12 +25,11 @@ class BlocknetCoreFrameManager:
         # Label for Data Path
         self.data_path_label = ctk.CTkLabel(self.title_frame, text="Data Path: ")
 
-        input_box_width = 387
         self.data_path_entry_string_var = ctk.StringVar(value=self.parent.utility.data_folder)
         self.data_path_entry = ctk.CTkEntry(self.title_frame,
                                             textvariable=self.data_path_entry_string_var,
                                             state='normal',
-                                            width=input_box_width)
+                                            width=BLOCKNET_DATADIR_INPUT_WIDTH)
         self.data_path_entry.configure(state='readonly')
 
         # Button for setting custom path

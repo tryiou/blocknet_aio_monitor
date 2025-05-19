@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import threading
+import time
 
 from utilities.git_repo_management import GitRepoManagement
 from utilities.global_variables import aio_folder
@@ -9,9 +10,10 @@ from utilities.global_variables import aio_folder
 
 class XBridgeBotManager:
     def __init__(self, repo_url: str = "https://github.com/tryiou/xbridge_trading_bots", current_branch: str = "main"):
+
         self.repo_url = repo_url
         self.target_dir = os.path.join(aio_folder, "xbridge_trading_bots")
-        self.execution_enabled = False
+        self.started = False
         self.current_branch = current_branch
         self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=self.current_branch,
                                                  workdir=aio_folder)
@@ -19,14 +21,11 @@ class XBridgeBotManager:
         self.process = None
 
     def repo_exists(self) -> bool:
-        return os.path.exists(os.path.join(self.target_dir, ".git"))
+        return os.path.exists(self.target_dir)
 
     def get_available_branches(self) -> list:
         """Return list of available branches from remote repo"""
         try:
-            if not self.repo_exists():
-                return ["main"]
-
             if not self.repo_management:
                 self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=self.current_branch,
                                                          workdir=aio_folder)
@@ -93,22 +92,31 @@ class XBridgeBotManager:
             except Exception as e:
                 logging.error(f"Failed to delete repository: {str(e)}", exc_info=True)
 
-    def toggle_execution(self) -> bool:
+    def toggle_execution(self, branch=None) -> None:
         """Toggle script execution state. Returns new state"""
-        if not self.repo_exists():
-            self.install_or_update(self.current_branch)
+        logging.info("toggle_execution")
+        if branch is None:
+            branch = self.current_branch
 
-        self.execution_enabled = not self.execution_enabled
-        if self.execution_enabled:
+        if not self.repo_exists() or not self.repo_management.venv or branch != self.current_branch:
+            self.install_or_update(branch)
+
+        if not self.repo_management.venv:
+            logging.error("failed to set repo")
+            return
+
+        if not self.started:
             self._start_execution()
+            self.started = True
         else:
             self._stop_execution()
-        return self.execution_enabled
+            self.started = False
 
     def _start_execution(self) -> None:
         """Start script execution in background"""
-        if self.thread and self.thread.is_alive():
-            return
+        while self.thread and self.thread.is_alive():
+            # wait for update tread to close completely.
+            time.sleep(0.5)
 
         self.thread = threading.Thread(target=self._run_script)
         self.thread.start()

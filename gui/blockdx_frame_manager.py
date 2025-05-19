@@ -4,7 +4,8 @@ import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
-from gui.constants import PANEL_CHECKBOXES_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, CHECK_BOXES_STICKY
+from gui.constants import PANEL_CHECKBOXES_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, CHECK_BOXES_STICKY, \
+    BLOCKDX_FRAME_WIDTH
 from utilities import global_variables
 
 
@@ -16,11 +17,10 @@ class BlockDxFrameManager:
         self.title_frame = title_frame
 
         # Label for Block-dx frame
-        block_dx_width = 588
         self.label = ctk.CTkLabel(self.title_frame,
                                   text=widgets_strings.blockdx_frame_title_string,
                                   anchor=HEADER_FRAMES_STICKY,
-                                  width=block_dx_width)
+                                  width=BLOCKDX_FRAME_WIDTH)
 
         # Checkboxes
         # width_mod = 35

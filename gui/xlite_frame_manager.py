@@ -7,7 +7,7 @@ import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
 from custom_tk_mods import ctkInputDialogMod
 from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, CORNER_RADIUS, HEADER_FRAMES_STICKY, \
-    CHECK_BOXES_STICKY
+    CHECK_BOXES_STICKY, XLITE_FRAME_WIDTH
 from utilities import utils
 
 
@@ -16,11 +16,10 @@ class XliteFrameManager:
         self.parent = parent
         self.master_frame = master_frame
         self.title_frame = title_frame
-        xlite_width = 464
         self.xlite_label = ctk.CTkLabel(self.title_frame,
                                         text=widgets_strings.xlite_frame_title_string,
                                         anchor=HEADER_FRAMES_STICKY,
-                                        width=xlite_width)
+                                        width=XLITE_FRAME_WIDTH)
         # Checkboxes
         self.process_status_checkbox_state = ctk.BooleanVar()
         self.process_status_checkbox_string_var = ctk.StringVar(value='')

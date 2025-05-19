@@ -12,9 +12,9 @@ import requests
 from utilities import global_variables
 
 try:
-    import utilities.get_python as get_python
+    import utilities.miniforge_portable as miniconda_portable
 except ModuleNotFoundError:
-    import get_python
+    import miniforge_portable
 
 import pygit2
 
@@ -249,34 +249,6 @@ class GitRepository:
             logging.error(f"Error fetching branches via API: {e}")
             return ["main"]  # Fallback
 
-    def get_remote_branches_o(self) -> List[str]:
-        """Fetch list of remote branch names."""
-        try:
-            # If repo doesn't exist yet, initialize and add remote
-            if not (self.target_dir / ".git").is_dir():
-                self.target_dir.mkdir(exist_ok=True, parents=True)
-                self.repo = pygit2.init_repository(str(self.target_dir))
-                # Add the remote
-                self.repo.remotes.create("origin", self.repo_url)
-            elif not self.repo:
-                # Repository exists, but repo object isn't initialized
-                self.repo = pygit2.Repository(str(self.target_dir))
-
-            # Fetch remote refs
-            remote = self.repo.remotes["origin"]
-            remote.fetch()
-
-            # Extract branch names (remove 'origin/' prefix)
-            branches = []
-            prefix = "refs/remotes/origin/"
-            for ref_name in self.repo.references:
-                if ref_name.startswith(prefix) and not ref_name.endswith('HEAD'):
-                    branches.append(ref_name[len(prefix):])
-
-            return branches
-        except pygit2.GitError as e:
-            self._fail(f"Failed to fetch remote branches: {e}")
-
     def _fail(self, message: str) -> None:
         """Log an error message and exit."""
         logging.error(message)
@@ -315,7 +287,7 @@ class GitRepoManagement:
         # Check if portable Python exists, install if not
         if not (self.portable_python_dir / "miniforge").exists():
             logging.info("Portable Python not found. Installing...")
-            installer = get_python.PortablePythonInstaller(self.portable_python_dir)
+            installer = miniforge_portable.PortablePythonInstaller(self.portable_python_dir)
             self.portable_python_path = installer.install()
         else:
             self.portable_python_path = self.portable_python_dir / "miniforge" / (
@@ -361,14 +333,12 @@ class GitRepoManagement:
             text=True
         )
 
-        # Start a thread to read and print output                                                                                                                                                                                
-        def read_output():
-            for line in process.stdout:
-                print(line.strip())
-            for line in process.stderr:
-                print(line.strip())
+        def stream_reader(stream, prefix):
+            for line in iter(stream.readline, ''):
+                print(f"{prefix}: {line.strip()}")
 
-        threading.Thread(target=read_output, daemon=True).start()
+        threading.Thread(target=stream_reader, args=(process.stdout, "STDOUT"), daemon=True).start()
+        threading.Thread(target=stream_reader, args=(process.stderr, "STDERR"), daemon=True).start()
 
         return process
 

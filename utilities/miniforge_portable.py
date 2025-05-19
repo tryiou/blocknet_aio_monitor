@@ -85,7 +85,7 @@ class PortablePythonInstaller:
             else:
                 conda_path = install_path / "bin" / "conda"
 
-                # Run conda install command
+            # Run conda install command, update tk packages for GUI app
             logging.info("Installing tk with xft_* support...")
             conda_cmd = [str(conda_path), "install", "-c", "conda-forge", "tk=*=xft_*", "-y"]
             subprocess.run(conda_cmd, check=True, cwd=str(install_path))

@@ -2,7 +2,7 @@ import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import utilities.utils
-from gui.constants import FRAME_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, BINS_BUTTONS_WIDTH
+from gui.constants import HEADER_FRAMES_STICKY, CORNER_RADIUS, BINS_BUTTONS_WIDTH, BINS_FRAME_WIDTH
 from gui.xbridge_bot_manager import XBridgeBotManager
 
 
@@ -17,7 +17,7 @@ class BinaryFrameManager:
         self.header_label = ctk.CTkLabel(self.title_frame,
                                          text="Binaries Control panel:",
                                          anchor=HEADER_FRAMES_STICKY,
-                                         width=FRAME_WIDTH)
+                                         width=BINS_FRAME_WIDTH)
         self.title_frame.columnconfigure(1, weight=1)
 
         self.found_label = ctk.CTkLabel(self.title_frame,
@@ -166,9 +166,7 @@ class BinaryFrameManager:
         if self.xbridge_bot_manager and branch:
             utilities.utils.disable_button(self.install_delete_bots_button, self.root_gui.install_greyed_img)
             utilities.utils.disable_button(self.bots_toggle_execution_button, self.root_gui.start_greyed_img)
-            if self.xbridge_bot_manager.repo_management is None or self.xbridge_bot_manager.current_branch != branch:
-                self.xbridge_bot_manager.install_or_update(branch)
-            self.xbridge_bot_manager.toggle_execution()
+            self.xbridge_bot_manager.toggle_execution(branch)
 
     def grid_widgets(self, x, y):
         # bin
@@ -191,11 +189,13 @@ class BinaryFrameManager:
         self.bots_found_checkbox.grid(row=x + 4, column=y + 2, padx=5, sticky=sticky)
         button_sticky = 'ew'
         padx_main_frame = (70, 8)
+        # padx_main_frame = 5
         self.install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=padx_main_frame, sticky=button_sticky)
         self.install_delete_blockdx_button.grid(row=x + 2, column=y + 3, padx=padx_main_frame, sticky=button_sticky)
         self.install_delete_xlite_button.grid(row=x + 3, column=y + 3, padx=padx_main_frame, sticky=button_sticky)
         self.install_delete_bots_button.grid(row=x + 4, column=y + 3, padx=padx_main_frame, sticky=button_sticky)
         padx_main_frame = (8, 8)
+        padx_main_frame = 5
         self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=padx_main_frame, sticky='e')
         # Button for starting or closing Block-dx
         self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=padx_main_frame, sticky='e')
