@@ -75,8 +75,8 @@ class PortablePythonInstaller:
         python_bin = install_path / ("Scripts/python.exe" if self.system == "Windows" else "bin/python")
         logging.info(f"✅ Installed portable Python to: {install_path}")
         logging.info(f"🔹 Python executable: {python_bin}")
-        logging.info(f"🔹 pip: {python_bin} -m pip")
-        logging.info(f"🔹 venv: {python_bin} -m venv /path/to/venv")
+        # logging.info(f"🔹 pip: {python_bin} -m pip")
+        # logging.info(f"🔹 venv: {python_bin} -m venv {self.venv}")
         # After successful installation
         try:
             # Construct conda path based on OS
