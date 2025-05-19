@@ -12,7 +12,7 @@ import requests
 from utilities import global_variables
 
 try:
-    import utilities.miniforge_portable as miniconda_portable
+    import utilities.miniforge_portable as miniforge_portable
 except ModuleNotFoundError:
     import miniforge_portable
 
