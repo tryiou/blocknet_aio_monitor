@@ -288,10 +288,9 @@ class GitRepoManagement:
         if not (self.portable_python_dir / "miniforge").exists():
             logging.info("Portable Python not found. Installing...")
             installer = miniforge_portable.PortablePythonInstaller(self.portable_python_dir)
-            self.portable_python_path = installer.install()
-        else:
-            self.portable_python_path = self.portable_python_dir / "miniforge" / (
-                "python.exe" if global_variables.system == "Windows" else "bin/python")
+            installer.install()
+        self.portable_python_path = self.portable_python_dir / "miniforge" / (
+            "python.exe" if global_variables.system == "Windows" else "bin/python")
         self.git_repo.clone_or_update()
         self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path))
         self.venv.create()
