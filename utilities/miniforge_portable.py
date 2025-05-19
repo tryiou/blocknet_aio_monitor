@@ -81,7 +81,7 @@ class PortablePythonInstaller:
         try:
             # Construct conda path based on OS
             if self.system == "Windows":
-                conda_path = install_path / "conda.exe"
+                conda_path = install_path / "Scripts" / "conda.exe"
             else:
                 conda_path = install_path / "bin" / "conda"
 
