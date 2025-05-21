@@ -1,21 +1,23 @@
-import asyncio
-import shutil
-import threading
-import logging
-import subprocess
-import psutil
-import requests
-import random
-import string
 import json
-import zipfile
+import logging
+import os
+import random
+import shutil
+import string
+import subprocess
 import tarfile
+import threading
+import time
+import zipfile
 from subprocess import check_output
 
-from conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
-                       blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
-                       remote_blockchain_configuration_repo)
-from global_variables import *
+import psutil
+import requests
+
+# from utilities.conf_data import (remote_blocknet_conf_url, blocknet_default_paths, base_xbridge_conf, blocknet_bin_path,
+#                                  blocknet_bootstrap_url, nodes_to_add, remote_xbridge_conf_url, remote_manifest_url,
+#                                  remote_blockchain_configuration_repo)
+from utilities import global_variables
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -56,7 +58,7 @@ class BlocknetRPCClient:
                 return json_answer['result']
             else:
                 logging.error(f"No result in json: {json_answer}")
-        except requests.exceptions.RequestException as e:
+        except requests.RequestException as e:
             # logging.error(f"Error sending RPC request: {e}")
             return None
         except Exception as ex:
@@ -66,7 +68,9 @@ class BlocknetRPCClient:
 
 class BlocknetUtility:
     def __init__(self, custom_path=None):
-        self.blocknet_exe = os.path.join(aio_folder, *blocknet_bin_path, blocknet_bin)
+        self.blocknet_exe = global_variables.os.path.join(global_variables.aio_folder,
+                                                          *global_variables.conf_data.blocknet_bin_path,
+                                                          global_variables.blocknet_bin)
         self.binary_percent_download = None
         self.parsed_wallet_confs = {}
         self.parsed_xbridge_confs = {}
@@ -89,32 +93,23 @@ class BlocknetUtility:
         self.parse_blocknet_conf()
         self.parse_xbridge_conf()
         self.init_blocknet_rpc()
-        self.start_async_tasks()
+        self.start_rpc_check_thread()
 
-    def start_async_tasks(self):
-        def blocknet_async_loop():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(
-                asyncio.gather(self.check_blocknet_rpc()))  # self.check_blocknet_process(),
-            loop.close()
-
-        thread = threading.Thread(target=blocknet_async_loop)
+    def start_rpc_check_thread(self):
+        thread = threading.Thread(target=self.check_blocknet_rpc)
         thread.start()
 
-    async def check_blocknet_rpc(self):
+    def check_blocknet_rpc(self):
         while self.running:
+            valid = False
             if self.blocknet_rpc:
                 result = self.blocknet_rpc.send_rpc_request('getnetworkinfo')
                 if result:
-                    self.valid_rpc = True
-                else:
-                    self.valid_rpc = False
-            else:
-                self.valid_rpc = False
-                # logging.error("Blocknet RPC client is not initialized.")
-            # logging.debug(f"valid_rpc: {self.valid_rpc}")
-            await asyncio.sleep(1)
+                    valid = True
+            self.valid_rpc = valid
+
+            # logging.info(result)
+            time.sleep(2)
 
     def init_blocknet_rpc(self):
         # Retrieve RPC user, password, and port from blocknet_conf_local with error handling
@@ -222,7 +217,7 @@ class BlocknetUtility:
         conf_file_path = os.path.join(self.data_folder, file)
         if os.path.exists(conf_file_path):
             self.blocknet_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.info(f"BLOCKNET: Parsed {conf_file_path} file successfully: {self.blocknet_conf_local}")
+            logging.info(f"BLOCKNET: Parsed ok: [{conf_file_path}]")
         else:
             self.blocknet_conf_local = {}
             logging.warning(f"{conf_file_path} file does not exist.")
@@ -231,7 +226,7 @@ class BlocknetUtility:
         conf_file_path = os.path.join(self.data_folder, "xbridge.conf")
         if os.path.exists(conf_file_path):
             self.xbridge_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.info(f"BLOCKNET: Parsed {conf_file_path} file successfully: {self.xbridge_conf_local}")
+            logging.info(f"BLOCKNET: Parsed ok: [{conf_file_path}]")
         else:
             self.xbridge_conf_local = {}
             logging.warning(f"{conf_file_path} file does not exist.")
@@ -263,13 +258,24 @@ class BlocknetUtility:
         if section_name not in self.blocknet_conf_local:
             self.blocknet_conf_local[section_name] = {}
 
-        # Ensure self.blocknet_conf_local[section_name]['addnode'] is a list
+        if 'rpcthreads' not in self.blocknet_conf_local[section_name] or int(
+                self.blocknet_conf_local[section_name]['rpcthreads']) < 32:
+            self.blocknet_conf_local[section_name]['rpcthreads'] = 32
+
+        if 'rpcworkqueue' not in self.blocknet_conf_local[section_name] or int(
+                self.blocknet_conf_local[section_name]['rpcworkqueue']) < 64:
+            self.blocknet_conf_local[section_name]['rpcworkqueue'] = 64
+
+        if 'rpcxbridgetimeout' not in self.blocknet_conf_local[section_name] or int(
+                self.blocknet_conf_local[section_name]['rpcxbridgetimeout']) < 120:
+            self.blocknet_conf_local[section_name]['rpcxbridgetimeout'] = 120
+
         addnode_value = self.blocknet_conf_local[section_name].get('addnode', [])
         if not isinstance(addnode_value, list):
             addnode_value = [addnode_value]
 
         # Add the nodes to the end of the file if not already existing
-        for node in nodes_to_add:
+        for node in global_variables.conf_data.nodes_to_add:
             if node not in addnode_value:
                 addnode_value.append(node)
                 logging.info(f"Added new node: {node}")
@@ -294,7 +300,8 @@ class BlocknetUtility:
                 else:
                     if key == "rpcallowip":
                         self.blocknet_conf_local[section][key] = "127.0.0.1"
-                    elif key not in self.blocknet_conf_local[section] or self.blocknet_conf_local[section][key] != value:
+                    elif key not in self.blocknet_conf_local[section] or self.blocknet_conf_local[section][
+                        key] != value:
                         self.blocknet_conf_local[section][key] = value
                         # logging.debug(f"Updated {key} value: {value}")
 
@@ -304,7 +311,7 @@ class BlocknetUtility:
 
         # logging.info(f"Old local configuration:\n{old_local_json}")
         # logging.info(f"Updated local configuration:\n{new_local_json}")
-        logging.info(new_local_json)
+        # logging.info(new_local_json)
         if old_local_json != new_local_json:
             logging.info("Local blocknet.conf has been updated. Saving...")
             self.save_blocknet_conf()
@@ -327,9 +334,9 @@ class BlocknetUtility:
 
         if latest_version:
             xbridge_conf = latest_version['xbridge_conf']
-            xbridge_url = f"{remote_blockchain_configuration_repo}/xbridge-confs/{xbridge_conf}"
+            xbridge_url = f"{global_variables.conf_data.remote_blockchain_configuration_repo}/xbridge-confs/{xbridge_conf}"
             wallet_conf = latest_version['wallet_conf']
-            wallet_conf_url = f"{remote_blockchain_configuration_repo}/wallet-confs/{wallet_conf}"
+            wallet_conf_url = f"{global_variables.conf_data.remote_blockchain_configuration_repo}/wallet-confs/{wallet_conf}"
             # download_remote_conf()
             parsed_xbridge_conf = retrieve_remote_conf(xbridge_url, "xbridge-confs", xbridge_conf)
             parsed_wallet_conf = retrieve_remote_conf(wallet_conf_url, "wallet-confs", wallet_conf)
@@ -350,7 +357,7 @@ class BlocknetUtility:
 
         if 'Main' not in self.xbridge_conf_local:
             # We want this on 'top' of file, add it if missing
-            self.xbridge_conf_local['Main'] = base_xbridge_conf
+            self.xbridge_conf_local['Main'] = global_variables.conf_data.base_xbridge_conf
 
         if self.blocknet_xbridge_conf_remote is None:
             logging.error("Remote xbridge.conf not available.")
@@ -412,12 +419,11 @@ class BlocknetUtility:
         else:
             self.xbridge_conf_local['Main'] = {
                 'ExchangeWallets': sections_string,
-                'FullLog': base_xbridge_conf['FullLog'],
-                'ShowAllOrders': base_xbridge_conf['ShowAllOrders'],
+                'FullLog': global_variables.conf_data.base_xbridge_conf['FullLog'],
+                'ShowAllOrders': global_variables.conf_data.base_xbridge_conf['ShowAllOrders'],
             }
 
         new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
-        logging.debug(f"\nold_local_json: {old_local_json}\nnew_local_json: {new_local_json}")
         if old_local_json != new_local_json:
             logging.info("Local xbridge.conf has been updated. Saving...")
             self.save_xbridge_conf()
@@ -435,8 +441,8 @@ class BlocknetUtility:
             os.makedirs(self.data_folder)
 
     def create_aio_folder(self):
-        if aio_folder and not os.path.exists(aio_folder):
-            os.makedirs(aio_folder)
+        if global_variables.aio_folder and not os.path.exists(global_variables.aio_folder):
+            os.makedirs(global_variables.aio_folder)
 
     def download_bootstrap(self):
         self.create_data_folder()
@@ -444,8 +450,8 @@ class BlocknetUtility:
 
         self.bootstrap_checking = True
         filename = "Blocknet.zip"
-        local_file_path = os.path.join(aio_folder, filename)
-        remote_file_size = get_remote_file_size(blocknet_bootstrap_url)
+        local_file_path = os.path.join(global_variables.aio_folder, filename)
+        remote_file_size = get_remote_file_size(global_variables.conf_data.blocknet_bootstrap_url)
         # Check if the file already exists on disk
         need_to_download = True
         if os.path.exists(local_file_path):
@@ -464,13 +470,13 @@ class BlocknetUtility:
                     # Set timeout values in seconds
                     connection_timeout = 10
                     read_timeout = 30
-                    response = requests.get(blocknet_bootstrap_url, stream=True,
+                    response = requests.get(global_variables.conf_data.blocknet_bootstrap_url, stream=True,
                                             timeout=(connection_timeout, read_timeout))
                     response.raise_for_status()
                     if response.status_code == 200:
                         try:
                             logging.info(
-                                f"Downloading {blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+                                f"Downloading {global_variables.conf_data.blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
                             bytes_downloaded = 0
                             for chunk in response.iter_content(chunk_size=8192):
                                 if chunk:
@@ -517,9 +523,9 @@ class BlocknetUtility:
 
     def download_blocknet_bin(self):
         self.downloading_bin = True
-        url = blocknet_releases_urls.get((system, machine))
+        url = global_variables.conf_data.blocknet_releases_urls.get((global_variables.system, global_variables.machine))
         if url is None:
-            raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+            raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
         # Set timeout values in seconds
         connection_timeout = 10
@@ -527,7 +533,7 @@ class BlocknetUtility:
         response = requests.get(url, stream=True, timeout=(connection_timeout, read_timeout))
         response.raise_for_status()
         if response.status_code == 200:
-            local_file_path = os.path.join(aio_folder, os.path.basename(url))
+            local_file_path = os.path.join(global_variables.aio_folder, os.path.basename(url))
             try:
                 remote_file_size = int(response.headers.get('Content-Length', 0))
                 logging.info(f"Downloading {url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
@@ -552,12 +558,12 @@ class BlocknetUtility:
 
             if url.endswith(".zip"):
                 with zipfile.ZipFile(local_file_path, "r") as zip_ref:
-                    zip_ref.extractall(aio_folder)
+                    zip_ref.extractall(global_variables.aio_folder)
                 logging.info("Zip file extracted successfully.")
                 os.remove(local_file_path)
             elif url.endswith(".tar.gz"):
                 with tarfile.open(local_file_path, "r:gz") as tar:
-                    tar.extractall(aio_folder)
+                    tar.extractall(global_variables.aio_folder)
                 logging.info("Tar.gz file extracted successfully.")
                 os.remove(local_file_path)
         else:
@@ -582,7 +588,7 @@ def get_blocknet_data_folder(custom_path=None):
     if custom_path:
         path = custom_path
     else:
-        path = blocknet_default_paths.get(system)
+        path = global_variables.conf_data.blocknet_default_paths.get(global_variables.system)
     if path:
         expanded_path = os.path.expandvars(os.path.expanduser(path))
         # logging.info(f"\n path {norm_path} \n")
@@ -619,7 +625,7 @@ def save_conf_to_file(conf_data, file_path):
 
 def retrieve_remote_conf(remote_url, subfolder, expected_filename):
     folder = "xb_conf"
-    local_conf_file = os.path.join(aio_folder, folder, subfolder, expected_filename)
+    local_conf_file = os.path.join(global_variables.aio_folder, folder, subfolder, expected_filename)
 
     if os.path.exists(local_conf_file):
         try:
@@ -627,7 +633,7 @@ def retrieve_remote_conf(remote_url, subfolder, expected_filename):
                 conf_data = f.read()
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
-                logging.info(f"REMOTE: found and parsed successfully: {local_conf_file}")
+                logging.info(f"REMOTE: found and parsed ok: [{local_conf_file}]")
                 return parsed_conf
             else:
                 logging.error(f"Failed to parse: {local_conf_file}")
@@ -646,10 +652,10 @@ def download_remote_conf(url, filepath):
             if parsed_conf:
                 # Save the remote configuration to a local file
                 save_conf_to_file(parsed_conf, filepath)
-                logging.info(f"retrieved and parsed successfully: {filepath} ")
+                logging.info(f"retrieved and parsed ok: [{filepath}]")
                 return parsed_conf
             else:
-                logging.error(f"Failed to parse: {filepath} ")
+                logging.error(f"Failed to parse {filepath} ")
                 return None
         else:
             logging.error(
@@ -663,8 +669,8 @@ def download_remote_conf(url, filepath):
 def retrieve_xb_manifest():
     # remote_manifest_url
     folder = "xb_conf"
-    filename = os.path.basename(remote_manifest_url)
-    local_manifest_file = os.path.join(aio_folder, folder, filename)
+    filename = os.path.basename(global_variables.conf_data.remote_manifest_url)
+    local_manifest_file = os.path.join(global_variables.aio_folder, folder, filename)
 
     # if os.path.exists(local_manifest_file):
     #     try:
@@ -677,16 +683,17 @@ def retrieve_xb_manifest():
     #         logging.error(f"{local_manifest_file} Error opening or parsing file: {e}")
 
     try:
-        response = requests.get(remote_manifest_url)
+        response = requests.get(global_variables.conf_data.remote_manifest_url)
         if response.status_code == 200:
             parsed_json = response.json()
             os.makedirs(os.path.dirname(local_manifest_file), exist_ok=True)
             with open(local_manifest_file, 'w') as f:
                 f.write(json.dumps(parsed_json, indent=4))  # Save the JSON data to local file
-            logging.info(f"REMOTE: Retrieved and parsed successfully: {local_manifest_file}")
+            logging.info(f"REMOTE: Retrieved and parsed ok: [{local_manifest_file}]")
             return parsed_json
         else:
-            logging.error(f"Failed to retrieve remote configuration file: {remote_manifest_url} {response.status_code}")
+            logging.error(
+                f"Failed to retrieve remote configuration file: {global_variables.conf_data.remote_manifest_url} {response.status_code}")
             return None
     except requests.exceptions.RequestException as e:
         logging.error(f"Error retrieving remote configuration file: {e}")
@@ -694,13 +701,13 @@ def retrieve_xb_manifest():
 
 
 def retrieve_remote_blocknet_conf():
-    filename = os.path.basename(remote_blocknet_conf_url)
-    return retrieve_remote_conf(remote_blocknet_conf_url, "wallet-confs", filename)
+    filename = os.path.basename(global_variables.conf_data.remote_blocknet_conf_url)
+    return retrieve_remote_conf(global_variables.conf_data.remote_blocknet_conf_url, "wallet-confs", filename)
 
 
 def retrieve_remote_blocknet_xbridge_conf():
-    filename = os.path.basename(remote_xbridge_conf_url)
-    return retrieve_remote_conf(remote_xbridge_conf_url, "xbridge-confs", filename)
+    filename = os.path.basename(global_variables.conf_data.remote_xbridge_conf_url)
+    return retrieve_remote_conf(global_variables.conf_data.remote_xbridge_conf_url, "xbridge-confs", filename)
 
 
 def parse_conf_file(file_path=None, input_string=None):
@@ -738,7 +745,6 @@ def parse_conf_file(file_path=None, input_string=None):
                 conf_data.setdefault(current_section.strip('[]'), {})
 
     return conf_data
-
 
 # if __name__ == "__main__":
 #     a = BlocknetUtility()

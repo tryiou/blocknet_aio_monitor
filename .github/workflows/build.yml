@@ -37,15 +37,32 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install dependencies
+      - name: Locate Python and pip
         run: |
-          python -m pip install --upgrade pip
+          echo "Python path: $(which python3.10)"                                                                                                                                                                                
+          echo "Pip path: $(python3.10 -m site --user-site)"        
+
+      - name: Install dependencies and Build executable on Ubuntu
+        run: |
+          python3.10 -m venv venv  
+          python3.10 -m pip install --upgrade pip
+          source venv/bin/activate     
           pip install -r requirements.txt
           pip install pyinstaller
+          
+          scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
 
-      - name: Build executable on Ubuntu
-        run: |
-          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          cmd=(pyinstaller --noconfirm --onefile \
+            --add-data "theme:theme" \
+            --add-data "img:img" \
+            --clean \
+            "$scriptPath")
+
+          echo "Running command:"
+          printf ' %q' "${cmd[@]}"
+          echo
+
+          "${cmd[@]}"
           mv dist/blocknet_aio_monitor dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-linux
 
       - uses: actions/upload-artifact@v4
@@ -90,9 +107,21 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
           pip install pyinstaller
-          python --version
-          which python
-          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+          
+          scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
+          
+          cmd=(pyinstaller --noconfirm --onefile \
+          --add-data "theme:theme" \
+          --add-data "img:img" \
+          --clean \
+          "$scriptPath")
+          
+          echo "Running command:"
+          printf ' %q' "${cmd[@]}"
+          echo
+          
+          "${cmd[@]}"
+          
           mkdir -p my_bin
           mv dist/blocknet_aio_monitor my_bin/blocknet_aio_monitor
 
@@ -101,7 +130,6 @@ jobs:
           mkdir -p dmg
           hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/blocknet_aio_monitor-macos-base.dmg
           hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-macos.dmg
-
 
       - uses: actions/upload-artifact@v4
         with:
@@ -144,15 +172,31 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Locate Python and pip
+        run: |
+          $pythonPath = (Get-Command python).Path                                                                                                                                                                                         
+          $pipPath = (Get-Command pip).Path                                                                                                                                                                                               
+          Write-Host "Python path: $pythonPath"                                                                                                                                                                                           
+          Write-Host "Pip path: $pipPath"     
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          python -m venv venv
+          venv\Scripts\activate.bat 
           pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Build executable on Windows
         run: |
-          pyinstaller --noconfirm --onefile --windowed --add-data "theme:theme" --add-data "img:img" --clean "${{ github.workspace }}/blocknet_aio_monitor.py"
+
+          $scriptPath = "$env:GITHUB_WORKSPACE\blocknet_aio_monitor.py"
+          
+          $command = "pyinstaller --noconfirm --onefile --log-level=DEBUG --add-data `"theme:theme`" --add-data `"img:img`" --clean `"$scriptPath`""
+          
+          Write-Host "Running: $command"
+          Invoke-Expression $command
+
 
       - name: Rename executable
         run: |

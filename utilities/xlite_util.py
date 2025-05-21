@@ -1,19 +1,21 @@
-import asyncio
+import json
+import logging
+import os
+import subprocess
 import tarfile
 import threading
+import time
 import zipfile
+
 import psutil
 import requests
-import logging
-import subprocess
-import time
-import json
-from conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
-from global_variables import *
+
+# from utilities.conf_data import (xlite_bin_path, xlite_default_paths, xlite_daemon_default_paths, vc_redist_win_url)
+from utilities import global_variables
 
 logging.basicConfig(level=logging.DEBUG)
 
-if system == 'Windows':
+if global_variables.system == 'Windows':
     import winreg
 
 
@@ -27,7 +29,7 @@ if system == 'Windows':
             return True
         else:
             logging.info("No vc_redist found. installing")
-            install_vc_redist(vc_redist_win_url)
+            install_vc_redist(global_variables.conf_data.vc_redist_win_url)
 
 
     def check_registry_value(key_path, value_name):
@@ -107,11 +109,13 @@ class XliteRPCClient:
 
 class XliteUtility:
     def __init__(self):
-        if system == "Darwin":
-            self.xlite_exe = os.path.join(aio_folder, os.path.basename(xlite_url))
-            self.dmg_mount_path = f"/Volumes/{xlite_volume_name}"
+        if global_variables.system == "Darwin":
+            self.xlite_exe = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.xlite_url))
+            self.dmg_mount_path = f"/Volumes/{global_variables.xlite_volume_name}"
         else:
-            self.xlite_exe = os.path.join(aio_folder, xlite_bin_path[system], xlite_bin_name[system])
+            self.xlite_exe = os.path.join(global_variables.aio_folder,
+                                          global_variables.conf_data.xlite_bin_path[global_variables.system],
+                                          global_variables.conf_data.xlite_bin_name[global_variables.system])
         self.binary_percent_download = None
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
@@ -128,13 +132,7 @@ class XliteUtility:
         self.parse_xlite_conf()
         self.parse_xlite_daemon_conf()
         self.downloading_bin = False
-        self.start_async_tasks()
-
-    async def check_xlite_conf(self):
-        while self.running and not (self.xlite_conf_local and 'APP_VERSION' in self.xlite_conf_local):
-            self.parse_xlite_conf()
-            # logging.debug("check_xlite_conf")
-            await asyncio.sleep(1)
+        self.start_threads()
 
     def check_xlite_daemon_confs_sequence(self, silent=True):
         self.parse_xlite_daemon_conf(silent)
@@ -145,55 +143,44 @@ class XliteUtility:
                 password = self.xlite_daemon_confs_local[coin]['rpcPassword']
                 self.coins_rpc[coin] = XliteRPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
 
-    async def check_xlite_daemon_confs(self):
+    def check_xlite_daemon_confs(self):
         while self.running and not self.valid_coins_rpc:
-            await asyncio.sleep(3)
             self.check_xlite_daemon_confs_sequence(silent=True)
-            await self.check_valid_coins_rpc(runonce=True)
+            time.sleep(10)
 
-    async def check_valid_coins_rpc(self, runonce=False):
+    def check_valid_xlite_coins_rpc(self, runonce=False):
         while self.running:
+            # logging.debug(f"valid_coins_rpc: {self.valid_coins_rpc}, runonce: {runonce}")
+            valid = False
             if self.coins_rpc:
                 for coin, rpc_server in self.coins_rpc.items():
-                    valid = False
                     if coin != "master" and coin != "TBLOCK":
                         # logging.info(self.xlite_daemon_confs_local[coin]['rpcEnabled'])
                         if self.xlite_daemon_confs_local[coin]['rpcEnabled'] is True:
                             res = rpc_server.send_rpc_request("getinfo")
-                            # logging.info(f"coin {coin} result:{res}")
                             if res is not None:
                                 valid = True
                         if not valid:
+                            # logging.debug(f"coin {coin} not valid")
                             break
-                if valid:
-                    self.valid_coins_rpc = True
-                else:
-                    self.valid_coins_rpc = False
+            if valid:
+                self.valid_coins_rpc = True
             else:
                 self.valid_coins_rpc = False
             if runonce:
                 return
-            # logging.info(f"valid_master_rpc: {self.valid_master_rpc}")
-            await asyncio.sleep(5)
 
-    def start_async_tasks(self):
-        def xlite_async_loop():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(
-                asyncio.gather(
-                    self.check_xlite_conf(),
-                    self.check_xlite_daemon_confs(),
-                    self.check_valid_coins_rpc()
-                )  # self.check_blocknet_process(),
-            )
-            loop.close()
+            time.sleep(5)
 
-        thread = threading.Thread(target=xlite_async_loop)
+    def start_threads(self):
+        thread = threading.Thread(target=self.check_xlite_daemon_confs)
+        thread.start()
+        thread = threading.Thread(target=self.check_valid_xlite_coins_rpc)
         thread.start()
 
     def parse_xlite_conf(self):
-        data_folder = os.path.expandvars(os.path.expanduser(xlite_default_paths.get(system, None)))
+        data_folder = os.path.expandvars(
+            os.path.expanduser(global_variables.conf_data.xlite_default_paths.get(global_variables.system, None)))
         file = "app-settings.json"
         file_path = os.path.join(data_folder, file)
         meta_data = {}
@@ -202,7 +189,7 @@ class XliteUtility:
             try:
                 with open(file_path, 'r') as file:
                     meta_data = json.load(file)
-                    logging.info(f"XLITE: Loaded JSON data from {file_path}: {meta_data}")
+                    logging.info(f"XLITE: Loaded JSON data from [{file_path}]")  #: {meta_data}")
             except Exception as e:
                 logging.error(f"Error parsing {file_path}: {e}, repairing file")
         else:
@@ -212,7 +199,9 @@ class XliteUtility:
 
     def parse_xlite_daemon_conf(self, silent=False):
         # Assuming daemon_data_path and confs_folder are defined earlier in your code
-        daemon_data_path = os.path.expandvars(os.path.expanduser(xlite_daemon_default_paths.get(system, None)))
+        daemon_data_path = os.path.expandvars(
+            os.path.expanduser(
+                global_variables.conf_data.xlite_daemon_default_paths.get(global_variables.system, None)))
         confs_folder = os.path.join(daemon_data_path, "settings")
 
         # List all files in the confs_folder
@@ -240,10 +229,11 @@ class XliteUtility:
                 self.xlite_daemon_confs_local[coin] = "ERROR PARSING"
                 logging.error(f"Error parsing {json_file_path}: {e}")
         if not silent:
-            logging.info(f"XLITE-DAEMON: Parsed every coins conf {self.xlite_daemon_confs_local}")
+            logging.info(
+                f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(self.xlite_daemon_confs_local.keys())}")
 
     def start_xlite(self, env_vars=[]):
-        if system == "Windows":
+        if global_variables.system == "Windows":
             # check vcredist
             # install_vc_redist(vc_redist_win_url)
             check_vc_redist_installed()
@@ -258,7 +248,7 @@ class XliteUtility:
             self.download_xlite_bin()
 
         try:
-            if system == "Darwin":
+            if global_variables.system == "Darwin":
                 # mac mod
                 # https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg
                 # Path to the application inside the DMG file
@@ -269,9 +259,10 @@ class XliteUtility:
                     os.system(f'hdiutil attach "{self.xlite_exe}"')
                 else:
                     logging.info("Volume is already mounted.")
-                full_path = os.path.join(self.dmg_mount_path, *xlite_bin_name[system])
+                full_path = os.path.join(self.dmg_mount_path,
+                                         *global_variables.conf_data.xlite_bin_name[global_variables.system])
                 logging.info(
-                    f"volume_name: {xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
+                    f"volume_name: {global_variables.xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 self.xlite_process = subprocess.Popen([full_path],
                                                       stdout=subprocess.PIPE,
                                                       stderr=subprocess.PIPE,
@@ -298,14 +289,13 @@ class XliteUtility:
         if self.xlite_process:
             try:
                 self.xlite_process.terminate()
-                # logging.info(f"Terminating Xlite subprocess.")
                 self.xlite_process.wait(timeout=10)  # Wait for the process to terminate with a timeout of 60 seconds
-                logging.info(f"Closed Xlite subprocess.")
+                logging.info(f"Closed Xlite")
                 self.xlite_process = None
             except subprocess.TimeoutExpired:
-                logging.info(f"Force terminating Xlite subprocess.")
+                logging.info(f"Force terminating Xlite")
                 self.kill_xlite()
-                logging.info(f"Xlite subprocess has been force terminated.")
+                logging.info(f"Xlite has been force terminated.")
                 self.xlite_process = None
             except Exception as e:
                 logging.error(f"Error: {e}")
@@ -318,7 +308,7 @@ class XliteUtility:
         if self.xlite_process:
             try:
                 self.xlite_process.kill()
-                logging.info(f"Killed Xlite subprocess.")
+                logging.info(f"Killed Xlite")
                 self.xlite_process = None
                 return
             except Exception as e:
@@ -347,7 +337,6 @@ class XliteUtility:
 
     def close_xlite_daemon_pids(self):
 
-        logging.info(f"close_xlite_daemon_pids: {self.xlite_daemon_pids}")
         # Close the Xlite-daemon processes using their PIDs
         for pid in self.xlite_daemon_pids:
             try:
@@ -367,12 +356,13 @@ class XliteUtility:
                     logging.info(f"Xlite-daemon process with PID {pid} has been force terminated.")
             except Exception as e:
                 logging.error(f"Error: {e}")
+        logging.info(f"Closed Xlite daemon")
 
     def download_xlite_bin(self):
         self.downloading_bin = True
-        url = xlite_releases_urls.get((system, machine))
+        url = global_variables.conf_data.xlite_releases_urls.get((global_variables.system, global_variables.machine))
         if url is None:
-            raise ValueError(f"Unsupported OS or architecture {system} {machine}")
+            raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
         # Set timeout values in seconds
         connection_timeout = 5
@@ -381,7 +371,7 @@ class XliteUtility:
         response.raise_for_status()  # Raise an exception for 4xx and 5xx status codes
         if response.status_code == 200:
             file_name = os.path.basename(url)
-            tmp_file_path = os.path.join(aio_folder, "tmp_xl_bin")
+            tmp_file_path = os.path.join(global_variables.aio_folder, "tmp_xl_bin")
             try:
                 remote_file_size = int(response.headers.get('Content-Length', 0))
                 # tmp_file_path = os.path.join(aio_folder, file_name + "_tmp")
@@ -410,17 +400,18 @@ class XliteUtility:
             # Extract the archive
             if url.endswith(".zip"):
                 with zipfile.ZipFile(tmp_file_path, "r") as zip_ref:
-                    local_path = os.path.join(aio_folder, xlite_bin_path[system])
+                    local_path = os.path.join(global_variables.aio_folder,
+                                              global_variables.conf_data.xlite_bin_path[global_variables.system])
                     zip_ref.extractall(local_path)
                 logging.info("Zip file extracted successfully.")
                 os.remove(tmp_file_path)
             elif url.endswith(".tar.gz"):
                 with tarfile.open(tmp_file_path, "r:gz") as tar:
-                    tar.extractall(aio_folder)
+                    tar.extractall(global_variables.aio_folder)
                 logging.info("Tar.gz file extracted successfully.")
                 os.remove(tmp_file_path)
             elif url.endswith(".dmg"):
-                file_path = os.path.join(aio_folder, file_name)
+                file_path = os.path.join(global_variables.aio_folder, file_name)
                 os.rename(tmp_file_path, file_path)
                 logging.info("DMG file saved successfully.")
         else:
@@ -437,6 +428,5 @@ class XliteUtility:
         else:
             logging.error("Error: DMG is not mounted.")
 
-
 # if __name__ == "__main__":
-    # install_vc_redist(vc_redist_win_url)
+# install_vc_redist(vc_redist_win_url)
