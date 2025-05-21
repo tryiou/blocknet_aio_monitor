@@ -4,8 +4,9 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import requests
 
@@ -19,6 +20,46 @@ except ModuleNotFoundError:
 import pygit2
 
 
+class ExecutionError(Exception):
+    """Custom exception for execution failures."""
+    pass
+
+
+def run_command(cmd_list: List[str], cwd: Optional[Path] = None,
+                timeout: int = 300) -> Tuple[int, str, str]:
+    """
+    Run a command and return its output.
+
+    Args:
+        cmd_list: Command and arguments as a list
+        cwd: Working directory
+        timeout: Command timeout in seconds
+
+    Returns:
+        Tuple of (return_code, stdout, stderr)
+
+    Raises:
+        ExecutionError: On command execution failure
+    """
+    try:
+        process = subprocess.run(
+            cmd_list,
+            check=False,  # Don't raise exception, we'll handle the return code
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout
+        )
+        return process.returncode, process.stdout, process.stderr
+    except subprocess.TimeoutExpired:
+        raise ExecutionError(f"Command timed out after {timeout} seconds: {' '.join(cmd_list)}")
+    except FileNotFoundError:
+        raise ExecutionError(f"Command not found: {cmd_list[0]}")
+    except Exception as e:
+        raise ExecutionError(f"Command execution failed: {e}")
+
+
 class VirtualEnvironment:
     def __init__(self, target_dir: Path, portable_python_path: str = None):
         self.target_dir = target_dir
@@ -28,8 +69,8 @@ class VirtualEnvironment:
         self.bin_dir = "Scripts" if self.is_windows else "bin"
         self.python_exe = "python.exe" if self.is_windows else "python"
         self.pip_exe = "pip.exe" if self.is_windows else "pip"
-        logging.info(f"venv_bin_path: {self.venv_dir / self.bin_dir}")
         self.venv_bin_path = self.venv_dir / self.bin_dir
+        logging.info(f"venv_bin_path: {self.venv_bin_path}")
 
     def create(self) -> None:
         """Create a virtual environment if it doesn't exist, using a specific Python interpreter."""
@@ -41,20 +82,24 @@ class VirtualEnvironment:
         try:
             # Make sure parent directory exists
             self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
+
             # Use portable Python if provided, else system Python
             python_path = self.portable_python_path
-            subprocess.check_call([python_path, "-m", "venv", str(self.venv_dir)])
+            returncode, stdout, stderr = run_command(
+                [python_path, "-m", "venv", str(self.venv_dir)]
+            )
+
+            if returncode != 0:
+                raise ExecutionError(f"Virtual environment creation failed: {stderr}")
 
             # Verify creation
             if not self.venv_bin_path.exists():
-                self._fail("Virtual environment creation failed: missing bin directory")
-
-            # Optionally, upgrade pip if needed
-            # e.g., subprocess.check_call([self.venv_bin_path / "pip", "install", "--upgrade", "pip"])
+                raise ExecutionError("Virtual environment creation failed: missing bin directory")
 
             logging.info("Virtual environment created successfully")
         except Exception as e:
-            self._fail(f"Failed to create virtual environment: {e}")
+            logging.error(f"Failed to create virtual environment: {e}")
+            raise
 
     def install_requirements(self, requirements_path: Path) -> None:
         """Install packages from requirements.txt."""
@@ -69,12 +114,19 @@ class VirtualEnvironment:
 
         try:
             if os.path.exists(pip_path):
-                self._run_command([pip_path, "install", "-r", str(requirements_path)])
+                cmd = [pip_path, "install", "-r", str(requirements_path)]
             else:
-                self._run_command([python_path, "-m", "pip", "install", "-r", str(requirements_path)])
+                cmd = [python_path, "-m", "pip", "install", "-r", str(requirements_path)]
+
+            returncode, stdout, stderr = run_command(cmd, self.target_dir)
+
+            if returncode != 0:
+                raise ExecutionError(f"Failed to install requirements: {stderr}")
+
             logging.info("Requirements installed successfully")
         except Exception as e:
-            self._fail(f"Failed to install requirements: {e}")
+            logging.error(f"Failed to install requirements: {e}")
+            raise
 
     def get_python_path(self) -> str:
         """Get the path to Python executable in the virtual environment."""
@@ -83,7 +135,7 @@ class VirtualEnvironment:
             logging.info(f"Using virtual environment Python: {venv_python_path}")
             return str(venv_python_path)
         else:
-            self._fail(f"Virtual environment Python not found at {venv_python_path}")
+            raise FileNotFoundError(f"Virtual environment Python not found at {venv_python_path}")
 
     def get_pip_path(self) -> str:
         """Get the path to pip executable in the virtual environment."""
@@ -91,25 +143,7 @@ class VirtualEnvironment:
         if pip_path.exists():
             logging.info(f"Using virtual environment pip: {pip_path}")
             return str(pip_path)
-        self._fail(f"Virtual environment pip not found in {self.venv_bin_path}")
-
-    def _run_command(self, cmd_list: List[str], cwd: Optional[Path] = None) -> None:
-        """Run a command and handle errors."""
-        try:
-            subprocess.run(
-                cmd_list,
-                check=True,
-                cwd=cwd or self.target_dir
-            )
-        except subprocess.CalledProcessError as e:
-            self._fail(f"Command failed: {e}")
-        except FileNotFoundError as e:
-            self._fail(f"Command not found: {e}")
-
-    def _fail(self, message: str) -> None:
-        """Log an error message and exit."""
-        logging.error(message)
-        sys.exit(1)
+        raise FileNotFoundError(f"Virtual environment pip not found in {self.venv_bin_path}")
 
 
 class GitRepository:
@@ -120,18 +154,24 @@ class GitRepository:
         self.target_dir = target_dir
         self.branch = branch
         self.repo = None
+        # Default timeout for Git operations (in seconds)
+        self.git_timeout = 300
 
     def clone_or_update(self) -> None:
         """Clone a new repository or update an existing one."""
-        if not self.target_dir.exists():
-            self._clone_repo()
-            return
+        try:
+            if not self.target_dir.exists():
+                self._clone_repo()
+                return
 
-        if not (self.target_dir / ".git").is_dir():
-            self._recreate_repo()
-            return
+            if not (self.target_dir / ".git").is_dir():
+                self._recreate_repo()
+                return
 
-        self._update_repo()
+            self._update_repo()
+        except Exception as e:
+            logging.error(f"Repository operation failed: {e}")
+            raise
 
     def _clone_repo(self) -> None:
         """Clone a fresh repository."""
@@ -139,16 +179,27 @@ class GitRepository:
         self.target_dir.mkdir(exist_ok=True, parents=True)
         try:
             callbacks = pygit2.RemoteCallbacks()
+
+            # Set a timeout for the clone operation
+            start_time = time.time()
+
             self.repo = pygit2.clone_repository(
                 self.repo_url,
                 str(self.target_dir),
                 callbacks=callbacks
             )
 
+            elapsed_time = time.time() - start_time
+            logging.info(f"Clone completed in {elapsed_time:.2f} seconds")
+
             self._checkout_branch()
             logging.info(f"Repository cloned successfully")
         except pygit2.GitError as e:
-            self._fail(f"Failed to clone repository: {e}")
+            logging.error(f"Failed to clone repository: {e}")
+            # Clean up partial clone if it exists
+            if self.target_dir.exists():
+                shutil.rmtree(self.target_dir)
+            raise
 
     def _checkout_branch(self) -> None:
         """Checkout the specified branch."""
@@ -156,13 +207,20 @@ class GitRepository:
             branch_ref = f"refs/heads/{self.branch}"
             if branch_ref in self.repo.references:
                 self.repo.checkout(branch_ref)
-            else:
-                # Try to create and checkout the branch from origin
-                remote_ref = f"refs/remotes/origin/{self.branch}"
-                if remote_ref in self.repo.references:
-                    remote_branch = self.repo.references[remote_ref]
-                    self.repo.create_branch(self.branch, self.repo.get(remote_branch.target))
-                    self.repo.checkout(branch_ref)
+                logging.info(f"Checked out existing branch: {self.branch}")
+                return
+
+            # Try to create and checkout the branch from origin
+            remote_ref = f"refs/remotes/origin/{self.branch}"
+            if remote_ref in self.repo.references:
+                remote_branch = self.repo.references[remote_ref]
+                self.repo.create_branch(self.branch, self.repo.get(remote_branch.target))
+                self.repo.checkout(branch_ref)
+                logging.info(f"Created and checked out branch from remote: {self.branch}")
+                return
+
+            # If we get here, the branch doesn't exist locally or remotely
+            logging.warning(f"Branch '{self.branch}' not found locally or remotely. Staying on current branch.")
         except pygit2.GitError as e:
             logging.warning(f"Could not checkout branch {self.branch}: {e}")
 
@@ -176,83 +234,152 @@ class GitRepository:
         self.target_dir.mkdir(exist_ok=True, parents=True)
         self._clone_repo()
 
-    def _update_repo(self) -> None:
-        """Update an existing repository."""
+    def _update_repo(self) -> bool:
+        """Update an existing repository using fetch + merge logic (like git pull)."""
         try:
             self.repo = pygit2.Repository(str(self.target_dir))
+            logging.info("Opened existing repository")
 
             # Fetch updates from remote
+            logging.info("Fetching updates from remote")
             remote_name = "origin"
-            remote = self.repo.remotes[remote_name]
+
+            # Make sure remote exists
+            try:
+                remote = self.repo.remotes[remote_name]
+            except KeyError:
+                logging.warning(f"Remote '{remote_name}' not found. Adding it.")
+                self.repo.remotes.create(remote_name, self.repo_url)
+                remote = self.repo.remotes[remote_name]
+
+            # Set fetch timeout
+            start_time = time.time()
             remote.fetch()
+            elapsed_time = time.time() - start_time
+            logging.info(f"Fetch completed in {elapsed_time:.2f} seconds")
 
-            # Get the remote reference for the branch
+            # Get the remote branch reference
             remote_branch_ref = f"refs/remotes/{remote_name}/{self.branch}"
-            remote_branch = None
-            try:
-                remote_branch = self.repo.references[remote_branch_ref]
-            except KeyError:
-                self._fail(f"Branch {self.branch} does not exist remotely")
+            remote_branch = self.repo.references.get(remote_branch_ref)
+            if not remote_branch:
+                logging.error(f"Remote branch '{self.branch}' not found in '{remote_name}'")
+                return False
 
-            # Check if branch exists locally
+            # Get the local branch
             local_branch_ref = f"refs/heads/{self.branch}"
-            try:
-                local_branch = self.repo.references[local_branch_ref]
-                # Checkout the branch
-                self.repo.checkout(f"refs/heads/{self.branch}")
-            except KeyError:
-                # If branch doesn't exist locally but exists remotely, create it
-                if remote_branch:
-                    # Create local branch pointing to the same commit as remote branch
-                    self.repo.create_branch(self.branch, self.repo.get(remote_branch.target))
-                    self.repo.checkout(f"refs/heads/{self.branch}")
-                else:
-                    self._fail(f"Branch {self.branch} does not exist locally or remotely")
+            local_branch = self.repo.references.get(local_branch_ref)
 
-            # Get the latest commit from remote branch
-            remote_commit_id = remote_branch.target
-            local_branch = self.repo.references[local_branch_ref]
+            # If local branch doesn't exist, create it
+            if not local_branch:
+                logging.info(f"Local branch '{self.branch}' not found. Creating it.")
+                self.repo.create_branch(self.branch, self.repo.get(remote_branch.target))
+                self.repo.checkout(local_branch_ref)
+                logging.info(f"Created and checked out branch: {self.branch}")
+                return True
 
-            # Only merge if the branches have diverged
-            if local_branch.target != remote_commit_id:
-                # Get the target commits
-                remote_commit = self.repo.get(remote_commit_id)
+            # Log current and remote commit IDs
+            logging.info(f"Current local commit: {local_branch.target}")
+            logging.info(f"Remote commit: {remote_branch.target}")
 
-                # Check if fast-forward is possible
-                if self.repo.merge_base(local_branch.target, remote_commit_id) == local_branch.target:
-                    # Fast-forward update
-                    local_branch.set_target(remote_commit_id)
-                    # Reset the working directory to match
-                    self.repo.checkout_tree(remote_commit)
-                    self.repo.head.set_target(remote_commit_id)
-                else:
-                    # Not a fast-forward merge
-                    self._fail("Cannot perform fast-forward merge. Repository may have local changes.")
+            # Check if we're already up to date
+            if local_branch.target == remote_branch.target:
+                logging.info("Repository is already up to date")
+                return True
 
-            logging.info(f"Repository updated successfully")
+            # Perform a merge analysis (simulate git pull)
+            self.repo.checkout(local_branch_ref)
+            merge_result, _ = self.repo.merge_analysis(remote_branch.target)
+
+            # Handle different merge situations
+            if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                logging.info("Repository is already up to date")
+                return True
+
+            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+                # Fast-forward merge
+                logging.info("Performing fast-forward merge")
+                local_branch.set_target(remote_branch.target)
+                self.repo.checkout(local_branch_ref)
+                logging.info("Fast-forward merge completed")
+                return True
+
+            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+                # Normal merge (might have conflicts)
+                logging.info("Performing normal merge")
+
+                try:
+                    # Attempt the merge
+                    self.repo.merge(remote_branch.target)
+
+                    # Check for conflicts
+                    if self.repo.index.conflicts:
+                        conflict_paths = [c[0].path for c in self.repo.index.conflicts]
+                        logging.error(f"Merge conflicts in: {', '.join(conflict_paths)}")
+                        # Abort the merge
+                        self.repo.state_cleanup()
+                        return False
+
+                    # Create the merge commit
+                    author = pygit2.Signature('Auto Merger', 'auto@merger.local')
+                    self.repo.create_commit(
+                        'HEAD',
+                        author, author,
+                        f"Merge branch '{self.branch}' of {self.repo_url}",
+                        self.repo.index.write_tree(),
+                        [self.repo.head.target, remote_branch.target]
+                    )
+                    self.repo.state_cleanup()
+                    logging.info("Merge completed successfully")
+                    return True
+
+                except pygit2.GitError as e:
+                    logging.error(f"Merge failed: {e}")
+                    # Try to abort the merge if it's in progress
+                    try:
+                        self.repo.state_cleanup()
+                    except:
+                        pass
+                    return False
+            else:
+                logging.error("Merge analysis returned an unexpected result")
+                return False
+
         except pygit2.GitError as e:
-            self._fail(f"Failed to update repository: {e}")
+            logging.error(f"Failed to update repository: {e}")
+            return False
 
-    def get_remote_branches(self) -> list:
-        """Return list of available branches from remote repo using GitHub API"""
+    def get_remote_branches(self) -> List[str]:
+        """
+        Return list of available branches from remote repo using GitHub API.
+        Falls back to default branch if API request fails.
+        """
         try:
-            # Replace with your GitHub token (if private repo)
-            # headers = {"Authorization": "token YOUR_GITHUB_TOKEN"}
+            # Extract owner and repo name from URL
+            url_parts = self.repo_url.rstrip('/').split('/')
+            if self.repo_url.startswith('http'):
+                owner = url_parts[-2]
+                repo_name = url_parts[-1]
+                if repo_name.endswith('.git'):
+                    repo_name = repo_name[:-4]
+            else:
+                # Handle SSH URLs (git@github.com:owner/repo.git)
+                repo_part = url_parts[-1]
+                owner, repo_name = repo_part.split(':')[-1].split('/')
+                if repo_name.endswith('.git'):
+                    repo_name = repo_name[:-4]
+
+            # API request with timeout
             response = requests.get(
-                f"https://api.github.com/repos/{self.repo_url.split('/')[-2]}/{self.repo_url.split('/')[-1]}/branches",
-                # headers=headers
+                f"https://api.github.com/repos/{owner}/{repo_name}/branches",
+                timeout=10
             )
             response.raise_for_status()
             branches = [branch["name"] for branch in response.json()]
+            logging.info(f"Found {len(branches)} remote branches")
             return branches
         except Exception as e:
-            logging.error(f"Error fetching branches via API: {e}")
-            return ["main"]  # Fallback
-
-    def _fail(self, message: str) -> None:
-        """Log an error message and exit."""
-        logging.error(message)
-        sys.exit(1)
+            logging.warning(f"Error fetching branches via API: {e}")
+            return ["main", "master"]  # Fallback to common default branches
 
 
 class GitRepoManagement:
@@ -269,9 +396,11 @@ class GitRepoManagement:
             repo_url: URL of the Git repository
             target_dir: Local directory where the repository will be cloned
             branch: Git branch to use (default: "main")
+            workdir: Work directory for portable Python installation
         """
         self.target_dir = Path(target_dir).resolve()
-        self.portable_python_dir = Path(workdir) / "portable_python"
+        self.workdir = Path(workdir) if workdir else None
+        self.portable_python_dir = self.workdir / "portable_python" if self.workdir else None
         self.portable_python_path = None
         self.git_repo = GitRepository(repo_url, self.target_dir, branch)
         self.venv = None
@@ -283,29 +412,44 @@ class GitRepoManagement:
         Returns:
             True if setup completed successfully
         """
-        logging.info(f"Setting up repository in {self.target_dir}")
-        # Check if portable Python exists, install if not
-        if not (self.portable_python_dir / "miniforge").exists():
-            logging.info("Portable Python not found. Installing...")
-            installer = miniforge_portable.PortablePythonInstaller(self.portable_python_dir)
-            installer.install()
-        self.portable_python_path = self.portable_python_dir / "miniforge" / (
-            "python.exe" if global_variables.system == "Windows" else "bin/python")
-        self.git_repo.clone_or_update()
-        self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path))
-        self.venv.create()
-        self.venv.install_requirements(self.target_dir / "requirements.txt")
+        try:
+            logging.info(f"Setting up repository in {self.target_dir}")
 
-        logging.info(f"Repository setup complete")
-        return True
+            # Check if portable Python exists, install if not
+            if self.portable_python_dir and not (self.portable_python_dir / "miniforge").exists():
+                logging.info("Portable Python not found. Installing...")
+                installer = miniforge_portable.PortablePythonInstaller(self.portable_python_dir)
+                installer.install()
 
-    def run_script(self, script_path: str, script_args: Optional[List[str]] = None) -> Optional[subprocess.Popen]:
+            # Set the Python path
+            if self.portable_python_dir:
+                self.portable_python_path = self.portable_python_dir / "miniforge" / (
+                    "python.exe" if global_variables.system == "Windows" else "bin/python")
+
+            # Clone or update the repository
+            self.git_repo.clone_or_update()
+
+            # Setup the virtual environment
+            self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path))
+            self.venv.create()
+            self.venv.install_requirements(self.target_dir / "requirements.txt")
+
+            logging.info(f"Repository setup complete")
+            return True
+
+        except Exception as e:
+            logging.error(f"Repository setup failed: {e}")
+            return False
+
+    def run_script(self, script_path: str, script_args: Optional[List[str]] = None,
+                   timeout: Optional[int] = None) -> Optional[subprocess.Popen]:
         """
         Execute a Python script using the virtual environment's Python interpreter.
 
         Args:
             script_path: Path to the script relative to the target directory
             script_args: List of arguments to pass to the script
+            timeout: Timeout for script execution in seconds (None for no timeout)
 
         Returns:
             subprocess.Popen object representing the running script
@@ -316,7 +460,7 @@ class GitRepoManagement:
         abs_script_path = (self.target_dir / script_path).resolve()
         if not abs_script_path.exists():
             logging.error(f"Script not found: {abs_script_path}")
-            sys.exit(1)
+            return None
 
         # Use the Python from the virtual environment
         python_path = self.venv.get_python_path()
@@ -324,22 +468,57 @@ class GitRepoManagement:
 
         logging.info(f"Running script with venv Python: {' '.join(cmd)}")
 
-        process = subprocess.Popen(
-            cmd,
-            cwd=self.target_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
+        try:
+            process = subprocess.Popen(
+                cmd,
+                cwd=self.target_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1  # Line buffered
+            )
 
-        def stream_reader(stream, prefix):
-            for line in iter(stream.readline, ''):
-                print(f"{prefix}: {line.strip()}")
+            # Create daemon threads to read stdout/stderr
+            def stream_reader(stream, prefix):
+                try:
+                    for line in iter(stream.readline, ''):
+                        if line:  # Skip empty lines
+                            print(f"{prefix}: {line.strip()}")
+                except (ValueError, IOError) as e:
+                    # Handle pipe closed or other IO errors
+                    logging.debug(f"Stream reader stopped: {e}")
 
-        threading.Thread(target=stream_reader, args=(process.stdout, "STDOUT"), daemon=True).start()
-        threading.Thread(target=stream_reader, args=(process.stderr, "STDERR"), daemon=True).start()
+            stdout_thread = threading.Thread(target=stream_reader,
+                                             args=(process.stdout, "STDOUT"),
+                                             daemon=True)
+            stderr_thread = threading.Thread(target=stream_reader,
+                                             args=(process.stderr, "STDERR"),
+                                             daemon=True)
 
-        return process
+            stdout_thread.start()
+            stderr_thread.start()
+
+            # If timeout is specified, start a watcher thread
+            if timeout:
+                def timeout_watcher():
+                    start_time = time.time()
+                    while process.poll() is None:
+                        if time.time() - start_time > timeout:
+                            logging.warning(f"Script execution timed out after {timeout} seconds")
+                            process.terminate()
+                            time.sleep(1)
+                            if process.poll() is None:
+                                process.kill()
+                            break
+                        time.sleep(1)
+
+                threading.Thread(target=timeout_watcher, daemon=True).start()
+
+            return process
+
+        except Exception as e:
+            logging.error(f"Failed to run script: {e}")
+            return None
 
     def get_remote_branches(self) -> List[str]:
         """Fetch list of remote branch names."""
@@ -353,9 +532,9 @@ if __name__ == "__main__":
     # Example usage
     git_repo_url = "https://github.com/tryiou/xbridge_trading_bots"
     local_target_dir = "xbridge_trading_bots"
-    local_branch = "main"
+    remote_branch = "main"
     logging.info(f"aio_folder: {global_variables.aio_folder}")
-    manager = GitRepoManagement(git_repo_url, local_target_dir, local_branch, global_variables.aio_folder)
+    manager = GitRepoManagement(git_repo_url, local_target_dir, remote_branch, global_variables.aio_folder)
     manager.setup()
 
     # Example of running a script after setup
