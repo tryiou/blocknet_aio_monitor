@@ -149,10 +149,10 @@ class VirtualEnvironment:
 class GitRepository:
     """Manages Git operations using pygit2."""
 
-    def __init__(self, repo_url: str, target_dir: Path, branch: str = "main"):
+    def __init__(self, repo_url: str, target_dir: Path, remote_branch: str = "main"):
         self.repo_url = repo_url
         self.target_dir = target_dir
-        self.branch = branch
+        self.remote_branch = remote_branch
         self.repo = None
         # Default timeout for Git operations (in seconds)
         self.git_timeout = 300
@@ -204,25 +204,25 @@ class GitRepository:
     def _checkout_branch(self) -> None:
         """Checkout the specified branch."""
         try:
-            branch_ref = f"refs/heads/{self.branch}"
+            branch_ref = f"refs/heads/{self.remote_branch}"
             if branch_ref in self.repo.references:
                 self.repo.checkout(branch_ref)
-                logging.info(f"Checked out existing branch: {self.branch}")
+                logging.info(f"Checked out existing branch: {self.remote_branch}")
                 return
 
             # Try to create and checkout the branch from origin
-            remote_ref = f"refs/remotes/origin/{self.branch}"
+            remote_ref = f"refs/remotes/origin/{self.remote_branch}"
             if remote_ref in self.repo.references:
                 remote_branch = self.repo.references[remote_ref]
-                self.repo.create_branch(self.branch, self.repo.get(remote_branch.target))
+                self.repo.create_branch(self.remote_branch, self.repo.get(remote_branch.target))
                 self.repo.checkout(branch_ref)
-                logging.info(f"Created and checked out branch from remote: {self.branch}")
+                logging.info(f"Created and checked out branch from remote: {self.remote_branch}")
                 return
 
             # If we get here, the branch doesn't exist locally or remotely
-            logging.warning(f"Branch '{self.branch}' not found locally or remotely. Staying on current branch.")
+            logging.warning(f"Branch '{self.remote_branch}' not found locally or remotely. Staying on current branch.")
         except pygit2.GitError as e:
-            logging.warning(f"Could not checkout branch {self.branch}: {e}")
+            logging.warning(f"Could not checkout branch {self.remote_branch}: {e}")
 
     def _recreate_repo(self) -> None:
         """Remove and recreate the repository directory."""
@@ -234,119 +234,75 @@ class GitRepository:
         self.target_dir.mkdir(exist_ok=True, parents=True)
         self._clone_repo()
 
-    def _update_repo(self) -> bool:
-        """Update an existing repository using fetch + merge logic (like git pull)."""
-        try:
-            self.repo = pygit2.Repository(str(self.target_dir))
-            logging.info("Opened existing repository")
+    def _update_repo(self):
+        """Update an existing repository using fetch + merge logic (like git pull).
+        mimics the pull method logic from MichaelBoselowitz's pygit2 "pull" example.
+        """
+        self.repo = pygit2.Repository(str(self.target_dir))
+        logging.info("Opened existing repository")
 
-            # Fetch updates from remote
-            logging.info("Fetching updates from remote")
-            remote_name = "origin"
+        remote_name = "origin"
+        branch = self.remote_branch
 
-            # Make sure remote exists
-            try:
-                remote = self.repo.remotes[remote_name]
-            except KeyError:
-                logging.warning(f"Remote '{remote_name}' not found. Adding it.")
-                self.repo.remotes.create(remote_name, self.repo_url)
-                remote = self.repo.remotes[remote_name]
+        # Find the remote
+        for remote in self.repo.remotes:
+            if remote.name == remote_name:
+                # Fetch from remote
+                logging.info(f"Fetching updates from remote '{remote_name}'")
+                start_time = time.time()
+                remote.fetch()
+                elapsed_time = time.time() - start_time
+                logging.info(f"Fetch completed in {elapsed_time:.2f} seconds")
 
-            # Set fetch timeout
-            start_time = time.time()
-            remote.fetch()
-            elapsed_time = time.time() - start_time
-            logging.info(f"Fetch completed in {elapsed_time:.2f} seconds")
-
-            # Get the remote branch reference
-            remote_branch_ref = f"refs/remotes/{remote_name}/{self.branch}"
-            remote_branch = self.repo.references.get(remote_branch_ref)
-            if not remote_branch:
-                logging.error(f"Remote branch '{self.branch}' not found in '{remote_name}'")
-                return False
-
-            # Get the local branch
-            local_branch_ref = f"refs/heads/{self.branch}"
-            local_branch = self.repo.references.get(local_branch_ref)
-
-            # If local branch doesn't exist, create it
-            if not local_branch:
-                logging.info(f"Local branch '{self.branch}' not found. Creating it.")
-                self.repo.create_branch(self.branch, self.repo.get(remote_branch.target))
-                self.repo.checkout(local_branch_ref)
-                logging.info(f"Created and checked out branch: {self.branch}")
-                return True
-
-            # Log current and remote commit IDs
-            logging.info(f"Current local commit: {local_branch.target}")
-            logging.info(f"Remote commit: {remote_branch.target}")
-
-            # Check if we're already up to date
-            if local_branch.target == remote_branch.target:
-                logging.info("Repository is already up to date")
-                return True
-
-            # Perform a merge analysis (simulate git pull)
-            self.repo.checkout(local_branch_ref)
-            merge_result, _ = self.repo.merge_analysis(remote_branch.target)
-
-            # Handle different merge situations
-            if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
-                logging.info("Repository is already up to date")
-                return True
-
-            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
-                # Fast-forward merge
-                logging.info("Performing fast-forward merge")
-                local_branch.set_target(remote_branch.target)
-                self.repo.checkout(local_branch_ref)
-                logging.info("Fast-forward merge completed")
-                return True
-
-            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-                # Normal merge (might have conflicts)
-                logging.info("Performing normal merge")
-
+                # Get remote master id
+                remote_master_id = None
                 try:
-                    # Attempt the merge
-                    self.repo.merge(remote_branch.target)
+                    remote_master_id = self.repo.lookup_reference(
+                        f"refs/remotes/{remote_name}/{branch}"
+                    ).target
+                except KeyError:
+                    logging.error(f"Remote branch '{branch}' not found in '{remote_name}'")
+                    return
 
-                    # Check for conflicts
-                    if self.repo.index.conflicts:
-                        conflict_paths = [c[0].path for c in self.repo.index.conflicts]
-                        logging.error(f"Merge conflicts in: {', '.join(conflict_paths)}")
-                        # Abort the merge
-                        self.repo.state_cleanup()
-                        return False
+                # Ensure local branch exists
+                try:
+                    repo_branch = self.repo.lookup_reference(f"refs/heads/{branch}")
+                except KeyError:
+                    logging.info(f"Local branch '{branch}' not found. Creating it.")
+                    self.repo.create_branch(branch, self.repo.get(remote_master_id))
+                    repo_branch = self.repo.lookup_reference(f"refs/heads/{branch}")
 
-                    # Create the merge commit
-                    author = pygit2.Signature('Auto Merger', 'auto@merger.local')
-                    self.repo.create_commit(
-                        'HEAD',
-                        author, author,
-                        f"Merge branch '{self.branch}' of {self.repo_url}",
-                        self.repo.index.write_tree(),
-                        [self.repo.head.target, remote_branch.target]
-                    )
-                    self.repo.state_cleanup()
-                    logging.info("Merge completed successfully")
-                    return True
+                # Get merge analysis results
+                merge_result, _ = self.repo.merge_analysis(remote_master_id)
 
-                except pygit2.GitError as e:
-                    logging.error(f"Merge failed: {e}")
-                    # Try to abort the merge if it's in progress
-                    try:
-                        self.repo.state_cleanup()
-                    except:
-                        pass
-                    return False
-            else:
-                logging.error("Merge analysis returned an unexpected result")
-                return False
+                # Up to date, do nothing
+                if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                    logging.info("Repository is already up to date")
+                    return
 
-        except pygit2.GitError as e:
-            logging.error(f"Failed to update repository: {e}")
-            return False
+                # We can just fastforward
+                elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+                    logging.info("Performing fast-forward merge")
+                    self.repo.checkout_tree(self.repo.get(remote_master_id))
+                    master_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
+                    master_ref.set_target(remote_master_id)
+                    self.repo.head.set_target(remote_master_id)
+                    logging.info("Fast-forward merge completed")
+                    return
+
+                # Normal merge would create conflicts
+                elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+                    logging.error("Pulling remote changes leads to a conflict")
+                    raise Exception("Git conflicts detected during pull operation")
+
+                # Unknown result
+                else:
+                    logging.error(f"Unexpected merge result: {merge_result}")
+                    raise AssertionError("Unknown merge analysis result")
+
+        # If we got here, the remote wasn't found
+        logging.error(f"Remote '{remote_name}' not found")
+        raise Exception(f"Remote '{remote_name}' not found")
 
     def get_remote_branches(self) -> List[str]:
         """
@@ -532,9 +488,9 @@ if __name__ == "__main__":
     # Example usage
     git_repo_url = "https://github.com/tryiou/xbridge_trading_bots"
     local_target_dir = "xbridge_trading_bots"
-    remote_branch = "main"
+    branch = "main"
     logging.info(f"aio_folder: {global_variables.aio_folder}")
-    manager = GitRepoManagement(git_repo_url, local_target_dir, remote_branch, global_variables.aio_folder)
+    manager = GitRepoManagement(git_repo_url, local_target_dir, branch, global_variables.aio_folder)
     manager.setup()
 
     # Example of running a script after setup
