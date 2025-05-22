@@ -10,20 +10,18 @@ from utilities import global_variables
 
 
 class BlockDxFrameManager:
-    def __init__(self, parent, master_frame, title_frame):
+    def __init__(self, parent):
         self.root_gui = parent.root_gui
         self.parent = parent
-        self.master_frame = master_frame
-        self.title_frame = title_frame
 
-        # Label for Block-dx frame
+        self.master_frame = ctk.CTkFrame(master=self.root_gui)
+        self.title_frame = ctk.CTkFrame(self.master_frame)
+
         self.label = ctk.CTkLabel(self.title_frame,
                                   text=widgets_strings.blockdx_frame_title_string,
                                   anchor=HEADER_FRAMES_STICKY,
                                   width=BLOCKDX_FRAME_WIDTH)
 
-        # Checkboxes
-        # width_mod = 35
         self.process_status_checkbox_state = ctk.BooleanVar()
         self.process_status_checkbox_string_var = ctk.StringVar(value='')
         self.process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,

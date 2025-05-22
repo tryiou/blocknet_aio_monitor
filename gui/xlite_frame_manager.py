@@ -12,10 +12,12 @@ from utilities import utils
 
 
 class XliteFrameManager:
-    def __init__(self, parent, master_frame, title_frame):
+    def __init__(self, parent):
+        self.root_gui = parent.root_gui
         self.parent = parent
-        self.master_frame = master_frame
-        self.title_frame = title_frame
+        self.master_frame = ctk.CTkFrame(master=self.root_gui)
+        self.title_frame = ctk.CTkFrame(self.master_frame)
+
         self.xlite_label = ctk.CTkLabel(self.title_frame,
                                         text=widgets_strings.xlite_frame_title_string,
                                         anchor=HEADER_FRAMES_STICKY,

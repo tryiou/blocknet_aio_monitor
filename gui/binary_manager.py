@@ -9,10 +9,8 @@ from utilities import utils, global_variables
 
 
 class BinaryManager:
-    def __init__(self, root_gui, master_frame, title_frame):
+    def __init__(self, root_gui):
         self.root_gui = root_gui
-        self.title_frame = title_frame
-        self.master_frame = master_frame
         self.frame_manager = None
 
         self.disable_start_blocknet_button = False
@@ -26,7 +24,7 @@ class BinaryManager:
         self.tooltip_manager = self.root_gui.tooltip_manager
 
     async def setup(self):
-        self.frame_manager = BinaryFrameManager(self, self.master_frame, self.title_frame)
+        self.frame_manager = BinaryFrameManager(self)
 
         self.root_gui.after(0, self.bins_check_aio_folder)
         self.root_gui.after(0, self.update_blocknet_buttons)

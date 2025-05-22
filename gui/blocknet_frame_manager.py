@@ -11,18 +11,16 @@ from utilities import utils, global_variables
 
 
 class BlocknetCoreFrameManager:
-    def __init__(self, parent, master_frame, title_frame):
+    def __init__(self, parent):
         self.root_gui = parent.root_gui
         self.parent = parent
-        self.master_frame = master_frame
-        self.title_frame = title_frame
+        self.master_frame = ctk.CTkFrame(master=self.root_gui)
+        self.title_frame = ctk.CTkFrame(self.master_frame)
 
-        # Create all Blocknet Core widgets here
         self.label = ctk.CTkLabel(self.title_frame,
                                   text=widgets_strings.blocknet_frame_title_string,
                                   anchor=HEADER_FRAMES_STICKY)  # , width=FRAME_WIDTH)
 
-        # Label for Data Path
         self.data_path_label = ctk.CTkLabel(self.title_frame, text="Data Path: ")
 
         self.data_path_entry_string_var = ctk.StringVar(value=self.parent.utility.data_folder)

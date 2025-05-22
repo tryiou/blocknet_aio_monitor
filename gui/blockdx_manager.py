@@ -7,18 +7,16 @@ from utilities.blockdx_util import BlockdxUtility
 
 
 class BlockDXManager:
-    def __init__(self, root_gui, master_frame, title_frame):
+    def __init__(self, root_gui):
         self.frame_manager = None
         self.root_gui = root_gui
-        self.title_frame = title_frame
-        self.master_frame = master_frame
         self.utility = BlockdxUtility()
         self.version = [global_variables.blockdx_release_url.split('/')[7]]
         self.process_running = False
         self.is_config_sync = None
 
     async def setup(self):
-        self.frame_manager = BlockDxFrameManager(self, self.master_frame, self.title_frame)
+        self.frame_manager = BlockDxFrameManager(self)
         self.root_gui.after(0, self.update_status_blockdx)
 
     def blockdx_check_config(self):

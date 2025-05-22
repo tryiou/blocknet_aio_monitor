@@ -27,9 +27,10 @@ class XBridgeBotManager:
         """Return list of available branches from remote repo"""
         try:
             if not self.repo_management:
-                self.repo_management = GitRepoManagement(self.repo_url, self.target_dir, branch=self.current_branch,
-                                                         workdir=aio_folder)
-            return self.repo_management.get_remote_branches()
+                logging.error(f"GitRepoManagement not initialized ?")
+                return ["main"]
+            else:
+                return self.repo_management.get_remote_branches()
         except Exception as e:
             logging.error(f"Error fetching branches: {e}")
             return ["main"]
@@ -101,23 +102,23 @@ class XBridgeBotManager:
         if not self.repo_exists() or not self.repo_management.venv or branch != self.current_branch:
             self.install_or_update(branch)
 
-        if not self.repo_management.venv:
-            logging.error("failed to set repo")
-            return
-
-        if not self.started:
-            self._start_execution()
-            self.started = True
+        if self.repo_management.venv:
+            if not self.process or self.process and self.process.poll() is not None:
+                self._start_execution()
+                self.started = True
+            else:
+                self._stop_execution()
+                self.started = False
         else:
-            self._stop_execution()
-            self.started = False
+            logging.info("Venv setup in progress")
 
     def _start_execution(self) -> None:
         """Start script execution in background"""
         while self.thread and self.thread.is_alive():
             # wait for update tread to close completely.
+            logging.info("waiting thread end")
             time.sleep(0.5)
-
+        #
         self.thread = threading.Thread(target=self._run_script)
         self.thread.start()
 

@@ -3,7 +3,6 @@ import logging
 import os
 import signal
 
-import PIL._tkinter_finder
 import customtkinter as ctk
 from PIL import Image
 from psutil import process_iter
@@ -27,7 +26,10 @@ ctk.set_default_color_theme(global_variables.themepath)
 
 
 class Blocknet_AIO_GUI(ctk.CTk):
+    """Main GUI class for Blocknet AIO application."""
+
     def __init__(self):
+        """Initialize the Blocknet AIO GUI application."""
         super().__init__()
         self.install_greyed_img = None
         self.install_img = None
@@ -40,12 +42,12 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.transparent_img = None
         self.theme_img = None
 
-        self.disable_daemons_conf_check = False
+        self.disable_daemons_conf_check: bool = False
 
-        self.cfg = utils.load_cfg_json()
+        self.cfg: dict = utils.load_cfg_json()
         self.adjust_theme()
-        self.custom_path = None
-        self.stored_password = None
+        self.custom_path: str = None
+        self.stored_password: str = None
         if self.cfg:
             if 'custom_path' in self.cfg:
                 self.custom_path = self.cfg['custom_path']
@@ -56,26 +58,17 @@ class Blocknet_AIO_GUI(ctk.CTk):
                     logging.error(f"Error decrypting XLite password: {e}")
                     self.stored_password = None
 
-        self.binary_manager = None
-        self.blocknet_manager = None
-        self.blockdx_manager = None
-        self.xlite_manager = None
+        self.time_disable_button: int = 3000
 
-        self.time_disable_button = 3000
+        self.tooltip_manager: TooltipManager = TooltipManager(self)
 
-        # frames
-        self.bins_download_frame = None
-        self.bins_title_frame = None
-        self.blocknet_core_frame = None
-        self.blocknet_title_frame = None
-        self.blockdx_frame = None
-        self.blockdx_title_frame = None
-        self.xlite_frame = None
-        self.xlite_title_frame = None
+        self.blocknet_manager = BlocknetManager(self)
+        self.binary_manager = BinaryManager(self)
+        self.blockdx_manager = BlockDXManager(self)
+        self.xlite_manager = XliteManager(self)
 
-        self.tooltip_manager = TooltipManager(self)
-
-    async def setup_management_sections(self):
+    async def setup_management_sections(self) -> None:
+        """Initialize and setup all management sections asynchronously."""
         await asyncio.gather(
             self.binary_manager.setup(),
             self.blocknet_manager.setup(),
@@ -83,18 +76,14 @@ class Blocknet_AIO_GUI(ctk.CTk):
             self.xlite_manager.setup()
         )
 
-    def create_managers(self):
-        self.blocknet_manager = BlocknetManager(self, self.blocknet_core_frame, self.blocknet_title_frame)
-        self.binary_manager = BinaryManager(self, self.bins_download_frame, self.bins_title_frame)
-        self.blockdx_manager = BlockDXManager(self, self.blockdx_frame, self.blockdx_title_frame)
-        self.xlite_manager = XliteManager(self, self.xlite_frame, self.xlite_title_frame)
+    def create_managers(self) -> None:
+        """Create instances of manager classes for different components."""
 
-    def init_setup(self):
+    def init_setup(self) -> None:
+        """Initialize the GUI setup, including layout, images, and frame configuration."""
         self.title(widgets_strings.app_title_string)
         self.resizable(False, False)
         self.setup_load_images()
-        self.init_frames()
-        self.create_managers()
         self.after(0, self.check_processes)
         asyncio.run(self.setup_management_sections())
         self.setup_tooltips()
@@ -104,199 +93,196 @@ class Blocknet_AIO_GUI(ctk.CTk):
         signal.signal(signal.SIGINT, self.handle_signal)
         signal.signal(signal.SIGTERM, self.handle_signal)
 
-    def init_frames(self):
-        self.bins_download_frame = ctk.CTkFrame(master=self)
-        self.bins_title_frame = ctk.CTkFrame(self.bins_download_frame)
-
-        self.blocknet_core_frame = ctk.CTkFrame(master=self)
-        self.blocknet_title_frame = ctk.CTkFrame(self.blocknet_core_frame)
-
-        self.blockdx_frame = ctk.CTkFrame(master=self)
-        self.blockdx_title_frame = ctk.CTkFrame(self.blockdx_frame)
-
-        self.xlite_frame = ctk.CTkFrame(master=self)
-        self.xlite_title_frame = ctk.CTkFrame(self.xlite_frame)
-
-    def setup_load_images(self):
+    def setup_load_images(self) -> None:
+        """Load and set up images for use in the GUI."""
         resize = (65, 30)
         self.theme_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "light.png")).resize(resize,
-                                                                                                          PIL.Image.LANCZOS),
-            dark_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "dark.png")).resize(resize,
-                                                                                                        PIL.Image.LANCZOS),
-            size=resize)
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "light.png")).resize(resize,
+                                                                                                      Image.LANCZOS),
+            dark_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "dark.png")).resize(resize,
+                                                                                                    Image.LANCZOS),
+            size=resize
+        )
         resize = (50, 50)
         self.transparent_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "transparent.png")).resize(resize,
-                                                                                                                PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "transparent.png")).resize(resize,
+                                                                                                            Image.LANCZOS)
+        )
         self.start_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "start-50.png")).resize(resize,
-                                                                                                             PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "start-50.png")).resize(resize,
+                                                                                                         Image.LANCZOS)
+        )
         self.start_greyed_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "start-50_greyed.png")).resize(
-                resize,
-                PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "start-50_greyed.png")).resize(resize,
+                                                                                                                Image.LANCZOS)
+        )
         self.stop_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "stop-50.png")).resize(resize,
-                                                                                                            PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "stop-50.png")).resize(resize,
+                                                                                                        Image.LANCZOS)
+        )
         self.stop_greyed_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "stop-50_greyed.png")).resize(
-                resize,
-                PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "stop-50_greyed.png")).resize(resize,
+                                                                                                               Image.LANCZOS)
+        )
         self.delete_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "delete-50.png")).resize(resize,
-                                                                                                              PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "delete-50.png")).resize(resize,
+                                                                                                          Image.LANCZOS)
+        )
         self.delete_greyed_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "delete-50_greyed.png")).resize(
-                resize,
-                PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "delete-50_greyed.png")).resize(resize,
+                                                                                                                 Image.LANCZOS)
+        )
         self.install_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "installer-50.png")).resize(resize,
-                                                                                                                 PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "installer-50.png")).resize(resize,
+                                                                                                             Image.LANCZOS)
+        )
         self.install_greyed_img = ctk.CTkImage(
-            light_image=PIL.Image.open(os.path.join(global_variables.DIRPATH, "img", "installer-50_greyed.png")).resize(
-                resize,
-                PIL.Image.LANCZOS))
+            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "installer-50_greyed.png")).resize(
+                resize, Image.LANCZOS)
+        )
 
-    def setup_tooltips(self):
-        self.tooltip_manager.register_tooltip(self.blocknet_core_frame,
-                                              msg=widgets_strings.tooltip_howtouse,
-                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
-        self.tooltip_manager.register_tooltip(self.blockdx_frame,
-                                              msg=widgets_strings.tooltip_howtouse,
-                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
-        self.tooltip_manager.register_tooltip(self.xlite_frame,
-                                              msg=widgets_strings.tooltip_howtouse,
-                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
-        self.tooltip_manager.register_tooltip(self.bins_download_frame,
-                                              msg=widgets_strings.tooltip_howtouse,
-                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
-        self.tooltip_manager.register_tooltip(self.bins_title_frame,
-                                              msg=widgets_strings.tooltip_bins_title_msg,
-                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
+    def setup_tooltips(self) -> None:
+        """Set up tooltips for various GUI components."""
+        self.tooltip_manager.register_tooltip(self.blocknet_manager.frame_manager.master_frame,
+                                              msg=widgets_strings.tooltip_howtouse, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
+        self.tooltip_manager.register_tooltip(self.blockdx_manager.frame_manager.master_frame,
+                                              msg=widgets_strings.tooltip_howtouse, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
+        self.tooltip_manager.register_tooltip(self.xlite_manager.frame_manager.master_frame,
+                                              msg=widgets_strings.tooltip_howtouse, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.master_frame,
+                                              msg=widgets_strings.tooltip_howtouse, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.title_frame,
+                                              msg=widgets_strings.tooltip_bins_title_msg, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
         self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.header_label,
-                                              msg=widgets_strings.tooltip_bins_title_msg,
-                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
+                                              msg=widgets_strings.tooltip_bins_title_msg, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
         self.tooltip_manager.register_tooltip(self.xlite_manager.frame_manager.xlite_label,
-                                              msg=widgets_strings.tooltip_xlite_label_msg,
-                                              delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
+                                              msg=widgets_strings.tooltip_xlite_label_msg, delay=1.0, border_width=2,
+                                              follow=True, bg_color=tooltip_bg_color)
         self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blocknet_label,
-                                              msg=widgets_strings.tooltip_blocknet_core_label_msg, delay=1,
-                                              follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
+                                              msg=widgets_strings.tooltip_blocknet_core_label_msg, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
         self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blockdx_label,
                                               msg=widgets_strings.tooltip_blockdx_label_msg,
                                               delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
                                               justify="left")
         self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.xlite_label,
-                                              msg=widgets_strings.tooltip_xlite_label_msg,
-                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
-        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_blocknet_button,
-                                              msg='', delay=1, width=1, follow=True, bg_color=tooltip_bg_color,
-                                              border_width=2, justify="left")
-        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_blockdx_button,
-                                              msg=global_variables.blockdx_release_url,
+                                              msg=widgets_strings.tooltip_xlite_label_msg, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_blocknet_button, msg='',
                                               delay=1, width=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
                                               justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_blockdx_button,
+                                              msg=global_variables.blockdx_release_url, delay=1, width=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
         self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_xlite_button,
-                                              msg=global_variables.xlite_release_url,
+                                              msg=global_variables.xlite_release_url, delay=1, follow=True,
+                                              bg_color=tooltip_bg_color, border_width=2, justify="left")
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blocknet_start_close_button, msg='',
                                               delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
                                               justify="left")
-        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blocknet_start_close_button,
-                                              msg='',
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blockdx_start_close_button, msg='',
                                               delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
                                               justify="left")
-        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blockdx_start_close_button,
-                                              msg='',
-                                              delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
-                                              justify="left")
-        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.xlite_toggle_execution_button,
-                                              msg='',
+        self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.xlite_toggle_execution_button, msg='',
                                               delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
                                               justify="left")
         self.tooltip_manager.register_tooltip(self.blocknet_manager.frame_manager.label,
-                                              msg=widgets_strings.tooltip_blocknet_core_label_msg,
-                                              delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
+                                              msg=widgets_strings.tooltip_blocknet_core_label_msg, delay=1.0,
+                                              border_width=2, follow=True, bg_color=tooltip_bg_color)
         self.tooltip_manager.register_tooltip(self.blockdx_manager.frame_manager.label,
-                                              msg=widgets_strings.tooltip_blockdx_label_msg,
-                                              delay=1.0, border_width=2, follow=True, bg_color=tooltip_bg_color)
+                                              msg=widgets_strings.tooltip_blockdx_label_msg, delay=1.0, border_width=2,
+                                              follow=True, bg_color=tooltip_bg_color)
 
-    def init_grid(self):
-        x = 0
-        y = 0
-        padx_main_frame = 10
-        pady_main_frame = 5
+    def init_grid(self) -> None:
+        """Initialize the grid layout for GUI components."""
+        x: int = 0
+        y: int = 0
+        padx_main_frame: int = 10
+        pady_main_frame: int = 5
         self.grid_frames(x, y, padx_main_frame, pady_main_frame)
         self.binary_manager.frame_manager.grid_widgets(x, y)
         self.blocknet_manager.frame_manager.grid_widgets(x, y)
         self.blockdx_manager.frame_manager.grid_widgets(x, y)
         self.xlite_manager.frame_manager.grid_widgets(x, y)
 
-    def grid_frames(self, x, y, padx_main_frame, pady_main_frame):
-        self.bins_download_frame.grid(row=x, column=y, padx=padx_main_frame, pady=pady_main_frame,
-                                      sticky=MAIN_FRAMES_STICKY)
+    def grid_frames(self, x: int, y: int, padx_main_frame: int, pady_main_frame: int) -> None:
+        """Grid layout for frames in the GUI."""
+        self.binary_manager.frame_manager.master_frame.grid(row=x, column=y, padx=padx_main_frame, pady=pady_main_frame,
+                                                            sticky=MAIN_FRAMES_STICKY)
         # bin panel have 5 buttons per row
-        self.bins_title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
+        self.binary_manager.frame_manager.title_frame.grid(row=0, column=0, columnspan=5, padx=5, pady=5,
+                                                           sticky=TITLE_FRAMES_STICKY)
 
-        self.blocknet_core_frame.grid(row=x + 1, column=y, padx=padx_main_frame, pady=pady_main_frame,
-                                      sticky=MAIN_FRAMES_STICKY)
-        self.blocknet_title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
+        self.blocknet_manager.frame_manager.master_frame.grid(row=x + 1, column=y, padx=padx_main_frame,
+                                                              pady=pady_main_frame,
+                                                              sticky=MAIN_FRAMES_STICKY)
+        self.blocknet_manager.frame_manager.title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5,
+                                                             sticky=TITLE_FRAMES_STICKY)
 
-        self.blockdx_frame.grid(row=x + 2, column=y, padx=padx_main_frame, pady=pady_main_frame,
-                                sticky=MAIN_FRAMES_STICKY)
-        self.blockdx_title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
+        self.blockdx_manager.frame_manager.master_frame.grid(row=x + 2, column=y, padx=padx_main_frame,
+                                                             pady=pady_main_frame,
+                                                             sticky=MAIN_FRAMES_STICKY)
+        self.blockdx_manager.frame_manager.title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5,
+                                                            sticky=TITLE_FRAMES_STICKY)
 
-        self.xlite_frame.grid(row=x + 3, column=y, padx=padx_main_frame, pady=pady_main_frame,
-                              sticky=MAIN_FRAMES_STICKY)
-        self.xlite_title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY)
+        self.xlite_manager.frame_manager.master_frame.grid(row=x + 3, column=y, padx=padx_main_frame,
+                                                           pady=pady_main_frame,
+                                                           sticky=MAIN_FRAMES_STICKY)
+        self.xlite_manager.frame_manager.title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5,
+                                                          sticky=TITLE_FRAMES_STICKY)
 
-    def handle_signal(self, signum, frame):
-        print("Signal {} received.".format(signum))
+    def handle_signal(self, signum: int, frame) -> None:
+        """Handle signals like SIGINT and SIGTERM."""
+        print(f"Signal {signum} received.")
         self.on_close()
 
-    def on_close(self):
+    def on_close(self) -> None:
+        """Handle application close event."""
         logging.info("Closing application...")
         utils.terminate_all_threads()
         logging.info("Threads terminated.")
         os._exit(0)
 
-    def adjust_theme(self):
+    def adjust_theme(self) -> None:
+        """Adjust the theme of the application based on the configuration."""
         if self.cfg and 'theme' in self.cfg:
-            actual = ctk.get_appearance_mode()
+            actual: str = ctk.get_appearance_mode()
             if self.cfg['theme'] != actual:
                 if actual == "Dark":
-                    new_theme = "Light"
+                    new_theme: str = "Light"
                 else:
-                    new_theme = "Dark"
+                    new_theme: str = "Dark"
                 ctk.set_appearance_mode(new_theme)
 
-    def switch_theme_command(self):
-        actual = ctk.get_appearance_mode()
+    def switch_theme_command(self) -> None:
+        """Switch the application theme to the opposite of the current theme."""
+        actual: str = ctk.get_appearance_mode()
         if actual == "Dark":
-            new_theme = "Light"
+            new_theme: str = "Light"
         else:
-            new_theme = "Dark"
+            new_theme: str = "Dark"
         ctk.set_appearance_mode(new_theme)
         utils.save_cfg_json("theme", new_theme)
 
-    def check_processes(self):
-        blocknet_bin = global_variables.blocknet_bin
-        blockdx_bin = global_variables.blockdx_bin[-1] if global_variables.system == "Darwin" \
+    def check_processes(self) -> None:
+        """Check for running processes related to Blocknet, BlockDX, and Xlite."""
+        blocknet_bin: str = global_variables.blocknet_bin
+        blockdx_bin: str = global_variables.blockdx_bin[-1] if global_variables.system == "Darwin" \
             else global_variables.blockdx_bin
-        xlite_bin = global_variables.xlite_bin[-1] if global_variables.system == "Darwin" \
+        xlite_bin: str = global_variables.xlite_bin[-1] if global_variables.system == "Darwin" \
             else global_variables.xlite_bin
-        xlite_daemon_bin = global_variables.xlite_daemon_bin
-        blocknet_processes = []
-        blockdx_processes = []
-        xlite_processes = []
-        xlite_daemon_processes = []
+        xlite_daemon_bin: str = global_variables.xlite_daemon_bin
+
+        blocknet_processes: list = []
+        blockdx_processes: list = []
+        xlite_processes: list = []
+        xlite_daemon_processes: list = []
 
         try:
             # Get all processes
@@ -332,10 +318,11 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.xlite_manager.daemon_process_running = bool(xlite_daemon_processes)
         self.xlite_manager.utility.xlite_daemon_pids = xlite_daemon_processes
 
-        self.after(2000, self.check_processes)
+        self.after(2000, func=self.check_processes)
 
 
-def run_gui():
+def run_gui() -> None:
+    """Run the Blocknet AIO GUI application."""
     app = Blocknet_AIO_GUI()
     # try:
     app.init_setup()

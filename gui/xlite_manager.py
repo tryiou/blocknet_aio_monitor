@@ -6,10 +6,8 @@ from utilities.xlite_util import XliteUtility
 
 
 class XliteManager:
-    def __init__(self, root_gui, master_frame, title_frame):
+    def __init__(self, root_gui):
         self.root_gui = root_gui
-        self.title_frame = title_frame
-        self.master_frame = master_frame
 
         self.frame_manager = None
         self.utility = XliteUtility()
@@ -20,7 +18,7 @@ class XliteManager:
         self.stored_password = None
 
     async def setup(self):
-        self.frame_manager = XliteFrameManager(self, self.master_frame, self.title_frame)
+        self.frame_manager = XliteFrameManager(self)
         self.root_gui.after(0, self.update_status_xlite)
 
     def refresh_xlite_confs(self):
