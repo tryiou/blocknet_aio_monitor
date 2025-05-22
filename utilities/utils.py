@@ -4,6 +4,7 @@ import os
 from threading import enumerate, current_thread
 
 import customtkinter as ctk
+import psutil
 from cryptography.fernet import Fernet
 
 from utilities import global_variables
@@ -116,3 +117,48 @@ def disable_button(button, img=None):
         button.configure(state=ctk.DISABLED)
     if img:
         button.configure(image=img)
+
+
+def processes_check():
+    """Check for running processes related to Blocknet, BlockDX, and Xlite."""
+
+    # Initialize process lists
+    process_lists: dict = {
+        global_variables.blocknet_bin: [],
+        global_variables.blockdx_bin: [],
+        global_variables.xlite_bin: [],
+        global_variables.xlite_daemon_bin: []
+    }
+
+    # Process all running processes
+    for proc in psutil.process_iter(['pid', 'name', 'status']):
+        pid = proc.info['pid']
+        name = proc.info['name']
+        status = proc.info['status']
+
+        # Check against each target process type
+        for target_name, process_list in process_lists.items():
+            result_pid = handle_process(pid, name, status, target_name)
+            if result_pid is not None:
+                process_list.append(result_pid)
+                break  # Process matched, no need to check other types
+
+    return (
+        process_lists[global_variables.blocknet_bin],
+        process_lists[global_variables.blockdx_bin],
+        process_lists[global_variables.xlite_bin],
+        process_lists[global_variables.xlite_daemon_bin]
+    )
+
+
+def handle_process(pid, name, status, target_name):
+    """Helper function to handle individual process logic."""
+    if name == target_name:
+        if status == "zombie":
+            # the app was closed by user manually, clean zombie process
+            process = psutil.Process(pid)
+            process.wait()
+            return None  # Don't add zombie processes to the list
+        else:
+            return pid
+    return None

@@ -5,7 +5,6 @@ import signal
 
 import customtkinter as ctk
 from PIL import Image
-from psutil import process_iter
 
 import widgets_strings
 from gui.binary_manager import BinaryManager
@@ -268,37 +267,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
         utils.save_cfg_json("theme", new_theme)
 
     def check_processes(self) -> None:
-        """Check for running processes related to Blocknet, BlockDX, and Xlite."""
-        blocknet_bin: str = global_variables.blocknet_bin
-        blockdx_bin: str = global_variables.blockdx_bin[-1] if global_variables.system == "Darwin" \
-            else global_variables.blockdx_bin
-        xlite_bin: str = global_variables.xlite_bin[-1] if global_variables.system == "Darwin" \
-            else global_variables.xlite_bin
-        xlite_daemon_bin: str = global_variables.xlite_daemon_bin
-
-        blocknet_processes: list = []
-        blockdx_processes: list = []
-        xlite_processes: list = []
-        xlite_daemon_processes: list = []
-
-        try:
-            # Get all processes
-            for proc in process_iter(['pid', 'name']):
-                # Check if any process matches the Blocknet process name
-                if blocknet_bin == proc.info['name']:
-                    blocknet_processes.append(proc.info['pid'])
-                # Check if any process matches the Block DX process name
-                if blockdx_bin == proc.info['name']:
-                    blockdx_processes.append(proc.info['pid'])
-                # Check if any process matches the Xlite process name
-                if xlite_bin == proc.info['name']:
-                    xlite_processes.append(proc.info['pid'])
-                # Check if any process matches the Xlite-daemon process name
-                if xlite_daemon_bin == proc.info['name']:
-                    xlite_daemon_processes.append(proc.info['pid'])
-        except Exception as e:
-            logging.warning(f"Error while checking processes: {e}")
-
+        blocknet_processes, blockdx_processes, xlite_processes, xlite_daemon_processes = utils.processes_check()
         # Update Blocknet process status and store the PIDs
         self.blocknet_manager.blocknet_process_running = bool(blocknet_processes)
         self.blocknet_manager.utility.blocknet_pids = blocknet_processes
@@ -315,7 +284,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.xlite_manager.daemon_process_running = bool(xlite_daemon_processes)
         self.xlite_manager.utility.xlite_daemon_pids = xlite_daemon_processes
 
-        self.after(2000, func=self.check_processes)
+        self.after(5000, func=self.check_processes)
 
 
 def run_gui() -> None:

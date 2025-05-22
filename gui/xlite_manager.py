@@ -15,7 +15,6 @@ class XliteManager:
         self.version = [global_variables.xlite_release_url.split('/')[7]]
         self.process_running = False
         self.daemon_process_running = False
-        self.stored_password = None
 
     async def setup(self):
         self.frame_manager = XliteFrameManager(self)

@@ -94,7 +94,7 @@ class XliteFrameManager:
             # Prevent the right-click event from propagating further
             utils.remove_cfg_json_key("salt")
             utils.remove_cfg_json_key("xl_pass")
-            self.parent.stored_password = None
+            self.root_gui.stored_password = None
             # Delete CC_WALLET_PASS variable
             if "CC_WALLET_PASS" in os.environ:
                 os.environ.pop("CC_WALLET_PASS")
@@ -120,7 +120,7 @@ class XliteFrameManager:
                 utils.save_cfg_json(key="salt", data=encryption_key.decode())
                 utils.save_cfg_json(key="xl_pass", data=salted_pass)
                 # Store the password in a variable
-                self.parent.stored_password = password
+                self.root_gui.stored_password = password
             else:
                 logging.info("No password entered.")
             # Perform actions for left-click (if needed)
@@ -145,7 +145,7 @@ class XliteFrameManager:
 
     def update_xlite_store_password_button(self):
         # xlite_store_password_button
-        var = widgets_strings.xlite_stored_password_string if self.parent.stored_password else widgets_strings.xlite_store_password_string
+        var = widgets_strings.xlite_stored_password_string if self.root_gui.stored_password else widgets_strings.xlite_store_password_string
         self.store_password_button_string_var.set(var)
 
     def update_xlite_daemon_process_status(self):
