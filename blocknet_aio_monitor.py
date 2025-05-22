@@ -62,10 +62,10 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
         self.tooltip_manager: TooltipManager = TooltipManager(self)
 
-        self.blocknet_manager = BlocknetManager(self)
-        self.binary_manager = BinaryManager(self)
-        self.blockdx_manager = BlockDXManager(self)
-        self.xlite_manager = XliteManager(self)
+        self.blocknet_manager: BlocknetManager = BlocknetManager(self)
+        self.binary_manager: BinaryManager = BinaryManager(self)
+        self.blockdx_manager: BlockDXManager = BlockDXManager(self)
+        self.xlite_manager: XliteManager = XliteManager(self)
 
     async def setup_management_sections(self) -> None:
         """Initialize and setup all management sections asynchronously."""
@@ -75,9 +75,6 @@ class Blocknet_AIO_GUI(ctk.CTk):
             self.blockdx_manager.setup(),
             self.xlite_manager.setup()
         )
-
-    def create_managers(self) -> None:
-        """Create instances of manager classes for different components."""
 
     def init_setup(self) -> None:
         """Initialize the GUI setup, including layout, images, and frame configuration."""
