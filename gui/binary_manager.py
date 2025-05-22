@@ -24,7 +24,7 @@ class BinaryFileHandler(FileSystemEventHandler):
         """
         super().__init__()
         self.binary_manager: 'BinaryManager' = binary_manager
-        self.max_delay: float = 2  # seconds
+        self.max_delay: float = 5  # seconds
         self.last_run: float = 0
         self.scheduled: bool = False
 
@@ -226,7 +226,7 @@ class BinaryManager:
                             shutil.rmtree(item_path)
 
     def check_and_update_aio_folder(self):
-        logging.info("check_and_update_aio_folder")
+        # logging.info("check_and_update_aio_folder")
 
         # Get system information and versions
         is_darwin = global_variables.system == "Darwin"
