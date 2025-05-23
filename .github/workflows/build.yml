@@ -99,13 +99,16 @@ jobs:
         run: |
           brew update
           brew upgrade
-          brew install python@3.10
-          brew install python-tk@3.10
-          python3.10 -m pip install --upgrade pip
+          brew install python
+          brew install python-tk
+          python3 -m pip install --upgrade pip
+          # brew install python@3.10
+          # brew install python-tk@3.10
+          # python3.10 -m pip install --upgrade pip
 
       - name: Install dependencies / Build executable on macOS
         run: |
-          python3.10 -m venv venv
+          python3 -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
           pip install pyinstaller
