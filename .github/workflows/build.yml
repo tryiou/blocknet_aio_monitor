@@ -98,7 +98,8 @@ jobs:
       - name: Set up Python using Homebrew
         run: |
           brew update
-          brew upgrade
+          brew upgrade || true
+          brew link --overwrite python@3.12
           brew install python
           brew install python-tk
           python3 -m pip install --upgrade pip
