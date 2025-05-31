@@ -53,6 +53,7 @@ jobs:
           scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
 
           cmd=(pyinstaller --noconfirm --onefile \
+            --hidden-import='PIL._tkinter_finder' \
             --add-data "theme:theme" \
             --add-data "img:img" \
             --clean \

@@ -122,12 +122,18 @@ def disable_button(button, img=None):
 def processes_check():
     """Check for running processes related to Blocknet, BlockDX, and Xlite."""
 
+    blocknet_bin = global_variables.blocknet_bin
+    blockdx_bin = global_variables.blockdx_bin[-1] if global_variables.system == "Darwin" \
+        else global_variables.blockdx_bin
+    xlite_bin = global_variables.xlite_bin[-1] if global_variables.system == "Darwin" \
+        else global_variables.xlite_bin
+    xlite_daemon_bin = global_variables.xlite_daemon_bin
     # Initialize process lists
     process_lists: dict = {
-        global_variables.blocknet_bin: [],
-        global_variables.blockdx_bin: [],
-        global_variables.xlite_bin: [],
-        global_variables.xlite_daemon_bin: []
+        blocknet_bin: [],
+        blockdx_bin: [],
+        xlite_bin: [],
+        xlite_daemon_bin: []
     }
 
     # Process all running processes
