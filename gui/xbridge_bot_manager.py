@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import os
 import subprocess
@@ -70,10 +71,40 @@ class XBridgeBotManager:
             self.current_branch = branch
             logging.info(f"Successfully updated to branch {branch}")
         except Exception as e:
-            logging.error(f"Failed to update: {str(e)}", exc_info=True)
+            error_msg = str(e)
+            if "conflict prevents checkout" in error_msg:
+                self.handle_config_folder_rename()
+            else:
+                logging.error(f"Failed to update: {error_msg}")
             logging.debug(f"Repository URL: {self.repo_url}")
             logging.debug(f"Target directory: {self.target_dir}")
             logging.debug(f"Branch: {branch}")
+
+    def handle_config_folder_rename(self):
+        logging.info("Successfully updated after resolving config conflict")
+        config_path = os.path.join(self.target_dir, "config")
+
+        if not os.path.exists(config_path):
+            logging.warning("Config folder not found, cannot rename")
+            return
+
+        # Generate a unique backup folder name with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        config_bak_path = os.path.join(self.target_dir, f"config_bak_{timestamp}")
+
+        try:
+            os.rename(config_path, config_bak_path)
+            logging.info(f"Renamed config folder to {config_bak_path} to resolve conflict")
+        except Exception as e:
+            logging.error(f"Failed to rename config folder: {e}")
+            return
+
+        # Retry setup once
+        try:
+            self.repo_management.setup()
+            logging.info("Successfully updated after resolving config conflict")
+        except Exception as retry_e:
+            logging.error(f"Failed to update even after config rename: {retry_e}")
 
     def delete_local_repo(self) -> None:
         """Delete local repository"""
