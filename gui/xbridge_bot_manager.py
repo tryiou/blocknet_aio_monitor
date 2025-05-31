@@ -1,9 +1,9 @@
-from datetime import datetime
 import logging
 import os
 import subprocess
 import threading
 import time
+from datetime import datetime
 
 from utilities.git_repo_management import GitRepoManagement
 from utilities.global_variables import aio_folder
@@ -72,7 +72,7 @@ class XBridgeBotManager:
             logging.info(f"Successfully updated to branch {branch}")
         except Exception as e:
             error_msg = str(e)
-            if "conflict prevents checkout" in error_msg:
+            if "conflict prevents checkout" in error_msg or "conflicts prevent checkout" in error_msg:
                 self.handle_config_folder_rename()
             else:
                 logging.error(f"Failed to update: {error_msg}")

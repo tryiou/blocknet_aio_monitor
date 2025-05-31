@@ -366,7 +366,7 @@ class GitRepoManagement:
         self.git_repo = GitRepository(repo_url, self.target_dir, branch)
         self.venv = None
 
-    def setup(self) -> bool:
+    def setup(self) -> None:
         """
         Clone/update the repository and set up the virtual environment.
 
