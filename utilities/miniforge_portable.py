@@ -78,14 +78,10 @@ class PortablePythonInstaller:
         # logging.info(f"🔹 pip: {python_bin} -m pip")
         # logging.info(f"🔹 venv: {python_bin} -m venv {self.venv}")
         # After successful installation
-        if self.system != "Windows":
+        if self.system == "Linux":
+            # fix for tkinter low quality display. linux only.
             try:
-                # Construct conda path based on OS
-                if self.system == "Windows":
-                    conda_path = install_path / "Scripts" / "conda.exe"
-                else:
-                    conda_path = install_path / "bin" / "conda"
-
+                conda_path = install_path / "bin" / "conda"
                 # Run conda install command, update tk packages for GUI app
                 logging.info("Installing tk with xft_* support...")
                 conda_cmd = [str(conda_path), "install", "-c", "conda-forge", "tk=*=xft_*", "-y"]

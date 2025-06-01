@@ -7,23 +7,21 @@ from gui.xbridge_bot_manager import XBridgeBotManager
 
 
 class BinaryFrameManager:
-    def __init__(self, parent, master_frame, title_frame):
+    def __init__(self, parent):
         self.root_gui = parent.root_gui
         self.parent = parent
-        self.master_frame = master_frame
-        self.title_frame = title_frame
-        self.xbridge_bot_manager = XBridgeBotManager()
+        self.master_frame = ctk.CTkFrame(master=self.root_gui)
+        self.title_frame = ctk.CTkFrame(self.master_frame)
 
+        self.xbridge_bot_manager = XBridgeBotManager()
         self.header_label = ctk.CTkLabel(self.title_frame,
                                          text="Binaries Control panel:",
                                          anchor=HEADER_FRAMES_STICKY,
                                          width=BINS_FRAME_WIDTH)
         self.title_frame.columnconfigure(1, weight=1)
-
         self.found_label = ctk.CTkLabel(self.title_frame,
                                         text="Found:",
                                         anchor='s')
-
         self.button_switch_theme = ctk.CTkButton(self.title_frame,
                                                  image=self.root_gui.theme_img,
                                                  command=self.root_gui.switch_theme_command,
@@ -167,6 +165,14 @@ class BinaryFrameManager:
             utilities.utils.disable_button(self.install_delete_bots_button, self.root_gui.install_greyed_img)
             utilities.utils.disable_button(self.bots_toggle_execution_button, self.root_gui.start_greyed_img)
             self.xbridge_bot_manager.toggle_execution(branch)
+            if not self.xbridge_bot_manager.repo_management.venv:
+                self.run_after_setup()
+
+    def run_after_setup(self):
+        if self.xbridge_bot_manager.repo_management.venv:
+            self.xbridge_bot_manager.toggle_execution()
+        else:
+            self.root_gui.after(1000, self.run_after_setup)
 
     def grid_widgets(self, x, y):
         # bin

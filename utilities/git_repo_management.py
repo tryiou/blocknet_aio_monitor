@@ -264,6 +264,11 @@ class GitRepository:
                     logging.error(f"Remote branch '{branch}' not found in '{remote_name}'")
                     return
 
+                current_branch = self.repo.head.shorthand
+                logging.info(f"current_branch: {current_branch}, self.remote_branch: {self.remote_branch}")
+                if current_branch != self.remote_branch:
+                    self._checkout_branch()
+
                 # Ensure local branch exists
                 try:
                     repo_branch = self.repo.lookup_reference(f"refs/heads/{branch}")
@@ -361,7 +366,7 @@ class GitRepoManagement:
         self.git_repo = GitRepository(repo_url, self.target_dir, branch)
         self.venv = None
 
-    def setup(self) -> bool:
+    def setup(self) -> None:
         """
         Clone/update the repository and set up the virtual environment.
 
@@ -391,11 +396,9 @@ class GitRepoManagement:
             self.venv.install_requirements(self.target_dir / "requirements.txt")
 
             logging.info(f"Repository setup complete")
-            return True
 
         except Exception as e:
-            logging.error(f"Repository setup failed: {e}")
-            return False
+            raise Exception(f"Repository setup failed: {e}")
 
     def run_script(self, script_path: str, script_args: Optional[List[str]] = None,
                    timeout: Optional[int] = None) -> Optional[subprocess.Popen]:

@@ -2,7 +2,7 @@
 aio_blocknet_data_path = {
     "Windows": "%appdata%\\AIO_Blocknet",
     "Linux": "~/.AIO_Blocknet",
-    "Darwin": "~/Library/Application Support/AIO_Blocknet"
+    "Darwin": "~/Library/AIO_Blocknet"
 }
 
 blocknet_bootstrap_url = "https://utils.blocknet.org/Blocknet.zip"
@@ -72,7 +72,6 @@ xlite_bin_name = {
     "Windows": "XLite.exe",
     "Linux": "xlite",
     "Darwin": ["XLite.app", "Contents", "MacOS", "XLite"]
-    # ["BLOCK-DX-1.9.5-mac", "BLOCK DX.app", "Contents", "MacOS"]  # List of folders for Darwin
 }
 xlite_daemon_bin_name = {
     ("Linux", "x86_64"): "xlite-daemon-linux64",

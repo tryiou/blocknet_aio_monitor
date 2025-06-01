@@ -1,18 +1,71 @@
 import logging
 import os
 import shutil
+import time
 from threading import Thread
+
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.observers import Observer
 
 import widgets_strings
 from gui.binary_frame_manager import BinaryFrameManager
 from utilities import utils, global_variables
 
 
+class BinaryFileHandler(FileSystemEventHandler):
+    """
+    Handles file modification events with rate limiting for binary updates.
+    """
+
+    def __init__(self, binary_manager: 'BinaryManager'):
+        """
+        Initializes the handler.
+        :param binary_manager: The manager responsible for binary updates.
+        """
+        super().__init__()
+        self.binary_manager: 'BinaryManager' = binary_manager
+        self.max_delay: float = 5  # seconds
+        self.last_run: float = 0
+        self.scheduled: bool = False
+
+    def on_modified(self, event: 'FileSystemEvent') -> None:
+        """
+        Called when a file is modified. Executes binary check/update with rate limiting.
+        """
+        # logging.info("File modified detected: %s", event.src_path)
+
+        if self.scheduled:
+            # logging.debug("Update already scheduled, skipping immediate execution.")
+            return
+
+        time_since_last = time.time() - self.last_run
+        # logging.debug("Time since last run: %.2f seconds", time_since_last)
+
+        if time_since_last >= self.max_delay:
+            # Execute immediately
+            # logging.info("Executing check_and_update_aio_folder immediately.")
+            self.binary_manager.check_and_update_aio_folder()
+            self.last_run = time.time()
+        else:
+            # Schedule for later
+            delay_ms = int((self.max_delay - time_since_last) * 1000)
+            # logging.info("Scheduling check_and_update_aio_folder in %d ms.", delay_ms)
+            self.scheduled = True
+            self.binary_manager.root_gui.after(delay_ms, self._execute_scheduled)
+
+    def _execute_scheduled(self) -> None:
+        """
+        Executes the scheduled update and resets the schedule flag.
+        """
+        # logging.info("Executing scheduled check_and_update_aio_folder.")
+        self.binary_manager.check_and_update_aio_folder()
+        self.last_run = time.time()
+        self.scheduled = False
+
+
 class BinaryManager:
-    def __init__(self, root_gui, master_frame, title_frame):
+    def __init__(self, root_gui):
         self.root_gui = root_gui
-        self.title_frame = title_frame
-        self.master_frame = master_frame
         self.frame_manager = None
 
         self.disable_start_blocknet_button = False
@@ -23,12 +76,17 @@ class BinaryManager:
         self.download_blockdx_thread = None
         self.download_xlite_thread = None
 
+        self.observer = Observer()
+        self.handler = BinaryFileHandler(self)
+        self.observer.schedule(self.handler, global_variables.aio_folder, recursive=False)
+        self.observer.start()
+
         self.tooltip_manager = self.root_gui.tooltip_manager
 
     async def setup(self):
-        self.frame_manager = BinaryFrameManager(self, self.master_frame, self.title_frame)
+        self.frame_manager = BinaryFrameManager(self)
 
-        self.root_gui.after(0, self.bins_check_aio_folder)
+        self.root_gui.after(0, self.check_and_update_aio_folder)
         self.root_gui.after(0, self.update_blocknet_buttons)
         self.root_gui.after(0, self.update_blockdx_buttons)
         self.root_gui.after(0, self.update_xlite_buttons)
@@ -71,11 +129,11 @@ class BinaryManager:
         )
 
     def start_or_close_xlite(self):
-        if not self.root_gui.xlite_manager.process_running:
-            if self.root_gui.stored_password:
-                env_vars = [{"CC_WALLET_PASS": self.root_gui.stored_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
-            else:
-                env_vars = []
+        if not self.root_gui.xlite_manager.process_running and self.root_gui.stored_password:
+            env_vars = [{"CC_WALLET_PASS": self.root_gui.stored_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
+        else:
+            env_vars = []
+
         self._start_or_close_binary(
             process_running=self.root_gui.xlite_manager.process_running,
             stop_func=self.root_gui.xlite_manager.utility.close_xlite,
@@ -167,8 +225,8 @@ class BinaryManager:
                             logging.info(f"deleting {item_path}")
                             shutil.rmtree(item_path)
 
-    def bins_check_aio_folder(self):
-        # logging.info("bins_check_aio_folder")
+    def check_and_update_aio_folder(self):
+        # logging.info("check_and_update_aio_folder")
 
         # Get system information and versions
         is_darwin = global_variables.system == "Darwin"
@@ -217,16 +275,13 @@ class BinaryManager:
             # logging.info(app_info)
             app_info["boolvar"].set(app_info["found"])
 
-        # Schedule next check
-        self.root_gui.after(5000, self.bins_check_aio_folder)
-
     def _prune_version(self, version):
         """Remove 'v' prefix from version string."""
         return version[0].replace('v', '')
 
     def _log_incorrect_target(self, target):
         """Log incorrect version found."""
-        # logging.info(f"incorrect version: {target}")
+        logging.info(f"incorrect version: {target}")
         # shutil.rmtree(target) if os.path.isdir(target) else os.remove(target)
         return
 
@@ -244,69 +299,6 @@ class BinaryManager:
                 app_info["found"] = True
             else:
                 self._log_incorrect_target(full_path)
-
-    def bins_check_aio_folder_original(self):
-        blocknet_pruned_version = self.root_gui.blocknet_manager.version[0].replace('v', '')
-        blockdx_pruned_version = self.root_gui.blockdx_manager.version[0].replace('v', '')
-        xlite_pruned_version = self.root_gui.xlite_manager.version[0].replace('v', '')
-
-        blocknet_present = False
-        blockdx_present = False
-        xlite_present = False
-
-        for item in os.listdir(global_variables.aio_folder):
-            if global_variables.system == "Darwin":
-                blockdx_filename = os.path.basename(global_variables.blockdx_release_url)
-                xlite_filename = os.path.basename(global_variables.xlite_release_url)
-                item_path = os.path.join(global_variables.aio_folder, item)
-                if os.path.isdir(item_path):
-                    if 'blocknet-' in item:
-                        if blocknet_pruned_version in item:
-                            blocknet_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            shutil.rmtree(item_path)
-                elif os.path.isfile(item_path):
-                    if 'BLOCK-DX-' in item:
-                        if blockdx_filename in item:
-                            blockdx_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            os.remove(item_path)
-                    elif 'XLite-' in item:
-                        if xlite_filename in item:
-                            xlite_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            os.remove(item_path)
-            else:
-                item_path = os.path.join(global_variables.aio_folder, item)
-                if os.path.isdir(item_path):
-                    # if a wrong version is found, delete it.
-                    if 'blocknet-' in item:
-                        if blocknet_pruned_version in item:
-                            blocknet_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            shutil.rmtree(item_path)
-                    elif 'BLOCK-DX-' in item:
-                        if blockdx_pruned_version in item:
-                            blockdx_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            shutil.rmtree(item_path)
-                    elif 'XLite-' in item:
-                        if xlite_pruned_version in item:
-                            xlite_present = True
-                        else:
-                            logging.info(f"deleting outdated version: {item_path}")
-                            shutil.rmtree(item_path)
-
-        self.root_gui.binary_manager.frame_manager.blocknet_installed_boolvar.set(blocknet_present)
-        self.root_gui.binary_manager.frame_manager.blockdx_installed_boolvar.set(blockdx_present)
-        self.root_gui.binary_manager.frame_manager.xlite_installed_boolvar.set(xlite_present)
-
-        self.root_gui.after(2000, self.bins_check_aio_folder_original)
 
     def update_blocknet_buttons(self):
         # BLOCKNET

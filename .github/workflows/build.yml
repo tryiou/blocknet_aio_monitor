@@ -53,6 +53,7 @@ jobs:
           scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
 
           cmd=(pyinstaller --noconfirm --onefile \
+            --hidden-import='PIL._tkinter_finder' \
             --add-data "theme:theme" \
             --add-data "img:img" \
             --clean \
@@ -97,13 +98,19 @@ jobs:
 
       - name: Set up Python using Homebrew
         run: |
-          brew install python@3.10
-          brew install python-tk@3.10
-          python3.10 -m pip install --upgrade pip
+          brew update
+          brew upgrade || true
+          brew link --overwrite python@3.12
+          brew install python
+          brew install python-tk
+          python3 -m pip install --upgrade pip
+          # brew install python@3.10
+          # brew install python-tk@3.10
+          # python3.10 -m pip install --upgrade pip
 
       - name: Install dependencies / Build executable on macOS
         run: |
-          python3.10 -m venv venv
+          python3 -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
           pip install pyinstaller

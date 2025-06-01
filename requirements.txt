@@ -5,3 +5,4 @@ customtkinter~=5.2.2
 CTkToolTip~=0.8
 pillow
 pygit2==1.18.0
+watchdog

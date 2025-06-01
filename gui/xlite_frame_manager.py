@@ -12,10 +12,12 @@ from utilities import utils
 
 
 class XliteFrameManager:
-    def __init__(self, parent, master_frame, title_frame):
+    def __init__(self, parent):
+        self.root_gui = parent.root_gui
         self.parent = parent
-        self.master_frame = master_frame
-        self.title_frame = title_frame
+        self.master_frame = ctk.CTkFrame(master=self.root_gui)
+        self.title_frame = ctk.CTkFrame(self.master_frame)
+
         self.xlite_label = ctk.CTkLabel(self.title_frame,
                                         text=widgets_strings.xlite_frame_title_string,
                                         anchor=HEADER_FRAMES_STICKY,
@@ -92,7 +94,7 @@ class XliteFrameManager:
             # Prevent the right-click event from propagating further
             utils.remove_cfg_json_key("salt")
             utils.remove_cfg_json_key("xl_pass")
-            self.parent.stored_password = None
+            self.root_gui.stored_password = None
             # Delete CC_WALLET_PASS variable
             if "CC_WALLET_PASS" in os.environ:
                 os.environ.pop("CC_WALLET_PASS")
@@ -118,7 +120,7 @@ class XliteFrameManager:
                 utils.save_cfg_json(key="salt", data=encryption_key.decode())
                 utils.save_cfg_json(key="xl_pass", data=salted_pass)
                 # Store the password in a variable
-                self.parent.stored_password = password
+                self.root_gui.stored_password = password
             else:
                 logging.info("No password entered.")
             # Perform actions for left-click (if needed)
@@ -143,7 +145,7 @@ class XliteFrameManager:
 
     def update_xlite_store_password_button(self):
         # xlite_store_password_button
-        var = widgets_strings.xlite_stored_password_string if self.parent.stored_password else widgets_strings.xlite_store_password_string
+        var = widgets_strings.xlite_stored_password_string if self.root_gui.stored_password else widgets_strings.xlite_store_password_string
         self.store_password_button_string_var.set(var)
 
     def update_xlite_daemon_process_status(self):

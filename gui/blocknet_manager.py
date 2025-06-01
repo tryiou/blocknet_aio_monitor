@@ -4,11 +4,9 @@ from utilities.blocknet_util import BlocknetUtility
 
 
 class BlocknetManager:
-    def __init__(self, root_gui, master_frame, title_frame):
+    def __init__(self, root_gui):
         self.frame_manager = None
         self.root_gui = root_gui
-        self.title_frame = title_frame
-        self.master_frame = master_frame
         self.version = [global_variables.blocknet_release_url.split('/')[7]]
         self.blocknet_process_running = False
 
@@ -17,7 +15,7 @@ class BlocknetManager:
         self.utility = BlocknetUtility(custom_path=self.root_gui.custom_path)
 
     async def setup(self):
-        self.frame_manager = BlocknetCoreFrameManager(self, self.master_frame, self.title_frame)
+        self.frame_manager = BlocknetCoreFrameManager(self)
 
         self.root_gui.after(0, self.update_status_blocknet_core)
 
