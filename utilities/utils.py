@@ -150,10 +150,10 @@ def processes_check():
                 break  # Process matched, no need to check other types
 
     return (
-        process_lists[global_variables.blocknet_bin],
-        process_lists[global_variables.blockdx_bin],
-        process_lists[global_variables.xlite_bin],
-        process_lists[global_variables.xlite_daemon_bin]
+        process_lists[blocknet_bin],
+        process_lists[blockdx_bin],
+        process_lists[xlite_bin],
+        process_lists[xlite_daemon_bin]
     )
 
 
