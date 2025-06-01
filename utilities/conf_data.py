@@ -2,7 +2,7 @@
 aio_blocknet_data_path = {
     "Windows": "%appdata%\\AIO_Blocknet",
     "Linux": "~/.AIO_Blocknet",
-    "Darwin": "~/Library/Application Support/AIO_Blocknet"
+    "Darwin": "~/Library/AIO_Blocknet"
 }
 
 blocknet_bootstrap_url = "https://utils.blocknet.org/Blocknet.zip"
