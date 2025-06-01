@@ -10,9 +10,10 @@ from utilities.global_variables import aio_folder
 
 
 class XBridgeBotManager:
-    def __init__(self, repo_url: str = "https://github.com/tryiou/xbridge_trading_bots", current_branch: str = "main"):
-
-        self.repo_url = repo_url
+    def __init__(self, current_branch: str = "main"):
+        self.author = "tryiou"
+        self.repo_name = "xbridge_trading_bots"
+        self.repo_url = "https://github.com/" + self.author + "/" + self.repo_name
         self.target_dir = os.path.join(aio_folder, "xbridge_trading_bots")
         self.started = False
         self.current_branch = current_branch
