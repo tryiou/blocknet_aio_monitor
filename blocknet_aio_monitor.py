@@ -267,7 +267,11 @@ class Blocknet_AIO_GUI(ctk.CTk):
         utils.save_cfg_json("theme", new_theme)
 
     def check_processes(self) -> None:
+        """
+        Checks the status of all relevant processes and updates the GUI accordingly.
+        """
         blocknet_processes, blockdx_processes, xlite_processes, xlite_daemon_processes = utils.processes_check()
+
         # Update Blocknet process status and store the PIDs
         self.blocknet_manager.blocknet_process_running = bool(blocknet_processes)
         self.blocknet_manager.utility.blocknet_pids = blocknet_processes
@@ -284,6 +288,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
         self.xlite_manager.daemon_process_running = bool(xlite_daemon_processes)
         self.xlite_manager.utility.xlite_daemon_pids = xlite_daemon_processes
 
+        # Schedule the next check
         self.after(5000, func=self.check_processes)
 
 

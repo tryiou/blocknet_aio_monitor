@@ -20,15 +20,18 @@ class BlockDXManager:
         self.root_gui.after(0, self.update_status_blockdx)
 
     def blockdx_check_config(self):
-        # Get required data
-        if bool(self.root_gui.blocknet_manager.utility.data_folder and self.root_gui.blocknet_manager.utility.blocknet_conf_local):
-            xbridgeconfpath = os.path.normpath(
-                os.path.join(self.root_gui.blocknet_manager.utility.data_folder, "xbridge.conf"))
-            logging.info(f"xbridgeconfpath: {xbridgeconfpath}")
-            rpc_user = self.root_gui.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get('rpcuser')
-            rpc_password = self.root_gui.blocknet_manager.utility.blocknet_conf_local.get('global', {}).get(
-                'rpcpassword')
-            self.utility.compare_and_update_local_conf(xbridgeconfpath, rpc_user, rpc_password)
+        """
+        Checks and updates the local BlockDX configuration based on Blocknet settings.
+        """
+        blocknet_utility = self.root_gui.blocknet_manager.utility
+        if not (blocknet_utility.data_folder and blocknet_utility.blocknet_conf_local):
+            return  # Blocknet configuration is not available
+
+        xbridge_conf_path = os.path.normpath(os.path.join(blocknet_utility.data_folder, "xbridge.conf"))
+        rpc_user = blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcuser')
+        rpc_password = blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcpassword')
+
+        self.utility.compare_and_update_local_conf(xbridge_conf_path, rpc_user, rpc_password)
 
     def update_status_blockdx(self):
         self.frame_manager.update_blockdx_process_status_checkbox()
