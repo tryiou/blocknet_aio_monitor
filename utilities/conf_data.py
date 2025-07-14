@@ -87,13 +87,18 @@ blockdx_bin_path = {
     "Darwin": "BLOCK-DX-1.9.5-mac"
 
 }
-# , "BLOCK DX.app"]
-# , "Contents", "MacOS"]  # List of folders for Darwin
 xlite_bin_path = {
     "Windows": "XLite-1.0.7-win-x64",
     "Linux": "XLite-1.0.7-linux",
     "Darwin": "XLite-1.0.7-mac"
 }
+# XLite launch options per OS
+xlite_launch_options = {
+    "Windows": ["--in-process-gpu"],
+    "Linux": [],
+    "Darwin": []
+}
+
 
 base_xbridge_conf = {
     'ExchangeWallets': '',
@@ -131,3 +136,4 @@ blockdx_base_conf = {
 
 # https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022
 vc_redist_win_url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+

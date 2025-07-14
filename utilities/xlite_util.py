@@ -216,6 +216,9 @@ class XliteUtility:
             logging.info(f"Xlite executable not found at {self.xlite_exe}. Downloading...")
             self.download_xlite_bin()
 
+        # Get launch options for current OS
+        launch_options = global_variables.conf_data.xlite_launch_options.get(global_variables.system, [])
+        
         try:
             if global_variables.system == "Darwin":
                 self.helper.handle_dmg(self.xlite_exe, self.dmg_mount_path, "mount")
@@ -223,13 +226,18 @@ class XliteUtility:
                                          *global_variables.conf_data.xlite_bin_name[global_variables.system])
                 logging.info(
                     f"volume_name: {global_variables.xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
-                self.xlite_process = subprocess.Popen([full_path],
+                
+                # Build command with launch options
+                command = [full_path] + launch_options
+                self.xlite_process = subprocess.Popen(command,
                                                       stdout=subprocess.PIPE,
                                                       stderr=subprocess.PIPE,
                                                       stdin=subprocess.PIPE,
                                                       start_new_session=True)
             else:
-                self.xlite_process = subprocess.Popen([self.xlite_exe],
+                # Build command with launch options
+                command = [self.xlite_exe] + launch_options
+                self.xlite_process = subprocess.Popen(command,
                                                       stdout=subprocess.PIPE,
                                                       stderr=subprocess.PIPE,
                                                       stdin=subprocess.PIPE,
@@ -238,7 +246,7 @@ class XliteUtility:
                 time.sleep(1)
 
             pid = self.xlite_process.pid
-            logging.info(f"Started Xlite process with PID {pid}: {self.xlite_exe}")
+            logging.info(f"Started Xlite process with PID {pid}: {command}")
         except Exception as e:
             logging.error(f"Error: {e}")
 
