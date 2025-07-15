@@ -32,12 +32,16 @@ class ConfigManager:
         self.machine = platform.machine()
         self.aio_folder = None
         self.config_template = {
-            'blocknet_bootstrap_url': "https://utils.blocknet.org/Blocknet.zip",
-            'nodes_to_add': [
-                "130.185.119.91:41412",
-                "75.119.135.155:41412",
-                "75.119.157.65:41412",
-                "exrproxy1.airdns.org:42111"
+            'blocknet_bootstrap_url': "https://utils.blocknet.org/Blocknet.zip",             
+            'extra_option_blocknet_core_conf': [                                                                                                                                               
+                {'addnode': '130.185.119.91:41412'},                                                                                                                                           
+                {'addnode': '75.119.135.155:41412'},                                                                                                                                          
+                {'addnode': '75.119.157.65:41412'},                                                                                                                                         
+                {'addnode': 'exrproxy1.airdns.org:42111'},                                                                                                                                         
+                {'rpcthreads': 32},                                                                                                                                         
+                {'rpcworkqueue': 64},                                                                                                                               
+                {'rpcxbridgetimeout': 120},                      
+                                                                                                            
             ],
             'blocknet_releases_urls': {
                 ("Windows", "AMD64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-win64.zip",
@@ -141,6 +145,9 @@ class ConfigManager:
             },
             'vc_redist_win_url': "https://aka.ms/vs/17/release/vc_redist.x64.exe"
         }
+        if self.system == "Windows":
+            self.config_template['extra_option_blocknet_core_conf'].append({'bantime':0})
+
         self._load_config()
 
     def _get_aio_path(self) -> Path:
@@ -151,28 +158,38 @@ class ConfigManager:
         }[self.system]))
         os.makedirs(aio_path, exist_ok=True)
         return Path(aio_path)
-
-    def _load_config(self) -> None:
-        self.aio_folder = self._get_aio_path()
-        config_file = self.aio_folder / "aio_config.yaml"
-        
-        if config_file.exists():
-            with open(config_file, "r") as f:
-                filtered_config = yaml.safe_load(f) or {}
-            # Start with template
-            self.config = self._deep_merge(self.config_template.copy(), {})
-            
-            # Update with filtered_config, handling system-specific keys
-            for key, value in filtered_config.items():
-                if key in SYSTEM_SPECIFIC_KEYS:
-                    self._set_system_value(key, value)
-                else:
-                    self.config[key] = value
-            logging.info(f"Loaded existing config from {config_file}")
-        else:
-            self.config = self.config_template.copy()
-            self._save_config()
-            logging.info(f"Created new config from template at {config_file}")
+    def _load_config(self) -> None:                                                                                                                                                          
+        self.aio_folder = self._get_aio_path()                                                                                                                                               
+        config_file = self.aio_folder / "aio_config.yaml"                                                                                                                                    
+                                                                                                                                                                                            
+        # Start with template as base config                                                                                                                                                 
+        self.config = self.config_template.copy()                                                                                                                                            
+                                                                                                                                                                                            
+        if config_file.exists():                                                                                                                                                             
+            with open(config_file, "r") as f:                                                                                                                                                
+                loaded_config = yaml.safe_load(f) or {}                                                                                                                                      
+            logging.info(f"Loaded existing config from {config_file}")                                                                                                                       
+                                                                                                                                                                                            
+            # FOR SYSTEM-SPECIFIC KEYS: Ensure current OS/Arch value is set                                                                                                                  
+            for key in SYSTEM_SPECIFIC_KEYS:                                                                                                                                                 
+                if key in loaded_config:                                                                                                                                                     
+                    # Preserve existing value for current system                                                                                                                             
+                    current_value = loaded_config[key]                                                                                                                                       
+                    self._set_system_value(key, current_value)                                                                                                                               
+                else:                                                                                                                                                                        
+                    # Add missing key with default for current OS/Arch                                                                                                                       
+                    default_value = self._get_system_value(key)                                                                                                                              
+                    self._set_system_value(key, default_value)                                                                                                                               
+                                                                                                                                                                                            
+            # FOR REGULAR KEYS: Merge and preserve existing values                                                                                                                           
+            for key, value in loaded_config.items():                                                                                                                                         
+                if key not in SYSTEM_SPECIFIC_KEYS:                                                                                                                                          
+                    self.config[key] = value                                                                                                                                                 
+        else:                                                                                                                                                                                
+            logging.info(f"Created new config from template at {config_file}")                                                                                                               
+                                                                                                                                                                                            
+        # Save to ensure missing keys are persisted                                                                                                                                          
+        self._save_config()   
 
     def _deep_merge(self, base: Dict, update: Dict) -> Dict:
         for key, value in update.items():

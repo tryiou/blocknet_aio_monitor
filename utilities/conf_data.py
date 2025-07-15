@@ -12,7 +12,6 @@ aio_blocknet_data_path = {
 }
 
 blocknet_bootstrap_url = config['blocknet_bootstrap_url']
-nodes_to_add = config['nodes_to_add']
 blocknet_releases_urls = config['blocknet_releases_urls']
 blockdx_releases_urls = config['blockdx_releases_urls']
 xlite_releases_urls = config['xlite_releases_urls']
@@ -39,4 +38,4 @@ remote_xbridge_conf_url = config['remote_xbridge_conf_url']
 blockdx_selectedWallets_blocknet = config['blockdx_selectedWallets_blocknet']
 blockdx_base_conf = config['blockdx_base_conf']
 vc_redist_win_url = config['vc_redist_win_url']
-
+extra_option_blocknet_core_conf = config['extra_option_blocknet_core_conf']
