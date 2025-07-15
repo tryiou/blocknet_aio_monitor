@@ -39,7 +39,6 @@ def load_cfg_json():
         return None
 
 
-
 def terminate_all_threads():
     logging.info("Terminating all threads...")
     for thread in enumerate():

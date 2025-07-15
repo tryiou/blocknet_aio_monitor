@@ -218,7 +218,7 @@ class XliteUtility:
 
         # Get launch options for current OS
         launch_options = global_variables.conf_data.xlite_launch_options.get(global_variables.system, [])
-        
+
         try:
             if global_variables.system == "Darwin":
                 self.helper.handle_dmg(self.xlite_exe, self.dmg_mount_path, "mount")
@@ -226,7 +226,7 @@ class XliteUtility:
                                          *global_variables.conf_data.xlite_bin_name[global_variables.system])
                 logging.info(
                     f"volume_name: {global_variables.xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
-                
+
                 # Build command with launch options
                 command = [full_path] + launch_options
                 self.xlite_process = subprocess.Popen(command,

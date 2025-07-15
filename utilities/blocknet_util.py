@@ -258,7 +258,7 @@ class BlocknetUtility:
                         self.blocknet_conf_local[section][key] = value
 
         # Handle extra options                                                                                                                                                               
-        self._update_extra_config_options()  
+        self._update_extra_config_options()
 
         logging.info("Local blocknet.conf updated successfully.")
 
@@ -273,34 +273,34 @@ class BlocknetUtility:
             logging.info("Local blocknet.conf remains the same. No need to save.")
             return False
 
-    def _update_extra_config_options(self):                                                                                                                                              
-        """Helper method to handle extra config options with list value handling"""                                                                                                      
-        section_name = 'global'                                                                                                                                                          
-        if not global_variables.conf_data.extra_option_blocknet_core_conf:                                                                                                               
-            return                                                                                                                                                                       
-                                                                                                                                                                                         
-        # Ensure global section exists                                                                                                                                                   
-        if section_name not in self.blocknet_conf_local:                                                                                                                                 
-            self.blocknet_conf_local[section_name] = {}                                                                                                                                  
-                                                                                                                                                                                         
-        # Process each option                                                                                                                                                            
-        for option in global_variables.conf_data.extra_option_blocknet_core_conf:                                                                                                        
-            for key, value in option.items():                                                                                                                                            
-                conf_value = self.blocknet_conf_local[section_name].get(key)                                                                                                             
-                                                                                                                                                                                         
+    def _update_extra_config_options(self):
+        """Helper method to handle extra config options with list value handling"""
+        section_name = 'global'
+        if not global_variables.conf_data.extra_option_blocknet_core_conf:
+            return
+
+            # Ensure global section exists
+        if section_name not in self.blocknet_conf_local:
+            self.blocknet_conf_local[section_name] = {}
+
+            # Process each option
+        for option in global_variables.conf_data.extra_option_blocknet_core_conf:
+            for key, value in option.items():
+                conf_value = self.blocknet_conf_local[section_name].get(key)
+
                 # Initialize or convert to list if needed                                                                                                                                
-                if not isinstance(conf_value, list):                                                                                                                                     
-                    self.blocknet_conf_local[section_name][key] = list(                                                                                                                  
-                        conf_value.split(',') if conf_value else []                                                                                                                      
-                    )                                                                                                                                                                    
-                                                                                                                                                                                         
-                # Convert option value to string for comparison                                                                                                                          
-                str_value = str(value)                                                                                                                                                   
-                                                                                                                                                                                         
+                if not isinstance(conf_value, list):
+                    self.blocknet_conf_local[section_name][key] = list(
+                        conf_value.split(',') if conf_value else []
+                    )
+
+                    # Convert option value to string for comparison
+                str_value = str(value)
+
                 # Add new value if not already present                                                                                                                                   
-                if str_value not in self.blocknet_conf_local[section_name][key]:                                                                                                         
-                    self.blocknet_conf_local[section_name][key].append(str_value)                                                                                                        
-                    logging.info(f"Added config option: {key}={str_value}")  
+                if str_value not in self.blocknet_conf_local[section_name][key]:
+                    self.blocknet_conf_local[section_name][key].append(str_value)
+                    logging.info(f"Added config option: {key}={str_value}")
 
     def retrieve_coin_conf(self, coin):
         latest_version = None
@@ -513,11 +513,11 @@ def save_conf_to_file(conf_data, file_path):
                 if section != 'global':
                     f.write(f"[{section}]\n")
                 for key, value in options.items():
-                    if isinstance(value, list):                                                                                                                                          
-                        for item in value:                                                                                                                                               
-                            f.write(f"{key}={item}\n")                                                                                                                                   
-                    else:                                                                                                                                                                
-                        f.write(f"{key}={value}\n")  
+                    if isinstance(value, list):
+                        for item in value:
+                            f.write(f"{key}={item}\n")
+                    else:
+                        f.write(f"{key}={value}\n")
 
         logging.info(f"Configuration data saved to {file_path} successfully")
         return True

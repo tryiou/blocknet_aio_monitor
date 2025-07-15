@@ -1,4 +1,3 @@
-import logging
 import os
 
 from gui.blockdx_frame_manager import BlockDxFrameManager

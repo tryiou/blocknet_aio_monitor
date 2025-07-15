@@ -1,12 +1,12 @@
+import logging
 import os
 import platform
-import logging
-import yaml
 from pathlib import Path
-from typing import Any, Dict
+from typing import Dict
+
+import yaml
 
 logging.basicConfig(level=logging.DEBUG)
-
 
 SYSTEM_SPECIFIC_KEYS = [
     'blocknet_releases_urls',
@@ -26,38 +26,49 @@ SYSTEM_SPECIFIC_KEYS = [
     'xlite_launch_options'
 ]
 
+
 class ConfigManager:
     def __init__(self):
         self.system = platform.system()
         self.machine = platform.machine()
         self.aio_folder = None
         self.config_template = {
-            'blocknet_bootstrap_url': "https://utils.blocknet.org/Blocknet.zip",             
-            'extra_option_blocknet_core_conf': [                                                                                                                                               
-                {'addnode': '130.185.119.91:41412'},                                                                                                                                           
-                {'addnode': '75.119.135.155:41412'},                                                                                                                                          
-                {'addnode': '75.119.157.65:41412'},                                                                                                                                         
-                {'addnode': 'exrproxy1.airdns.org:42111'},                                                                                                                                         
-                {'rpcthreads': 32},                                                                                                                                         
-                {'rpcworkqueue': 64},                                                                                                                               
-                {'rpcxbridgetimeout': 120},                      
-                                                                                                            
+            'blocknet_bootstrap_url': "https://utils.blocknet.org/Blocknet.zip",
+            'extra_option_blocknet_core_conf': [
+                {'addnode': '130.185.119.91:41412'},
+                {'addnode': '75.119.135.155:41412'},
+                {'addnode': '75.119.157.65:41412'},
+                {'addnode': 'exrproxy1.airdns.org:42111'},
+                {'rpcthreads': 32},
+                {'rpcworkqueue': 64},
+                {'rpcxbridgetimeout': 120},
+
             ],
             'blocknet_releases_urls': {
-                ("Windows", "AMD64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-win64.zip",
-                ("Linux", "x86_64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-x86_64-linux-gnu.tar.gz",
-                ("Linux", "aarch64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-aarch64-linux-gnu.tar.gz",
-                ("Linux", "riscv64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-riscv64-linux-gnu.tar.gz",
-                ("Darwin", "x86_64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz"
+                ("Windows",
+                 "AMD64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-win64.zip",
+                ("Linux",
+                 "x86_64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-x86_64-linux-gnu.tar.gz",
+                ("Linux",
+                 "aarch64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-aarch64-linux-gnu.tar.gz",
+                ("Linux",
+                 "riscv64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-riscv64-linux-gnu.tar.gz",
+                ("Darwin",
+                 "x86_64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz"
             },
             'blockdx_releases_urls': {
-                ("Windows", "AMD64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-win-x64.zip",
-                ("Linux", "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-linux-x64.tar.gz",
-                ("Darwin", "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg"
+                ("Windows",
+                 "AMD64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-win-x64.zip",
+                ("Linux",
+                 "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-linux-x64.tar.gz",
+                ("Darwin",
+                 "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg"
             },
             'xlite_releases_urls': {
-                ("Windows", "AMD64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip",
-                ("Linux", "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz",
+                ("Windows",
+                 "AMD64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip",
+                ("Linux",
+                 "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz",
                 ("Darwin", "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg"
             },
             'blocknet_default_paths': {
@@ -146,50 +157,51 @@ class ConfigManager:
             'vc_redist_win_url': "https://aka.ms/vs/17/release/vc_redist.x64.exe"
         }
         if self.system == "Windows":
-            self.config_template['extra_option_blocknet_core_conf'].append({'bantime':0})
+            self.config_template['extra_option_blocknet_core_conf'].append({'bantime': 0})
 
         self._load_config()
 
     def _get_aio_path(self) -> Path:
         aio_path = os.path.expandvars(os.path.expanduser({
-            "Windows": "%appdata%\\AIO_Blocknet",
-            "Linux": "~/.AIO_Blocknet",
-            "Darwin": "~/Library/AIO_Blocknet"
-        }[self.system]))
+                                                             "Windows": "%appdata%\\AIO_Blocknet",
+                                                             "Linux": "~/.AIO_Blocknet",
+                                                             "Darwin": "~/Library/AIO_Blocknet"
+                                                         }[self.system]))
         os.makedirs(aio_path, exist_ok=True)
         return Path(aio_path)
-    def _load_config(self) -> None:                                                                                                                                                          
-        self.aio_folder = self._get_aio_path()                                                                                                                                               
-        config_file = self.aio_folder / "aio_config.yaml"                                                                                                                                    
-                                                                                                                                                                                            
+
+    def _load_config(self) -> None:
+        self.aio_folder = self._get_aio_path()
+        config_file = self.aio_folder / "aio_config.yaml"
+
         # Start with template as base config                                                                                                                                                 
-        self.config = self.config_template.copy()                                                                                                                                            
-                                                                                                                                                                                            
-        if config_file.exists():                                                                                                                                                             
-            with open(config_file, "r") as f:                                                                                                                                                
-                loaded_config = yaml.safe_load(f) or {}                                                                                                                                      
-            logging.info(f"Loaded existing config from {config_file}")                                                                                                                       
-                                                                                                                                                                                            
+        self.config = self.config_template.copy()
+
+        if config_file.exists():
+            with open(config_file, "r") as f:
+                loaded_config = yaml.safe_load(f) or {}
+            logging.info(f"Loaded existing config from {config_file}")
+
             # FOR SYSTEM-SPECIFIC KEYS: Ensure current OS/Arch value is set                                                                                                                  
-            for key in SYSTEM_SPECIFIC_KEYS:                                                                                                                                                 
-                if key in loaded_config:                                                                                                                                                     
+            for key in SYSTEM_SPECIFIC_KEYS:
+                if key in loaded_config:
                     # Preserve existing value for current system                                                                                                                             
-                    current_value = loaded_config[key]                                                                                                                                       
-                    self._set_system_value(key, current_value)                                                                                                                               
-                else:                                                                                                                                                                        
+                    current_value = loaded_config[key]
+                    self._set_system_value(key, current_value)
+                else:
                     # Add missing key with default for current OS/Arch                                                                                                                       
-                    default_value = self._get_system_value(key)                                                                                                                              
-                    self._set_system_value(key, default_value)                                                                                                                               
-                                                                                                                                                                                            
-            # FOR REGULAR KEYS: Merge and preserve existing values                                                                                                                           
-            for key, value in loaded_config.items():                                                                                                                                         
-                if key not in SYSTEM_SPECIFIC_KEYS:                                                                                                                                          
-                    self.config[key] = value                                                                                                                                                 
-        else:                                                                                                                                                                                
-            logging.info(f"Created new config from template at {config_file}")                                                                                                               
-                                                                                                                                                                                            
-        # Save to ensure missing keys are persisted                                                                                                                                          
-        self._save_config()   
+                    default_value = self._get_system_value(key)
+                    self._set_system_value(key, default_value)
+
+                    # FOR REGULAR KEYS: Merge and preserve existing values
+            for key, value in loaded_config.items():
+                if key not in SYSTEM_SPECIFIC_KEYS:
+                    self.config[key] = value
+        else:
+            logging.info(f"Created new config from template at {config_file}")
+
+            # Save to ensure missing keys are persisted
+        self._save_config()
 
     def _deep_merge(self, base: Dict, update: Dict) -> Dict:
         for key, value in update.items():

@@ -15,6 +15,7 @@ from utilities import utils, global_variables
 urllib3_logger = logging.getLogger('watchdog')
 urllib3_logger.setLevel(logging.WARNING)
 
+
 class BinaryFileHandler(FileSystemEventHandler):
     """
     Handles file modification events with rate limiting for binary updates.
@@ -300,7 +301,8 @@ class BinaryManager:
             else:
                 self._log_incorrect_target(full_path)
 
-    def _update_install_delete_button(self, binary_name, bool_var, button, string_var, manager, release_url, folder_path, process_running_attr_name):
+    def _update_install_delete_button(self, binary_name, bool_var, button, string_var, manager, release_url,
+                                      folder_path, process_running_attr_name):
         """
         Updates the install/delete button for a given binary.
         """
