@@ -123,7 +123,7 @@ class ConfigManager:
                 "Darwin": "XLite-1.0.7-mac"
             },
             'xlite_launch_options': {
-                "Windows": ["--in-process-gpu"],
+                "Windows": ["--disable-gpu"],
                 "Linux": [],
                 "Darwin": []
             },
