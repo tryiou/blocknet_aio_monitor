@@ -4,7 +4,6 @@ import os
 import random
 import shutil
 import string
-import subprocess
 import threading
 import time
 import zipfile
@@ -12,7 +11,6 @@ import zipfile
 import requests
 
 from utilities import global_variables
-from utilities.helper_util import UtilityHelper
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -54,13 +52,15 @@ class BlocknetRPCClient:
             return None
 
 
-class BlocknetUtility:
+from utilities.bin_handlers.base_binutil import BaseBinUtil
+
+
+class BlocknetHandler(BaseBinUtil):
     def __init__(self, custom_path=None):
-        self.helper = UtilityHelper()
+        super().__init__("Blocknet")
         self.blocknet_exe = os.path.join(global_variables.aio_folder,
                                          *global_variables.conf_data.blocknet_bin_path,
                                          global_variables.blocknet_bin)
-        self.binary_percent_download = None
         self.parsed_wallet_confs = {}
         self.parsed_xbridge_confs = {}
         self.bootstrap_checking = False
@@ -122,43 +122,20 @@ class BlocknetUtility:
             logging.info(f"Blocknet executable not found at {self.blocknet_exe}. Downloading...")
             self.download_blocknet_bin()
         try:
-            self.blocknet_process = subprocess.Popen([self.blocknet_exe, f"-datadir={self.data_folder}"],
-                                                     stdout=subprocess.PIPE,
-                                                     stderr=subprocess.PIPE,
-                                                     stdin=subprocess.PIPE,
-                                                     start_new_session=True)
-            logging.info(f"Started Blocknet process: {self.blocknet_exe} with data directory: {self.data_folder}")
+            command = [self.blocknet_exe, f"-datadir={self.data_folder}"]
+            self.blocknet_process = self.start_process(command)
+            logging.info(f"Started Blocknet process: {command} with data directory: {self.data_folder}")
         except Exception as e:
             logging.error(f"Error: {e}")
 
     def close_blocknet(self):
         if self.blocknet_process:
-            try:
-                self.blocknet_process.terminate()
-                self.blocknet_process.wait(timeout=60)
-                logging.info(f"Closed Blocknet subprocess.")
-                self.blocknet_process = None
-                return
-            except subprocess.TimeoutExpired:
-                logging.info(f"Force terminating Blocknet subprocess.")
-                self.kill_blocknet()
-                logging.info(f"Blocknet subprocess has been force terminated.")
-                self.blocknet_process = None
-                return
-            except Exception as e:
-                logging.error(f"Error: {e}")
+            self.graceful_terminate(timeout=60)
         else:
             self.close_blocknet_pids()
 
     def kill_blocknet(self):
-        if self.blocknet_process:
-            try:
-                self.blocknet_process.kill()
-                logging.info(f"Killed Blocknet subprocess.")
-                self.blocknet_process = None
-                return
-            except Exception as e:
-                logging.error(f"Error: {e}")
+        self.force_kill()
 
     def close_blocknet_pids(self):
         self.helper.terminate_processes(self.blocknet_pids, "Blocknet")
@@ -479,20 +456,16 @@ class BlocknetUtility:
             self.bootstrap_checking = False
 
     def download_blocknet_bin(self):
-        self.downloading_bin = True
         url = global_variables.conf_data.blocknet_releases_urls.get((global_variables.system, global_variables.machine))
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
-        tmp_path = os.path.join(global_variables.aio_folder, os.path.basename(url))
-        final_path = self.blocknet_exe  # For DMG
-        extract_to = global_variables.aio_folder  # For zip/tar.gz
-
-        self.helper.download_file(
-            url, tmp_path, final_path, extract_to,
-            global_variables.system, "binary_percent_download", self
+        self.download_binary(
+            url,
+            os.path.basename(url),
+            self.blocknet_exe,
+            global_variables.aio_folder
         )
-        self.downloading_bin = False
 
 
 def get_remote_file_size(url):

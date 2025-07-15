@@ -2,14 +2,14 @@ import os
 
 from gui.blockdx_frame_manager import BlockDxFrameManager
 from utilities import global_variables
-from utilities.blockdx_util import BlockdxUtility
+from utilities.bin_handlers.blockdx_handler import BlockDXHandler
 
 
 class BlockDXManager:
     def __init__(self, root_gui):
         self.frame_manager = None
         self.root_gui = root_gui
-        self.utility = BlockdxUtility()
+        self.utility = BlockDXHandler()
         self.version = [global_variables.blockdx_release_url.split('/')[7]]
         self.process_running = False
         self.is_config_sync = None

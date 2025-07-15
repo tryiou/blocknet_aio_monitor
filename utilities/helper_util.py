@@ -29,7 +29,7 @@ class UtilityHelper:
                     bytes_downloaded += len(chunk)
                     if progress_attr and instance:
                         setattr(instance, progress_attr, (bytes_downloaded / remote_size) * 100)
-                        logging.debug(f"Downloaded {bytes_downloaded}/{remote_size} bytes")
+                        # logging.debug(f"Downloaded {bytes_downloaded}/{remote_size} bytes")
 
         if os.path.getsize(tmp_path) != remote_size:
             os.remove(tmp_path)

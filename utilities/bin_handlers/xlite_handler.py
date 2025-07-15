@@ -4,11 +4,12 @@ import os
 import subprocess
 import threading
 import time
+import traceback
 
 import requests
 
 from utilities import global_variables
-from utilities.helper_util import UtilityHelper
+from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -92,9 +93,12 @@ class XliteRPCClient:
             return None
 
 
-class XliteUtility:
+
+
+
+class XliteHandler(BaseBinUtil):
     def __init__(self):
-        self.helper = UtilityHelper()
+        super().__init__("Xlite")
         if global_variables.system == "Darwin":
             self.xlite_exe = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.xlite_url))
             self.dmg_mount_path = f"/Volumes/{global_variables.xlite_volume_name}"
@@ -102,7 +106,6 @@ class XliteUtility:
             self.xlite_exe = os.path.join(global_variables.aio_folder,
                                           global_variables.conf_data.xlite_bin_path[global_variables.system],
                                           global_variables.conf_data.xlite_bin_name[global_variables.system])
-        self.binary_percent_download = None
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
         self.coins_rpc = {}
@@ -116,7 +119,6 @@ class XliteUtility:
         self.xlite_daemon_pids = []
         self.parse_xlite_conf()
         self.parse_xlite_daemon_conf()
-        self.downloading_bin = False
         self.start_threads()
 
     def check_xlite_daemon_confs_sequence(self, silent=True):
@@ -208,76 +210,45 @@ class XliteUtility:
         if global_variables.system == "Windows":
             check_vc_redist_installed()
 
-        for var_dict in env_vars:
-            for var_name, var_value in var_dict.items():
-                os.environ[var_name] = var_value
-
         if not os.path.exists(self.xlite_exe):
             logging.info(f"Xlite executable not found at {self.xlite_exe}. Downloading...")
             self.download_xlite_bin()
 
         # Get launch options for current OS
-        launch_options = global_variables.conf_data.xlite_launch_options.get(global_variables.system, [])
+        launch_options = global_variables.conf_data.xlite_launch_options.get(global_variables.system, None)
 
         try:
             if global_variables.system == "Darwin":
-                self.helper.handle_dmg(self.xlite_exe, self.dmg_mount_path, "mount")
+                self.mount_dmg(self.xlite_exe, self.dmg_mount_path)
                 full_path = os.path.join(self.dmg_mount_path,
                                          *global_variables.conf_data.xlite_bin_name[global_variables.system])
                 logging.info(
                     f"volume_name: {global_variables.xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
-
-                # Build command with launch options
-                command = [full_path] + launch_options
+                command = [full_path] + launch_options 
                 cwd = os.path.dirname(full_path)
             else:
-                # Build command with launch options
                 command = [self.xlite_exe] + launch_options
                 cwd = os.path.dirname(self.xlite_exe)
 
-            self.xlite_process = subprocess.Popen(
-                command,
-                cwd=cwd,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True
-            )
-            while self.xlite_process.pid is None:
-                time.sleep(1)
-
-            pid = self.xlite_process.pid
-            logging.info(f"Started Xlite process with PID {pid}: {command}")
+            parsed_env_vars = {}
+            for env_var_str in env_vars:
+                if '=' in env_var_str:
+                    key, value = env_var_str.split('=', 1)
+                    parsed_env_vars[key] = value
+                else:
+                    logging.warning(f"Environment variable string '{env_var_str}' does not contain '='. Skipping.")
+            self.xlite_process = self.start_process(command, cwd=cwd, env_vars=parsed_env_vars)
+            logging.info(f"Started Xlite process with PID {self.xlite_process.pid}: {command}")
         except Exception as e:
-            logging.error(f"Error: {e}")
+            logging.error(f"Error starting Xlite process: {e}\n{traceback.format_exc()}")
+            # logging.error(f"Error AA: {e}")
 
     def close_xlite(self):
         if self.xlite_process:
-            try:
-                self.xlite_process.terminate()
-                self.xlite_process.wait(timeout=10)
-                logging.info(f"Closed Xlite")
-                self.xlite_process = None
-            except subprocess.TimeoutExpired:
-                logging.info(f"Force terminating Xlite")
-                self.kill_xlite()
-                logging.info(f"Xlite has been force terminated.")
-                self.xlite_process = None
-            except Exception as e:
-                logging.error(f"Error: {e}")
+            self.graceful_terminate(timeout=10)
         else:
             self.close_xlite_pids()
         self.close_xlite_daemon_pids()
-
-    def kill_xlite(self):
-        if self.xlite_process:
-            try:
-                self.xlite_process.kill()
-                logging.info(f"Killed Xlite")
-                self.xlite_process = None
-                return
-            except Exception as e:
-                logging.error(f"Error: {e}")
 
     def close_xlite_pids(self):
         self.helper.terminate_processes(self.xlite_pids, "XLite")
@@ -286,20 +257,14 @@ class XliteUtility:
         self.helper.terminate_processes(self.xlite_daemon_pids, "Xlite-daemon")
 
     def download_xlite_bin(self):
-        self.downloading_bin = True
         url = global_variables.conf_data.xlite_releases_urls.get((global_variables.system, global_variables.machine))
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
-        tmp_path = os.path.join(global_variables.aio_folder, "tmp_xl_bin")
-        final_path = self.xlite_exe  # For DMG
-        extract_to = global_variables.aio_folder  # For zip/tar.gz
-
-        self.helper.download_file(
-            url, tmp_path, final_path, extract_to,
-            global_variables.system, "binary_percent_download", self
+        tmp_filename = "tmp_xl_bin"
+        self.download_binary(
+            url,
+            tmp_filename,
+            self.xlite_exe,
+            global_variables.aio_folder
         )
-        self.downloading_bin = False
-
-    def unmount_dmg(self):
-        self.helper.handle_dmg(None, self.dmg_mount_path, "unmount")

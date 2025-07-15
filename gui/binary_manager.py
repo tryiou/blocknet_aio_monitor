@@ -130,10 +130,10 @@ class BinaryManager:
         )
 
     def start_or_close_xlite(self):
+        env_vars = []
         if not self.root_gui.xlite_manager.process_running and self.root_gui.stored_password:
-            env_vars = [{"CC_WALLET_PASS": self.root_gui.stored_password}, {"CC_WALLET_AUTOLOGIN": 'true'}]
-        else:
-            env_vars = []
+            env_vars.append(f"CC_WALLET_PASS={self.root_gui.stored_password}")
+            env_vars.append("CC_WALLET_AUTOLOGIN=true")
 
         self._start_or_close_binary(
             process_running=self.root_gui.xlite_manager.process_running,

@@ -5,7 +5,7 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utilities.blocknet_util import BlocknetUtility
+from utilities.bin_handlers.blocknet_handler import BlocknetHandler
 from utilities import global_variables
 
 
@@ -20,7 +20,7 @@ class TestExtraConfigHandling(unittest.TestCase):
         ]
 
         # Mock BlocknetUtility instance                                                                                                                                                  
-        self.util = BlocknetUtility(custom_path="/test/path")
+        self.util = BlocknetHandler(custom_path="/test/path")
         self.util.blocknet_conf_local = {
             'global': {
                 'rpcuser': 'testuser',

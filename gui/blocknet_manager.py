@@ -1,6 +1,6 @@
 from gui.blocknet_frame_manager import BlocknetCoreFrameManager
 from utilities import global_variables
-from utilities.blocknet_util import BlocknetUtility
+from utilities.bin_handlers.blocknet_handler import BlocknetHandler
 
 
 class BlocknetManager:
@@ -12,7 +12,7 @@ class BlocknetManager:
 
         self.bootstrap_thread = None
 
-        self.utility = BlocknetUtility(custom_path=self.root_gui.custom_path)
+        self.utility = BlocknetHandler(custom_path=self.root_gui.custom_path)
 
     async def setup(self):
         self.frame_manager = BlocknetCoreFrameManager(self)

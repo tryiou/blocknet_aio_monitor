@@ -2,7 +2,7 @@ import logging
 
 from gui.xlite_frame_manager import XliteFrameManager
 from utilities import global_variables
-from utilities.xlite_util import XliteUtility
+from utilities.bin_handlers.xlite_handler import XliteHandler
 
 
 class XliteManager:
@@ -10,7 +10,7 @@ class XliteManager:
         self.root_gui = root_gui
 
         self.frame_manager = None
-        self.utility = XliteUtility()
+        self.utility = XliteHandler()
 
         self.version = [global_variables.xlite_release_url.split('/')[7]]
         self.process_running = False

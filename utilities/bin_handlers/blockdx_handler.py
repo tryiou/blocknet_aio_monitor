@@ -2,18 +2,16 @@ import copy
 import json
 import logging
 import os
-import subprocess
-import time
 
 from utilities import global_variables
-from utilities.helper_util import UtilityHelper
+from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-class BlockdxUtility:
+class BlockDXHandler(BaseBinUtil):
     def __init__(self):
-        self.helper = UtilityHelper()
+        super().__init__("Blockdx")
         if global_variables.system == "Darwin":
             self.dmg_mount_path = f"/Volumes/{global_variables.blockdx_volume_name}"
             self.blockdx_exe = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.blockdx_url))
@@ -21,14 +19,12 @@ class BlockdxUtility:
             self.blockdx_exe = os.path.join(global_variables.aio_folder,
                                             global_variables.conf_data.blockdx_bin_path[global_variables.system],
                                             global_variables.conf_data.blockdx_bin_name[global_variables.system])
-        self.binary_percent_download = None
         self.process_running = None
         self.blockdx_process = None
         self.blockdx_conf_local = None
         self.running = True  # flag for async funcs
         self.blockdx_pids = []
         self.parse_blockdx_conf()
-        self.downloading_bin = False
 
     def parse_blockdx_conf(self):
         data_folder = get_blockdx_data_folder()
@@ -94,96 +90,50 @@ class BlockdxUtility:
         else:
             logging.info("No changes detected in Blockdx config.")
 
-    def unmount_dmg(self):
-        self.helper.handle_dmg(None, self.dmg_mount_path, "unmount")
-
     def start_blockdx(self):
         if not os.path.exists(self.blockdx_exe):
-            # self.downloading_bin = True
             logging.info(f"Blockdx executable not found at {self.blockdx_exe}. Downloading...")
             self.download_blockdx_bin()
-            # self.downloading_bin = False
 
         try:
-            # Start the BLOCK-DX process using subprocess
             if global_variables.system == "Darwin":
-                # mac mod
-                self.helper.handle_dmg(self.blockdx_exe, self.dmg_mount_path, "mount")
+                self.mount_dmg(self.blockdx_exe, self.dmg_mount_path)
                 full_path = os.path.join(self.dmg_mount_path,
                                          *global_variables.conf_data.blockdx_bin_name[global_variables.system])
                 logging.info(
                     f"volume_name: {global_variables.blockdx_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
-                self.blockdx_process = subprocess.Popen([full_path],
-                                                        stdout=subprocess.PIPE,
-                                                        stderr=subprocess.PIPE,
-                                                        stdin=subprocess.PIPE,
-                                                        start_new_session=True)
+                command = [full_path]
+                cwd = os.path.dirname(full_path)
             else:
-                self.blockdx_process = subprocess.Popen([self.blockdx_exe],
-                                                        stdout=subprocess.PIPE,
-                                                        stderr=subprocess.PIPE,
-                                                        stdin=subprocess.PIPE,
-                                                        start_new_session=True)
-            # Check if the process has started
-            while self.blockdx_process.pid is None:
-                time.sleep(1)  # Wait for 1 second before checking again
+                command = [self.blockdx_exe]
+                cwd = os.path.dirname(self.blockdx_exe)
 
-            pid = self.blockdx_process.pid
-            logging.info(f"Started Blockdx process with PID {pid}: {self.blockdx_exe}")
+            self.blockdx_process = self.start_process(command, cwd=cwd)
+            logging.info(f"Started Blockdx process with PID {self.blockdx_process.pid}: {command}")
         except Exception as e:
             logging.error(f"Error: {e}")
 
     def close_blockdx(self):
-        # Close the blockdx subprocess if it exists
         if self.blockdx_process:
-            try:
-                self.blockdx_process.terminate()
-                # logging.info(f"Terminating blockdx subprocess.")
-                self.blockdx_process.wait(timeout=60)  # Wait for the process to terminate with a timeout of 60 seconds
-                logging.info(f"Closed blockdx subprocess.")
-                self.blockdx_process = None
-                return
-            except subprocess.TimeoutExpired:
-                logging.info(f"Force terminating blockdx subprocess.")
-                self.kill_blockdx()
-                logging.info(f"blockdx subprocess has been force terminated.")
-                self.blockdx_process = None
-                return
-            except Exception as e:
-                logging.error(f"Error: {e}")
+            self.graceful_terminate(timeout=10)
         else:
             self.close_blockdx_pids()
-
-    def kill_blockdx(self):
-        # Kill the blockdx subprocess if it exists
-        if self.blockdx_process:
-            try:
-                self.blockdx_process.kill()
-                logging.info(f"Killed blockdx subprocess.")
-                self.blockdx_process = None
-                return
-            except Exception as e:
-                logging.error(f"Error: {e}")
 
     def close_blockdx_pids(self):
         self.helper.terminate_processes(self.blockdx_pids, "BlockDX")
 
     def download_blockdx_bin(self):
-        self.downloading_bin = True
         url = global_variables.conf_data.blockdx_releases_urls.get((global_variables.system, global_variables.machine))
-
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
-        tmp_path = os.path.join(global_variables.aio_folder, "tmp_dx_bin")
-        final_path = self.blockdx_exe  # For DMG
-        extract_to = global_variables.aio_folder  # For zip/tar.gz
-
-        self.helper.download_file(
-            url, tmp_path, final_path, extract_to,
-            global_variables.system, "binary_percent_download", self
+        tmp_filename = "tmp_dx_bin"
+        self.download_binary(
+            url,
+            tmp_filename,
+            self.blockdx_exe,
+            global_variables.aio_folder
         )
-        self.downloading_bin = False
 
 
 def get_blockdx_data_folder():

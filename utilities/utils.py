@@ -85,8 +85,8 @@ def save_cfg_json(key, data):
         # If file doesn't exist or JSON decoding error occurs, create a new empty dictionary
         cfg_data = {}
 
-    # Update the data with the new key-value pair
-    cfg_data[key] = data
+                                                                                                                                      
+    cfg_data.update({key: data})  
 
     # Save to file
     with open(filename, 'w') as file:
