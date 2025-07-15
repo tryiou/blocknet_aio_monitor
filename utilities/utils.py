@@ -16,19 +16,28 @@ def configure_tooltip_text(tooltip, msg):
 
 
 def load_cfg_json():
-    local_filename = "cfg.json"
-    local_conf_path = global_variables.aio_folder
-    filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
+    local_filename = "aio_settings.json"
+    old_local_filename = "cfg.json"
+
+    local_conf_path = global_variables.aio_folder  # define this early
+    full_old_path = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), old_local_filename)
+    full_new_path = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
+
+    if os.path.exists(full_old_path):
+        # migrate old config file
+        logging.info(f"Renaming {full_old_path} to {full_new_path}")
+        os.rename(full_old_path, full_new_path)
 
     # Check if the file exists
-    if os.path.exists(filename):
-        with open(filename, 'r') as file:
+    if os.path.exists(full_new_path):
+        with open(full_new_path, 'r') as file:
             cfg_data = json.load(file)
-        logging.info(f"Configuration file loaded ok: [{filename}]")
+        logging.info(f"Configuration file loaded ok: [{full_new_path}]")
         return cfg_data
     else:
-        logging.info(f"Configuration file not found: [{filename}]")
+        logging.info(f"Configuration file not found: [{full_new_path}]")
         return None
+
 
 
 def terminate_all_threads():
@@ -41,7 +50,7 @@ def terminate_all_threads():
 
 
 def remove_cfg_json_key(key):
-    local_filename = "cfg.json"
+    local_filename = "aio_settings.json"
     local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
     filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
 
@@ -65,7 +74,7 @@ def remove_cfg_json_key(key):
 
 
 def save_cfg_json(key, data):
-    local_filename = "cfg.json"
+    local_filename = "aio_settings.json"
     local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
     filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
 

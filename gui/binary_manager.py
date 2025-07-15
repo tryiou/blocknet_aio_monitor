@@ -11,6 +11,9 @@ import widgets_strings
 from gui.binary_frame_manager import BinaryFrameManager
 from utilities import utils, global_variables
 
+# Disable log entries from the urllib3 module (used by requests)
+urllib3_logger = logging.getLogger('watchdog')
+urllib3_logger.setLevel(logging.WARNING)
 
 class BinaryFileHandler(FileSystemEventHandler):
     """
