@@ -229,19 +229,20 @@ class XliteUtility:
 
                 # Build command with launch options
                 command = [full_path] + launch_options
-                self.xlite_process = subprocess.Popen(command,
-                                                      stdout=subprocess.PIPE,
-                                                      stderr=subprocess.PIPE,
-                                                      stdin=subprocess.PIPE,
-                                                      start_new_session=True)
+                cwd = os.path.dirname(full_path)
             else:
                 # Build command with launch options
                 command = [self.xlite_exe] + launch_options
-                self.xlite_process = subprocess.Popen(command,
-                                                      stdout=subprocess.PIPE,
-                                                      stderr=subprocess.PIPE,
-                                                      stdin=subprocess.PIPE,
-                                                      start_new_session=True)
+                cwd = os.path.dirname(self.xlite_exe)
+
+            self.xlite_process = subprocess.Popen(
+                command,
+                cwd=cwd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
             while self.xlite_process.pid is None:
                 time.sleep(1)
 
