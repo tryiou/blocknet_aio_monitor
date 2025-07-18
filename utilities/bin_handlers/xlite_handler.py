@@ -100,12 +100,12 @@ class XliteHandler(BaseBinUtil):
     def __init__(self):
         super().__init__("Xlite")
         if global_variables.system == "Darwin":
-            self.xlite_exe = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.xlite_url))
+            self.executable_path = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.xlite_url))
             self.dmg_mount_path = f"/Volumes/{global_variables.xlite_volume_name}"
         else:
-            self.xlite_exe = os.path.join(global_variables.aio_folder,
-                                          global_variables.conf_data.xlite_bin_path[global_variables.system],
-                                          global_variables.conf_data.xlite_bin_name[global_variables.system])
+            self.executable_path = os.path.join(global_variables.aio_folder,
+                                                global_variables.conf_data.xlite_bin_path[global_variables.system],
+                                                global_variables.conf_data.xlite_bin_name[global_variables.system])
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
         self.coins_rpc = {}
@@ -210,8 +210,8 @@ class XliteHandler(BaseBinUtil):
         if global_variables.system == "Windows":
             check_vc_redist_installed()
 
-        if not os.path.exists(self.xlite_exe):
-            logging.info(f"Xlite executable not found at {self.xlite_exe}. Downloading...")
+        if not os.path.exists(self.executable_path):
+            logging.info(f"Xlite executable not found at {self.executable_path}. Downloading...")
             self.download_xlite_bin()
 
         # Get launch options for current OS
@@ -219,7 +219,7 @@ class XliteHandler(BaseBinUtil):
 
         try:
             if global_variables.system == "Darwin":
-                self.mount_dmg(self.xlite_exe, self.dmg_mount_path)
+                self.handle_dmg( "mount")
                 full_path = os.path.join(self.dmg_mount_path,
                                          *global_variables.conf_data.xlite_bin_name[global_variables.system])
                 logging.info(
@@ -227,8 +227,8 @@ class XliteHandler(BaseBinUtil):
                 command = [full_path] + launch_options 
                 cwd = os.path.dirname(full_path)
             else:
-                command = [self.xlite_exe] + launch_options
-                cwd = os.path.dirname(self.xlite_exe)
+                command = [self.executable_path] + launch_options
+                cwd = os.path.dirname(self.executable_path)
 
             parsed_env_vars = {}
             for env_var_str in env_vars:
@@ -251,10 +251,10 @@ class XliteHandler(BaseBinUtil):
         self.close_xlite_daemon_pids()
 
     def close_xlite_pids(self):
-        self.helper.terminate_processes(self.xlite_pids, "XLite")
+        self.terminate_processes(self.xlite_pids, "XLite")
 
     def close_xlite_daemon_pids(self):
-        self.helper.terminate_processes(self.xlite_daemon_pids, "Xlite-daemon")
+        self.terminate_processes(self.xlite_daemon_pids, "Xlite-daemon")
 
     def download_xlite_bin(self):
         url = global_variables.conf_data.xlite_releases_urls.get((global_variables.system, global_variables.machine))
@@ -265,6 +265,12 @@ class XliteHandler(BaseBinUtil):
         self.download_binary(
             url,
             tmp_filename,
-            self.xlite_exe,
+            self.executable_path,
             global_variables.aio_folder
         )
+    
+    def unmount_dmg(self):
+        if global_variables.system != "Darwin":
+            logging.warning(f"Call unmount_dmg with wrong OS, {global_variables.system} ?")
+            return
+        self.handle_dmg( "unmount")

@@ -138,7 +138,7 @@ class BlocknetHandler(BaseBinUtil):
         self.force_kill()
 
     def close_blocknet_pids(self):
-        self.helper.terminate_processes(self.blocknet_pids, "Blocknet")
+        self.terminate_processes(self.blocknet_pids, "Blocknet")
 
     def check_data_folder_existence(self):
         return os.path.exists(self.data_folder)

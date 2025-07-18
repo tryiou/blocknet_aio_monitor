@@ -240,21 +240,21 @@ class BinaryManager:
                 "dir_prefix": "blocknet-",
                 "is_dir": True,
                 "darwin_file": None,
-                "boolvar": self.root_gui.binary_manager.frame_manager.blocknet_installed_boolvar
+                "boolvar": self.frame_manager.blocknet_installed_boolvar
             },
             "blockdx": {
                 "version": self._prune_version(self.root_gui.blockdx_manager.version),
                 "dir_prefix": "BLOCK-DX-",
                 "is_dir": not is_darwin,
                 "darwin_file": os.path.basename(global_variables.blockdx_release_url) if is_darwin else None,
-                "boolvar": self.root_gui.binary_manager.frame_manager.blockdx_installed_boolvar
+                "boolvar": self.frame_manager.blockdx_installed_boolvar
             },
             "xlite": {
                 "version": self._prune_version(self.root_gui.xlite_manager.version),
                 "dir_prefix": "XLite-",
                 "is_dir": not is_darwin,
                 "darwin_file": os.path.basename(global_variables.xlite_release_url) if is_darwin else None,
-                "boolvar": self.root_gui.binary_manager.frame_manager.xlite_installed_boolvar
+                "boolvar": self.frame_manager.xlite_installed_boolvar
             }
         }
 
@@ -268,7 +268,13 @@ class BinaryManager:
             # logging.info(f"item: {item}")
 
             for app_name, app_info in apps_info.items():
-                if app_info["dir_prefix"] in item:
+                is_match_candidate = False
+                if app_info["is_dir"] and app_info["dir_prefix"] in item:
+                    is_match_candidate = True
+                elif not app_info["is_dir"] and app_info["darwin_file"] and app_info["darwin_file"] in item:
+                    is_match_candidate = True
+
+                if is_match_candidate:
                     self._check_app_version(app_info, item, full_path)
 
         # Update GUI with results

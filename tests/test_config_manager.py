@@ -152,7 +152,7 @@ class TestConfigPersistence(BaseConfigTest):
         new_cfg = self.create_config_for_platform('Windows', 'AMD64')
         self.assertIn('127.0.0.1:41412', new_cfg.config['nodes_to_add'])
 
-        # Verify template values retained                                                                                                                                                
+        # Verify template values retained
         self.assertEqual(
             new_cfg._get_system_value('xlite_launch_options'),
             ['--in-process-gpu']

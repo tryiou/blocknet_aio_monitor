@@ -15,6 +15,8 @@ from gui.xlite_manager import XliteManager
 from utilities import global_variables
 from utilities import utils
 
+logging.getLogger().setLevel(logging.DEBUG)
+
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
 pil_logger = logging.getLogger('PIL')
@@ -235,7 +237,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
     def handle_signal(self, signum: int, frame) -> None:
         """Handle signals like SIGINT and SIGTERM."""
-        print(f"Signal {signum} received.")
+        logging.info(f"Signal {signum} received.")
         self.on_close()
 
     def on_close(self) -> None:

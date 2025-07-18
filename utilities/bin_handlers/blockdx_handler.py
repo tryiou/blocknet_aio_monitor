@@ -6,24 +6,25 @@ import os
 from utilities import global_variables
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
-logging.basicConfig(level=logging.DEBUG)
-
+# logging.basicConfig(level=logging.DEBUG)
+logging.getLogger().setLevel(logging.DEBUG)
 
 class BlockDXHandler(BaseBinUtil):
     def __init__(self):
         super().__init__("Blockdx")
         if global_variables.system == "Darwin":
             self.dmg_mount_path = f"/Volumes/{global_variables.blockdx_volume_name}"
-            self.blockdx_exe = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.blockdx_url))
+            self.executable_path = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.blockdx_url))
         else:
-            self.blockdx_exe = os.path.join(global_variables.aio_folder,
-                                            global_variables.conf_data.blockdx_bin_path[global_variables.system],
-                                            global_variables.conf_data.blockdx_bin_name[global_variables.system])
+            self.executable_path = os.path.join(global_variables.aio_folder,
+                                                global_variables.conf_data.blockdx_bin_path[global_variables.system],
+                                                global_variables.conf_data.blockdx_bin_name[global_variables.system])
         self.process_running = None
         self.blockdx_process = None
         self.blockdx_conf_local = None
         self.running = True  # flag for async funcs
         self.blockdx_pids = []
+        self.is_config_sync = False # Initialize is_config_sync
         self.parse_blockdx_conf()
 
     def parse_blockdx_conf(self):
@@ -87,17 +88,23 @@ class BlockDXHandler(BaseBinUtil):
                 json.dump(meta_data, file, indent=4)
             logging.info("Updated Blockdx config with new data.")
             self.blockdx_conf_local = meta_data
+            self.is_config_sync = False # Config changed, so not in sync
         else:
             logging.info("No changes detected in Blockdx config.")
-
+            self.is_config_sync = True # No changes, so config is in sync
+ 
     def start_blockdx(self):
-        if not os.path.exists(self.blockdx_exe):
-            logging.info(f"Blockdx executable not found at {self.blockdx_exe}. Downloading...")
+        if not os.path.exists(self.executable_path):
+            logging.info(f"Blockdx executable not found at {self.executable_path}. Downloading...")
             self.download_blockdx_bin()
+            if not os.path.exists(self.executable_path):
+                logging.error("Failed to download Blockdx binary. Aborting start.")
+                return # Abort if download failed
 
         try:
             if global_variables.system == "Darwin":
-                self.mount_dmg(self.blockdx_exe, self.dmg_mount_path)
+
+                self.handle_dmg( "mount")
                 full_path = os.path.join(self.dmg_mount_path,
                                          *global_variables.conf_data.blockdx_bin_name[global_variables.system])
                 logging.info(
@@ -105,8 +112,8 @@ class BlockDXHandler(BaseBinUtil):
                 command = [full_path]
                 cwd = os.path.dirname(full_path)
             else:
-                command = [self.blockdx_exe]
-                cwd = os.path.dirname(self.blockdx_exe)
+                command = [self.executable_path]
+                cwd = os.path.dirname(self.executable_path)
 
             self.blockdx_process = self.start_process(command, cwd=cwd)
             logging.info(f"Started Blockdx process with PID {self.blockdx_process.pid}: {command}")
@@ -120,7 +127,7 @@ class BlockDXHandler(BaseBinUtil):
             self.close_blockdx_pids()
 
     def close_blockdx_pids(self):
-        self.helper.terminate_processes(self.blockdx_pids, "BlockDX")
+        self.terminate_processes(self.blockdx_pids, "BlockDX")
 
     def download_blockdx_bin(self):
         url = global_variables.conf_data.blockdx_releases_urls.get((global_variables.system, global_variables.machine))
@@ -128,13 +135,18 @@ class BlockDXHandler(BaseBinUtil):
             raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
 
         tmp_filename = "tmp_dx_bin"
-        self.download_binary(
+        return self.download_binary( # Return the result of download_binary
             url,
             tmp_filename,
-            self.blockdx_exe,
+            self.executable_path,
             global_variables.aio_folder
         )
-
+    
+    def unmount_dmg(self):
+        if global_variables.system != "Darwin":
+            logging.warning(f"Call unmount_dmg with wrong OS, {global_variables.system} ?")
+            return
+        self.handle_dmg( "unmount")
 
 def get_blockdx_data_folder():
     path = global_variables.conf_data.blockdx_default_paths.get(global_variables.system)
