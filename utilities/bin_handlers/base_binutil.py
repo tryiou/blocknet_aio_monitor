@@ -66,9 +66,26 @@ class BaseBinUtil:
 
         if url.endswith(".zip"):
             with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_to)
+                # Use handler class name to determine extraction method
+                handler_class = instance.__class__.__name__
+
+                # Blocknet preserves internal folder structure
+                if handler_class == "BlocknetHandler":
+                    zip_ref.extractall(extract_to)
+                    logger.info(f"Extracted Blocknet ZIP directly to {extract_to}")
+                    # XLite/BlockDX create new archive-named subfolders
+                elif handler_class in ["XliteHandler", "BlockDXHandler"]:
+                    archive_name = os.path.splitext(os.path.basename(url))[0]
+                    target_path = os.path.join(extract_to, archive_name)
+                    os.makedirs(target_path, exist_ok=True)
+                    zip_ref.extractall(target_path)
+                    logger.info(f"Extracted {handler_class} to new folder {target_path}")
+                    # Other handlers use default extraction
+                else:
+                    zip_ref.extractall(extract_to)
+                    logger.info(f"Extracted {handler_class} ZIP to {extract_to}")
+
             os.remove(tmp_path)
-            logger.info(f"Extracted ZIP file to {extract_to}")
         elif url.endswith(".tar.gz"):
             with tarfile.open(tmp_path, 'r:gz') as tar:
                 tar.extractall(extract_to)
