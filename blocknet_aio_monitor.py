@@ -15,12 +15,31 @@ from gui.xlite_manager import XliteManager
 from utilities import global_variables
 from utilities import utils
 
-logging.getLogger().setLevel(logging.DEBUG)
+# Create or get the root logger
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)  # Set the logging level to DEBUG
+
+# Create a console handler (prints to stdout)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+# Create a formatter and set it for the handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+
+# Add the handler to the logger (only once to avoid duplicate logs)
+if not logger.hasHandlers():
+    logger.addHandler(console_handler)
 
 asyncio_logger = logging.getLogger('asyncio')
 asyncio_logger.setLevel(logging.WARNING)
 pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.WARNING)
+urllib3_logger = logging.getLogger('urllib3')
+urllib3_logger.setLevel(logging.WARNING)
+urllib3_logger = logging.getLogger('watchdog')
+urllib3_logger.setLevel(logging.WARNING)
+
 from gui.constants import tooltip_bg_color, MAIN_FRAMES_STICKY, TITLE_FRAMES_STICKY
 
 ctk.set_default_color_theme(global_variables.themepath)
@@ -56,7 +75,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
                 try:
                     self.stored_password = utils.decrypt_password(self.cfg['xl_pass'], self.cfg['salt'].encode())
                 except Exception as e:
-                    logging.error(f"Error decrypting XLite password: {e}")
+                    logger.error(f"Error decrypting XLite password: {e}")
                     self.stored_password = None
 
         self.time_disable_button: int = 3000
@@ -237,14 +256,14 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
     def handle_signal(self, signum: int, frame) -> None:
         """Handle signals like SIGINT and SIGTERM."""
-        logging.info(f"Signal {signum} received.")
+        logger.info(f"Signal {signum} received.")
         self.on_close()
 
     def on_close(self) -> None:
         """Handle application close event."""
-        logging.info("Closing application...")
+        logger.info("Closing application...")
         utils.terminate_all_threads()
-        logging.info("Threads terminated.")
+        logger.info("Threads terminated.")
         os._exit(0)
 
     def adjust_theme(self) -> None:
@@ -304,9 +323,9 @@ def run_gui() -> None:
     #     print("GUI execution terminated by user.")
     # except Exception as e:
     #     # Log the error to a file
-    #     logging.basicConfig(filename='gui_errors.log', level=logging.ERROR,
+    #     logger.basicConfig(filename='gui_errors.log', level=logging.ERROR,
     #                         format='%(asctime)s - %(levelname)s - %(message)s')
-    #     logging.error("An error occurred: %s", e)
+    #     logger.error("An error occurred: %s", e)
     #
     #     # Print a user-friendly error message
     #     print("An unexpected error occurred. Please check the log file 'gui_errors.log' for more information.")

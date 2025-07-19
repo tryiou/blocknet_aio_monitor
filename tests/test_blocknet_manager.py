@@ -1,14 +1,14 @@
-import unittest
 import os
 import sys
-from unittest.mock import MagicMock, patch, AsyncMock, call
+import unittest
+from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from gui.blocknet_manager import BlocknetManager
-from utilities import global_variables
 import customtkinter as ctk
+
 
 class TestBlocknetManager(unittest.TestCase):
     def setUp(self):
@@ -46,8 +46,8 @@ class TestBlocknetManager(unittest.TestCase):
 
         # Initialize BlocknetManager
         self.blocknet_manager = BlocknetManager(self.mock_root_gui)
-        self.blocknet_manager.utility = self.MockBlocknetHandler.return_value # Assign the mock instance
-        self.blocknet_manager.frame_manager = MagicMock() # Mock frame_manager after init
+        self.blocknet_manager.utility = self.MockBlocknetHandler.return_value  # Assign the mock instance
+        self.blocknet_manager.frame_manager = MagicMock()  # Mock frame_manager after init
 
     def tearDown(self):
         self.patcher_global_variables.stop()

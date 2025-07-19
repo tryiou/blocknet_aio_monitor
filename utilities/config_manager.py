@@ -6,7 +6,7 @@ from typing import Dict
 
 import yaml
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 SYSTEM_SPECIFIC_KEYS = [
     'blocknet_releases_urls',
@@ -180,7 +180,7 @@ class ConfigManager:
         if config_file.exists():
             with open(config_file, "r") as f:
                 loaded_config = yaml.safe_load(f) or {}
-            logging.info(f"Loaded existing config from {config_file}")
+            logger.info(f"Loaded existing config from {config_file}")
 
             # FOR SYSTEM-SPECIFIC KEYS: Ensure current OS/Arch value is set                                                                                                                  
             for key in SYSTEM_SPECIFIC_KEYS:
@@ -198,7 +198,7 @@ class ConfigManager:
                 if key not in SYSTEM_SPECIFIC_KEYS:
                     self.config[key] = value
         else:
-            logging.info(f"Created new config from template at {config_file}")
+            logger.info(f"Created new config from template at {config_file}")
 
             # Save to ensure missing keys are persisted
         self._save_config()
@@ -257,4 +257,4 @@ class ConfigManager:
         filtered_config = self._filter_config_for_saving()
         with open(config_file, "w") as f:
             yaml.dump(filtered_config, f, default_flow_style=False)
-        logging.info(f"Saved filtered config to {config_file}")
+        logger.info(f"Saved filtered config to {config_file}")

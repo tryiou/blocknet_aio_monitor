@@ -1,15 +1,14 @@
-import unittest
 import os
 import sys
-from unittest.mock import MagicMock, patch, AsyncMock, call
+import unittest
+from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from gui.blockdx_manager import BlockDXManager
-from utilities import global_variables
 import customtkinter as ctk
-import asyncio # Added for asyncio.run
+
 
 class TestBlockDXManager(unittest.TestCase):
     def setUp(self):
@@ -20,8 +19,8 @@ class TestBlockDXManager(unittest.TestCase):
         # Mock root_gui and its managers
         self.mock_root_gui = MagicMock(spec=ctk.CTk)
         self.mock_root_gui.blocknet_manager = MagicMock()
-        self.mock_root_gui.tk = MagicMock() # Add mock for .tk attribute
-        self.mock_root_gui.children = {} # Add mock for .children attribute
+        self.mock_root_gui.tk = MagicMock()  # Add mock for .tk attribute
+        self.mock_root_gui.children = {}  # Add mock for .children attribute
 
         # Patch customtkinter components
         self.patcher_ctk_frame = patch('customtkinter.CTkFrame')
@@ -35,7 +34,6 @@ class TestBlockDXManager(unittest.TestCase):
         self.patcher_ctk_checkbox = patch('custom_tk_mods.ctkCheckBox.CTkCheckBox')
         self.MockCTkCheckBox = self.patcher_ctk_checkbox.start()
 
-
         # Patch BlockDXHandler
         self.patcher_blockdx_handler = patch('gui.blockdx_manager.BlockDXHandler')
         self.MockBlockDXHandler = self.patcher_blockdx_handler.start()
@@ -46,7 +44,7 @@ class TestBlockDXManager(unittest.TestCase):
 
         # Initialize BlockDXManager
         self.blockdx_manager = BlockDXManager(self.mock_root_gui)
-        self.blockdx_manager.utility = self.MockBlockDXHandler.return_value # Assign the mock instance
+        self.blockdx_manager.utility = self.MockBlockDXHandler.return_value  # Assign the mock instance
         self.blockdx_manager.frame_manager = MagicMock()
 
     def tearDown(self):

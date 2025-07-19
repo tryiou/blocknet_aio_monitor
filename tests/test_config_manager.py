@@ -10,7 +10,7 @@ import yaml
 
 from utilities.config_manager import ConfigManager, SYSTEM_SPECIFIC_KEYS
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class BaseConfigTest(unittest.TestCase):
@@ -34,9 +34,9 @@ class BaseConfigTest(unittest.TestCase):
 
     def run(self, result=None):
         """Override run to log test start and end."""
-        logging.info("===== Starting test: %s =====", self.id())
+        logger.info("===== Starting test: %s =====", self.id())
         test_result = super().run(result)
-        logging.info("===== Completed test: %s =====", self.id())
+        logger.info("===== Completed test: %s =====", self.id())
         return test_result
 
 

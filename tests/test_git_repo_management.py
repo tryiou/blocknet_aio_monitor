@@ -1,13 +1,12 @@
-import unittest
-from unittest.mock import patch, MagicMock, mock_open
-import tempfile
-import os
 import subprocess
+import tempfile
+import unittest
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 from utilities.git_repo_management import (
-    GitRepository, 
-    VirtualEnvironment, 
+    GitRepository,
+    VirtualEnvironment,
     GitRepoManagement,
     ExecutionError,
     run_command
@@ -25,9 +24,9 @@ class TestRunCommand(unittest.TestCase):
             mock_process.stdout = "test output"
             mock_process.stderr = ""
             mock_run.return_value = mock_process
-            
+
             returncode, stdout, stderr = run_command(["echo", "test"])
-            
+
             self.assertEqual(returncode, 0)
             self.assertEqual(stdout, "test output")
             self.assertEqual(stderr, "")
@@ -36,30 +35,30 @@ class TestRunCommand(unittest.TestCase):
         """Test command timeout handling."""
         with patch('subprocess.run') as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired(["test"], 300)
-            
+
             with self.assertRaises(ExecutionError) as context:
                 run_command(["test"], timeout=300)
-            
+
             self.assertIn("timed out", str(context.exception))
 
     def test_run_command_not_found(self):
         """Test command not found handling."""
         with patch('subprocess.run') as mock_run:
             mock_run.side_effect = FileNotFoundError()
-            
+
             with self.assertRaises(ExecutionError) as context:
                 run_command(["nonexistent_command"])
-            
+
             self.assertIn("Command not found", str(context.exception))
 
     def test_run_command_general_error(self):
         """Test general command execution error."""
         with patch('subprocess.run') as mock_run:
             mock_run.side_effect = Exception("General error")
-            
+
             with self.assertRaises(ExecutionError) as context:
                 run_command(["test"])
-            
+
             self.assertIn("Command execution failed", str(context.exception))
 
 
@@ -97,7 +96,7 @@ class TestVirtualEnvironment(unittest.TestCase):
         # Create fake venv directory
         venv_bin_path = Path(self.temp_dir) / "venv" / "bin"
         venv_bin_path.mkdir(parents=True)
-        
+
         with patch('utilities.git_repo_management.run_command') as mock_run:
             self.venv.create()
             mock_run.assert_not_called()
@@ -108,7 +107,8 @@ class TestVirtualEnvironment(unittest.TestCase):
             mock_run.return_value = (0, "success", "")
             with patch.object(Path, 'exists', return_value=False):
                 with patch.object(Path, 'mkdir'):
-                    with patch.object(Path, 'exists', side_effect=[False, True]):  # First False for venv_bin_path, then True
+                    with patch.object(Path, 'exists',
+                                      side_effect=[False, True]):  # First False for venv_bin_path, then True
                         self.venv.create()
                         mock_run.assert_called_once()
 
@@ -116,7 +116,7 @@ class TestVirtualEnvironment(unittest.TestCase):
         """Test venv creation failure."""
         with patch('utilities.git_repo_management.run_command') as mock_run:
             mock_run.return_value = (1, "", "error")
-            
+
             with self.assertRaises(ExecutionError):
                 self.venv.create()
 
@@ -130,7 +130,7 @@ class TestVirtualEnvironment(unittest.TestCase):
         """Test requirements installation with requirements.txt."""
         req_file = Path(self.temp_dir) / "requirements.txt"
         req_file.write_text("pytest\nrequests")
-        
+
         with patch('utilities.git_repo_management.run_command') as mock_run:
             mock_run.return_value = (0, "success", "")
             with patch.object(Path, 'exists', return_value=True):
@@ -142,7 +142,7 @@ class TestVirtualEnvironment(unittest.TestCase):
         venv_python = Path(self.temp_dir) / "venv" / "bin" / "python"
         venv_python.parent.mkdir(parents=True)
         venv_python.touch()
-        
+
         python_path = self.venv.get_python_path()
         self.assertEqual(python_path, str(venv_python))
 
@@ -156,7 +156,7 @@ class TestVirtualEnvironment(unittest.TestCase):
         venv_pip = Path(self.temp_dir) / "venv" / "bin" / "pip"
         venv_pip.parent.mkdir(parents=True)
         venv_pip.touch()
-        
+
         pip_path = self.venv.get_pip_path()
         self.assertEqual(pip_path, str(venv_pip))
 
@@ -189,16 +189,16 @@ class TestGitRepository(unittest.TestCase):
         mock_repo = MagicMock()
         mock_repo.references = {"refs/heads/main": True}
         mock_clone.return_value = mock_repo
-        
+
         self.repo._clone_repo()
-        
+
         mock_clone.assert_called_once()
 
     @patch('pygit2.clone_repository')
     def test_clone_repo_failure(self, mock_clone):
         """Test repository cloning failure."""
         mock_clone.side_effect = Exception("Clone failed")
-        
+
         with self.assertRaises(Exception):
             self.repo._clone_repo()
 
@@ -206,10 +206,10 @@ class TestGitRepository(unittest.TestCase):
     def test_clone_repo_cleanup_on_failure(self, mock_clone):
         """Test cleanup on clone failure."""
         mock_clone.side_effect = Exception("Clone failed")
-        
+
         with self.assertRaises(Exception):
             self.repo._clone_repo()
-        
+
         # Directory should be cleaned up (but it won't be in this test since we mock)
         # This test needs to be adjusted to match actual behavior
         self.assertTrue(Path(self.temp_dir).exists())  # Directory exists but is empty
@@ -219,25 +219,25 @@ class TestGitRepository(unittest.TestCase):
         mock_repo = MagicMock()
         mock_repo.references = {"refs/heads/main": True}
         self.repo.repo = mock_repo
-        
+
         self.repo._checkout_branch()
-        
+
         mock_repo.checkout.assert_called_once_with("refs/heads/main")
 
     def test_checkout_branch_from_remote(self):
         """Test checking out branch from remote."""
         mock_repo = MagicMock()
-        
+
         # Mock the remote reference to return a proper object with a target
         mock_remote_ref_obj = MagicMock()
-        mock_remote_ref_obj.target = "mock_target_oid" # Simulate an OID
+        mock_remote_ref_obj.target = "mock_target_oid"  # Simulate an OID
         mock_repo.references = {"refs/remotes/origin/main": mock_remote_ref_obj}
-        
+
         mock_repo.create_branch = MagicMock()
         mock_repo.get = MagicMock()
-        mock_commit_obj = MagicMock() # Simulate a Commit object
+        mock_commit_obj = MagicMock()  # Simulate a Commit object
         mock_repo.get.return_value = mock_commit_obj
-        
+
         self.repo.repo = mock_repo
 
         self.repo._checkout_branch()
@@ -256,25 +256,25 @@ class TestGitRepository(unittest.TestCase):
             ]
             mock_response.raise_for_status = MagicMock()
             mock_get.return_value = mock_response
-            
+
             branches = self.repo.get_remote_branches()
-            
+
             self.assertEqual(branches, ["main", "develop", "feature/test"])
 
     def test_get_remote_branches_api_failure(self):
         """Test getting remote branches when API fails."""
         with patch('requests.get') as mock_get:
             mock_get.side_effect = Exception("API error")
-            
+
             branches = self.repo.get_remote_branches()
-            
+
             self.assertEqual(branches, ["main", "master"])
 
     def test_clone_or_update_new_repo(self):
         """Test clone_or_update for new repository."""
         with patch.object(self.repo, '_clone_repo') as mock_clone:
             self.repo.clone_or_update()
-            
+
             mock_clone.assert_called_once()
 
     def test_clone_or_update_existing_repo(self):
@@ -282,19 +282,19 @@ class TestGitRepository(unittest.TestCase):
         # Create fake .git directory
         git_dir = Path(self.temp_dir) / ".git"
         git_dir.mkdir()
-        
+
         with patch.object(self.repo, '_update_repo') as mock_update:
             self.repo.clone_or_update()
-            
+
             mock_update.assert_called_once()
 
     def test_clone_or_update_recreate_repo(self):
         """Test clone_or_update when .git is missing."""
         Path(self.temp_dir).mkdir(exist_ok=True)
-        
+
         with patch.object(self.repo, '_recreate_repo') as mock_recreate:
             self.repo.clone_or_update()
-            
+
             mock_recreate.assert_called_once()
 
 
@@ -325,16 +325,15 @@ class TestGitRepoManagement(unittest.TestCase):
     def test_setup_success(self):
         """Test successful setup."""
         with patch('utilities.git_repo_management.miniforge_portable') as mock_miniforge, \
-             patch.object(self.repo_mgmt.git_repo, 'clone_or_update') as mock_clone, \
-             patch('utilities.git_repo_management.VirtualEnvironment') as mock_venv_class:
-            
+                patch.object(self.repo_mgmt.git_repo, 'clone_or_update') as mock_clone, \
+                patch('utilities.git_repo_management.VirtualEnvironment') as mock_venv_class:
             mock_miniforge.PortablePythonInstaller.return_value.install.return_value = None
             mock_venv_instance = mock_venv_class.return_value
             mock_venv_instance.create.return_value = None
             mock_venv_instance.install_requirements.return_value = None
-            
+
             self.repo_mgmt.setup()
-            
+
             mock_clone.assert_called_once()
             mock_venv_class.assert_called_once()
             mock_venv_instance.create.assert_called_once()
@@ -343,20 +342,19 @@ class TestGitRepoManagement(unittest.TestCase):
     def test_setup_with_portable_python(self):
         """Test setup with portable Python installation."""
         with patch('utilities.git_repo_management.miniforge_portable') as mock_miniforge, \
-             patch.object(self.repo_mgmt.git_repo, 'clone_or_update') as mock_clone, \
-             patch('utilities.git_repo_management.VirtualEnvironment') as mock_venv_class:
-            
+                patch.object(self.repo_mgmt.git_repo, 'clone_or_update') as mock_clone, \
+                patch('utilities.git_repo_management.VirtualEnvironment') as mock_venv_class:
             # Create fake portable python directory
             portable_dir = Path(self.temp_dir) / "portable_python" / "miniforge"
             portable_dir.mkdir(parents=True)
-            
+
             mock_miniforge.PortablePythonInstaller.return_value.install.return_value = None
             mock_venv_instance = mock_venv_class.return_value
             mock_venv_instance.create.return_value = None
             mock_venv_instance.install_requirements.return_value = None
-            
+
             self.repo_mgmt.setup()
-            
+
             mock_clone.assert_called_once()
             mock_venv_class.assert_called_once()
             mock_venv_instance.create.assert_called_once()
@@ -372,23 +370,23 @@ class TestGitRepoManagement(unittest.TestCase):
         script_path = Path(self.repo_mgmt.target_dir) / "test.py"
         script_path.parent.mkdir(parents=True)
         script_path.write_text("print('test')")
-        
+
         # Create mock venv to avoid NoneType error
         mock_venv = MagicMock()
         mock_venv.get_python_path.return_value = '/fake/python'
         self.repo_mgmt.venv = mock_venv
-        
+
         with patch('subprocess.Popen') as mock_popen, \
-             patch('threading.Thread') as mock_thread:
+                patch('threading.Thread') as mock_thread:
             mock_process = MagicMock()
             mock_process.stdout.readline.return_value = b''
             mock_process.stderr.readline.return_value = b''
             mock_process.poll.return_value = 0  # Process completed
             mock_popen.return_value = mock_process
             mock_thread.return_value = MagicMock()  # Mock thread
-            
+
             result = self.repo_mgmt.run_script("test.py", ["arg1", "arg2"])
-            
+
             mock_popen.assert_called_once()
             self.assertEqual(result, mock_process)
 
@@ -397,23 +395,23 @@ class TestGitRepoManagement(unittest.TestCase):
         script_path = Path(self.repo_mgmt.target_dir) / "test.py"
         script_path.parent.mkdir(parents=True)
         script_path.write_text("print('test')")
-        
+
         # Create mock venv to avoid NoneType error
         mock_venv = MagicMock()
         mock_venv.get_python_path.return_value = '/fake/python'
         self.repo_mgmt.venv = mock_venv
-        
+
         with patch('subprocess.Popen') as mock_popen, \
-             patch('threading.Thread') as mock_thread:
+                patch('threading.Thread') as mock_thread:
             mock_process = MagicMock()
             mock_process.stdout.readline.return_value = b''
             mock_process.stderr.readline.return_value = b''
             mock_process.poll.return_value = 0  # Process completed
             mock_popen.return_value = mock_process
             mock_thread.return_value = MagicMock()  # Mock thread
-            
+
             result = self.repo_mgmt.run_script("test.py", timeout=30)
-            
+
             mock_popen.assert_called_once()
             self.assertEqual(result, mock_process)
 
@@ -421,11 +419,12 @@ class TestGitRepoManagement(unittest.TestCase):
         """Test getting remote branches through GitRepoManagement."""
         with patch.object(self.repo_mgmt.git_repo, 'get_remote_branches') as mock_get:
             mock_get.return_value = ["main", "develop"]
-            
+
             branches = self.repo_mgmt.get_remote_branches()
-            
+
             self.assertEqual(branches, ["main", "develop"])
             mock_get.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()

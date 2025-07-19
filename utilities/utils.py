@@ -9,6 +9,8 @@ from cryptography.fernet import Fernet
 
 from utilities import global_variables
 
+logger = logging.getLogger(__name__)
+
 
 def configure_tooltip_text(tooltip, msg):
     if tooltip.get() != msg:
@@ -25,27 +27,27 @@ def load_cfg_json():
 
     if os.path.exists(full_old_path):
         # migrate old config file
-        logging.info(f"Renaming {full_old_path} to {full_new_path}")
+        logger.info(f"Renaming {full_old_path} to {full_new_path}")
         os.rename(full_old_path, full_new_path)
 
     # Check if the file exists
     if os.path.exists(full_new_path):
         with open(full_new_path, 'r') as file:
             cfg_data = json.load(file)
-        logging.info(f"Configuration file loaded ok: [{full_new_path}]")
+        logger.info(f"Configuration file loaded ok: [{full_new_path}]")
         return cfg_data
     else:
-        logging.info(f"Configuration file not found: [{full_new_path}]")
+        logger.info(f"Configuration file not found: [{full_new_path}]")
         return None
 
 
 def terminate_all_threads():
-    logging.info("Terminating all threads...")
+    logger.info("Terminating all threads...")
     for thread in enumerate():
         if thread != current_thread():
-            # logging.info(f"Terminating thread: {thread.name}")
+            # logger.info(f"Terminating thread: {thread.name}")
             thread.join(timeout=0.25)  # Terminate thread
-            logging.info(f"Thread {thread.name} terminated")
+            logger.info(f"Thread {thread.name} terminated")
 
 
 def remove_cfg_json_key(key):
@@ -58,7 +60,7 @@ def remove_cfg_json_key(key):
         with open(filename, 'r') as file:
             cfg_data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        logging.error(f"Failed to load JSON file: [{filename}]")
+        logger.error(f"Failed to load JSON file: [{filename}]")
         return
 
     # Check if the key exists in the dictionary
@@ -67,9 +69,9 @@ def remove_cfg_json_key(key):
         del cfg_data[key]
         with open(filename, 'w') as file:
             json.dump(cfg_data, file)
-        logging.info(f"Key '{key}' was removed from configuration file: [{filename}]")
+        logger.info(f"Key '{key}' was removed from configuration file: [{filename}]")
     else:
-        logging.warning(f"Key '{key}' not found in configuration file: [{filename}]")
+        logger.warning(f"Key '{key}' not found in configuration file: [{filename}]")
 
 
 def save_cfg_json(key, data):
@@ -85,13 +87,12 @@ def save_cfg_json(key, data):
         # If file doesn't exist or JSON decoding error occurs, create a new empty dictionary
         cfg_data = {}
 
-                                                                                                                                      
-    cfg_data.update({key: data})  
+    cfg_data.update({key: data})
 
     # Save to file
     with open(filename, 'w') as file:
         json.dump(cfg_data, file)
-    logging.info(f"{key} {data} was saved to configuration file: [{filename}]")
+    logger.info(f"{key} {data} was saved to configuration file: [{filename}]")
 
 
 def generate_key():

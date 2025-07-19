@@ -1,21 +1,20 @@
-import threading
-import unittest
+import json
 import os
 import sys
-from unittest.mock import MagicMock, patch, call, mock_open
-import subprocess
-import json
+import unittest
+from unittest.mock import MagicMock, patch, mock_open
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utilities.bin_handlers.xlite_handler import XliteHandler, XliteRPCClient
 
+
 class TestXliteHandler(unittest.TestCase):
     def setUp(self):
         # Create a minimal mock setup that doesn't interfere with threading
         self.patches = []
-        
+
         # Mock global_variables
         self.mock_global_variables = MagicMock()
         self.mock_global_variables.system = 'Linux'
@@ -23,7 +22,7 @@ class TestXliteHandler(unittest.TestCase):
         self.mock_global_variables.aio_folder = '/mock/aio_folder'
         self.mock_global_variables.xlite_volume_name = 'XliteVolume'
         self.mock_global_variables.xlite_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg'
-        
+
         # Mock conf_data
         self.mock_conf_data = MagicMock()
         self.mock_conf_data.xlite_bin_path = {
@@ -52,13 +51,17 @@ class TestXliteHandler(unittest.TestCase):
             'Darwin': '/home/user/Library/Application Support/Xlite-daemon'
         }
         self.mock_conf_data.xlite_releases_urls = {
-            ('Linux', 'x86_64'): 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz',
-            ('Windows', 'AMD64'): 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip',
+            (
+                'Linux',
+                'x86_64'): 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz',
+            (
+                'Windows',
+                'AMD64'): 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip',
             ('Darwin', 'x86_64'): 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg'
         }
         self.mock_conf_data.vc_redist_win_url = 'http://mock.com/vcredist.exe'
         self.mock_global_variables.conf_data = self.mock_conf_data
-        
+
         # Apply patches
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.global_variables', self.mock_global_variables))
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.os.path.exists', return_value=True))
@@ -68,15 +71,15 @@ class TestXliteHandler(unittest.TestCase):
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.os.listdir', return_value=[]))
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.open', mock_open(read_data='{}')))
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.json.load', return_value={}))
-        
+
         # Start all patches
         for p in self.patches:
             p.start()
-        
+
         # Mock threading to prevent actual thread creation
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.threading.Thread'))
         self.patches[-1].start()
-        
+
         # Create handler instance
         self.handler = XliteHandler()
 
@@ -94,7 +97,7 @@ class TestXliteHandler(unittest.TestCase):
             self.mock_global_variables.system = "Linux"
             handler = XliteHandler()  # Recreate handler with Linux system
             handler.download_xlite_bin()
-            
+
             expected_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz'
             expected_executable = '/mock/aio_folder/XLite-1.0.7-linux/xlite'
             mock_download.assert_called_once_with(
@@ -109,7 +112,7 @@ class TestXliteHandler(unittest.TestCase):
             self.mock_global_variables.system = "Darwin"
             handler = XliteHandler()  # Recreate handler with Darwin system
             handler.download_xlite_bin()
-            
+
             expected_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg'
             expected_executable = '/mock/aio_folder/XLite-1.0.7-mac.dmg'
             mock_download.assert_called_once_with(
@@ -168,9 +171,9 @@ class TestXliteHandler(unittest.TestCase):
                 mock_process = MagicMock()
                 mock_process.pid = 12345
                 mock_start.return_value = mock_process
-                
+
                 self.handler.start_xlite(env_vars=["ENV_VAR=value"])
-                
+
                 expected_cmd = ['/mock/aio_folder/XLite-1.0.7-linux/xlite']
                 mock_start.assert_called_once()
                 args, kwargs = mock_start.call_args
@@ -184,13 +187,13 @@ class TestXliteHandler(unittest.TestCase):
                         mock_process = MagicMock()
                         mock_process.pid = 12345
                         mock_start.return_value = mock_process
-                        
+
                         # Create handler with Darwin system
                         handler = XliteHandler()
                         handler.dmg_mount_path = '/Volumes/XliteVolume'
-                        
+
                         handler.start_xlite()
-                        
+
                         mock_handle_dmg.assert_called_once_with("mount")
                         mock_start.assert_called_once()
 
@@ -198,17 +201,17 @@ class TestXliteHandler(unittest.TestCase):
         mock_process = MagicMock()
         mock_process.pid = 123
         self.handler.xlite_process = mock_process
-        
+
         with patch.object(self.handler, 'graceful_terminate') as mock_graceful:
             with patch.object(self.handler, 'terminate_processes') as mock_terminate:
                 self.handler.close_xlite()
-                
+
                 mock_graceful.assert_called_once_with(timeout=10)
                 mock_terminate.assert_called()
 
     def test_close_xlite_no_process(self):
         self.handler.xlite_process = None
-        
+
         with patch.object(self.handler, 'terminate_processes') as mock_terminate:
             self.handler.close_xlite()
             mock_terminate.assert_called()
@@ -231,7 +234,7 @@ class TestXliteHandler(unittest.TestCase):
             self.mock_global_variables.machine = "AMD64"
             handler = XliteHandler()  # Recreate handler with Windows system
             handler.download_xlite_bin()
-            
+
             expected_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip'
             expected_executable = '/mock/aio_folder/XLite-1.0.7-win-x64/XLite.exe'
             mock_download.assert_called_once_with(
@@ -248,10 +251,10 @@ class TestXliteHandler(unittest.TestCase):
             mock_response.status_code = 200
             mock_response.json.return_value = {"result": {"balance": 100}}
             mock_post.return_value = mock_response
-            
+
             client = XliteRPCClient("testuser", "testpass", 8080)
             result = client.send_rpc_request("getbalance")
-            
+
             self.assertEqual(result, {"balance": 100})
             mock_post.assert_called_once()
             call_args = mock_post.call_args
@@ -264,10 +267,10 @@ class TestXliteHandler(unittest.TestCase):
             mock_response = MagicMock()
             mock_response.status_code = 500
             mock_post.return_value = mock_response
-            
+
             client = XliteRPCClient("testuser", "testpass", 8080)
             result = client.send_rpc_request("getbalance")
-            
+
             self.assertIsNone(result)
 
     def test_start_xlite_windows(self):
@@ -278,12 +281,13 @@ class TestXliteHandler(unittest.TestCase):
                     mock_process = MagicMock()
                     mock_process.pid = 12345
                     mock_start.return_value = mock_process
-                    
+
                     # Mock the Windows-specific function that may not exist
-                    with patch('utilities.bin_handlers.xlite_handler.check_vc_redist_installed', create=True, return_value=True):
+                    with patch('utilities.bin_handlers.xlite_handler.check_vc_redist_installed', create=True,
+                               return_value=True):
                         handler = XliteHandler()
                         handler.start_xlite()
-                        
+
                         expected_cmd = ['/mock/aio_folder/XLite-1.0.7-win-x64/XLite.exe', '--in-process-gpu']
                         mock_start.assert_called_once()
                         args, kwargs = mock_start.call_args
@@ -296,9 +300,9 @@ class TestXliteHandler(unittest.TestCase):
                     mock_process = MagicMock()
                     mock_process.pid = 12345
                     mock_start.return_value = mock_process
-                    
+
                     self.handler.start_xlite()
-                    
+
                     mock_download.assert_called_once()
                     mock_start.assert_called_once()
 
@@ -308,9 +312,9 @@ class TestXliteHandler(unittest.TestCase):
                 mock_process = MagicMock()
                 mock_process.pid = 12345
                 mock_start.return_value = mock_process
-                
+
                 self.handler.start_xlite(env_vars=["INVALID_VAR", "VALID_VAR=value"])
-                
+
                 mock_start.assert_called_once()
                 args, kwargs = mock_start.call_args
                 self.assertEqual(kwargs.get('env_vars', {}), {'VALID_VAR': 'value'})
@@ -327,20 +331,20 @@ class TestXliteHandler(unittest.TestCase):
             with patch('utilities.bin_handlers.xlite_handler.global_variables.machine', 'x86_64'):
                 # Mock all necessary configuration dictionaries
                 mock_conf_data = self.mock_global_variables.conf_data
-                
+
                 # Add UnsupportedOS to all necessary dictionaries
                 mock_conf_data.xlite_bin_path['UnsupportedOS'] = 'XLite-1.0.7-unsupported'
                 mock_conf_data.xlite_bin_name['UnsupportedOS'] = 'xlite'
                 mock_conf_data.xlite_default_paths['UnsupportedOS'] = '/home/user/.xlite-unsupported'
                 mock_conf_data.xlite_daemon_default_paths['UnsupportedOS'] = '/home/user/.xlite-daemon-unsupported'
                 # Note: xlite_releases_urls intentionally doesn't include ('UnsupportedOS', 'x86_64')
-                
+
                 handler = XliteHandler()
-                
+
                 # This should raise ValueError from download_xlite_bin
                 with self.assertRaises(ValueError) as context:
                     handler.download_xlite_bin()
-                
+
                 self.assertIn("Unsupported OS or architecture", str(context.exception))
 
 

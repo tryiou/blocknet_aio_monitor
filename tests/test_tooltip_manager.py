@@ -1,14 +1,14 @@
-import unittest
 import os
 import sys
-from unittest.mock import MagicMock, patch, call
+import unittest
+from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from gui.tooltip_manager import TooltipManager
-from utilities import utils
 import CTkToolTip
+
 
 class TestTooltipManager(unittest.TestCase):
     def setUp(self):

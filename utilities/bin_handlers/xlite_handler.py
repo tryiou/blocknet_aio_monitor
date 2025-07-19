@@ -11,7 +11,7 @@ import requests
 from utilities import global_variables
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 if global_variables.system == 'Windows':
     import winreg
@@ -25,7 +25,7 @@ if global_variables.system == 'Windows':
         if display_name is not None:
             return True
         else:
-            logging.info("No vc_redist found. Installing")
+            logger.info("No vc_redist found. Installing")
             install_vc_redist(global_variables.conf_data.vc_redist_win_url)
 
 
@@ -37,7 +37,7 @@ if global_variables.system == 'Windows':
         except FileNotFoundError:
             return None
         except Exception as e:
-            logging.error(f"Error: {e}")
+            logger.error(f"Error: {e}")
             return None
 
 
@@ -52,12 +52,12 @@ if global_variables.system == 'Windows':
             command = f"{installer_name} /install /quiet /norestart"
 
             subprocess.run(command, shell=True, check=True)
-            logging.info("Visual C++ Redistributable installed successfully.")
+            logger.info("Visual C++ Redistributable installed successfully.")
 
             os.remove(installer_name)
 
         except Exception as e:
-            logging.error(f"Error: {e}")
+            logger.error(f"Error: {e}")
 
 
 class XliteRPCClient:
@@ -85,22 +85,20 @@ class XliteRPCClient:
             if 'result' in json_answer:
                 return json_answer['result']
             else:
-                logging.error(f"No result in json: {json_answer}")
+                logger.error(f"No result in json: {json_answer}")
         except requests.RequestException as e:
             return None
         except Exception as ex:
-            logging.exception(f"An unexpected error occurred while sending RPC request: {ex}")
+            logger.exception(f"An unexpected error occurred while sending RPC request: {ex}")
             return None
-
-
-
 
 
 class XliteHandler(BaseBinUtil):
     def __init__(self):
         super().__init__("Xlite")
         if global_variables.system == "Darwin":
-            self.executable_path = os.path.join(global_variables.aio_folder, os.path.basename(global_variables.xlite_url))
+            self.executable_path = os.path.join(global_variables.aio_folder,
+                                                os.path.basename(global_variables.xlite_url))
             self.dmg_mount_path = f"/Volumes/{global_variables.xlite_volume_name}"
         else:
             self.executable_path = os.path.join(global_variables.aio_folder,
@@ -173,9 +171,9 @@ class XliteHandler(BaseBinUtil):
             try:
                 with open(file_path, 'r') as file:
                     meta_data = json.load(file)
-                    logging.info(f"XLITE: Loaded JSON data from [{file_path}]")
+                    logger.info(f"XLITE: Loaded JSON data from [{file_path}]")
             except Exception as e:
-                logging.error(f"Error parsing {file_path}: {e}, repairing file")
+                logger.error(f"Error parsing {file_path}: {e}, repairing file")
         self.xlite_conf_local = meta_data
 
     def parse_xlite_daemon_conf(self, silent=False):
@@ -201,9 +199,9 @@ class XliteHandler(BaseBinUtil):
                 self.xlite_daemon_confs_local[coin] = data
             except Exception as e:
                 self.xlite_daemon_confs_local[coin] = "ERROR PARSING"
-                logging.error(f"Error parsing {json_file_path}: {e}")
+                logger.error(f"Error parsing {json_file_path}: {e}")
         if not silent:
-            logging.info(
+            logger.info(
                 f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(self.xlite_daemon_confs_local.keys())}")
 
     def start_xlite(self, env_vars=[]):
@@ -211,7 +209,7 @@ class XliteHandler(BaseBinUtil):
             check_vc_redist_installed()
 
         if not os.path.exists(self.executable_path):
-            logging.info(f"Xlite executable not found at {self.executable_path}. Downloading...")
+            logger.info(f"Xlite executable not found at {self.executable_path}. Downloading...")
             self.download_xlite_bin()
 
         # Get launch options for current OS
@@ -219,12 +217,12 @@ class XliteHandler(BaseBinUtil):
 
         try:
             if global_variables.system == "Darwin":
-                self.handle_dmg( "mount")
+                self.handle_dmg("mount")
                 full_path = os.path.join(self.dmg_mount_path,
                                          *global_variables.conf_data.xlite_bin_name[global_variables.system])
-                logging.info(
+                logger.info(
                     f"volume_name: {global_variables.xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
-                command = [full_path] + launch_options 
+                command = [full_path] + launch_options
                 cwd = os.path.dirname(full_path)
             else:
                 command = [self.executable_path] + launch_options
@@ -236,12 +234,12 @@ class XliteHandler(BaseBinUtil):
                     key, value = env_var_str.split('=', 1)
                     parsed_env_vars[key] = value
                 else:
-                    logging.warning(f"Environment variable string '{env_var_str}' does not contain '='. Skipping.")
+                    logger.warning(f"Environment variable string '{env_var_str}' does not contain '='. Skipping.")
             self.xlite_process = self.start_process(command, cwd=cwd, env_vars=parsed_env_vars)
-            logging.info(f"Started Xlite process with PID {self.xlite_process.pid}: {command}")
+            logger.info(f"Started Xlite process with PID {self.xlite_process.pid}: {command}")
         except Exception as e:
-            logging.error(f"Error starting Xlite process: {e}\n{traceback.format_exc()}")
-            # logging.error(f"Error AA: {e}")
+            logger.error(f"Error starting Xlite process: {e}\n{traceback.format_exc()}")
+            # logger.error(f"Error AA: {e}")
 
     def close_xlite(self):
         if self.xlite_process:
@@ -268,9 +266,9 @@ class XliteHandler(BaseBinUtil):
             self.executable_path,
             global_variables.aio_folder
         )
-    
+
     def unmount_dmg(self):
         if global_variables.system != "Darwin":
-            logging.warning(f"Call unmount_dmg with wrong OS, {global_variables.system} ?")
+            logger.warning(f"Call unmount_dmg with wrong OS, {global_variables.system} ?")
             return
-        self.handle_dmg( "unmount")
+        self.handle_dmg("unmount")

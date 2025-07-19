@@ -12,11 +12,7 @@ import requests
 
 from utilities import global_variables
 
-logging.basicConfig(level=logging.DEBUG)
-
-# Disable log entries from the urllib3 module (used by requests)
-urllib3_logger = logging.getLogger('urllib3')
-urllib3_logger.setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
 
 class BlocknetRPCClient:
@@ -44,11 +40,11 @@ class BlocknetRPCClient:
             if 'result' in json_answer:
                 return json_answer['result']
             else:
-                logging.error(f"No result in json: {json_answer}")
+                logger.error(f"No result in json: {json_answer}")
         except requests.RequestException as e:
             return None
         except Exception as ex:
-            logging.exception(f"An unexpected error occurred while sending RPC request: {ex}")
+            logger.exception(f"An unexpected error occurred while sending RPC request: {ex}")
             return None
 
 
@@ -113,20 +109,20 @@ class BlocknetHandler(BaseBinUtil):
         if rpc_user is not None and rpc_password is not None and rpc_port != 0:
             self.blocknet_rpc = BlocknetRPCClient(rpc_user, rpc_password, rpc_port)
         else:
-            logging.error("RPC user, password, or port not found in the configuration.")
+            logger.error("RPC user, password, or port not found in the configuration.")
             self.blocknet_rpc = None
 
     def start_blocknet(self):
         self.create_data_folder()
         if not os.path.exists(self.blocknet_exe):
-            logging.info(f"Blocknet executable not found at {self.blocknet_exe}. Downloading...")
+            logger.info(f"Blocknet executable not found at {self.blocknet_exe}. Downloading...")
             self.download_blocknet_bin()
         try:
             command = [self.blocknet_exe, f"-datadir={self.data_folder}"]
             self.blocknet_process = self.start_process(command)
-            logging.info(f"Started Blocknet process: {command} with data directory: {self.data_folder}")
+            logger.info(f"Started Blocknet process: {command} with data directory: {self.data_folder}")
         except Exception as e:
-            logging.error(f"Error: {e}")
+            logger.error(f"Error: {e}")
 
     def close_blocknet(self):
         if self.blocknet_process:
@@ -146,9 +142,9 @@ class BlocknetHandler(BaseBinUtil):
     def set_custom_data_path(self, custom_path):
         if not os.path.exists(custom_path):
             os.makedirs(custom_path)
-            logging.info(f"Custom data path created: {custom_path}")
+            logger.info(f"Custom data path created: {custom_path}")
         self.data_folder = custom_path
-        logging.debug(f"Custom data path set: {custom_path}")
+        logger.debug(f"Custom data path set: {custom_path}")
         self.parse_blocknet_conf()
         self.parse_xbridge_conf()
         self.init_blocknet_rpc()
@@ -158,19 +154,19 @@ class BlocknetHandler(BaseBinUtil):
         conf_file_path = os.path.join(self.data_folder, file)
         if os.path.exists(conf_file_path):
             self.blocknet_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.info(f"BLOCKNET: Parsed ok: [{conf_file_path}]")
+            logger.info(f"BLOCKNET: Parsed ok: [{conf_file_path}]")
         else:
             self.blocknet_conf_local = {}
-            logging.warning(f"{conf_file_path} file does not exist.")
+            logger.warning(f"{conf_file_path} file does not exist.")
 
     def parse_xbridge_conf(self):
         conf_file_path = os.path.join(self.data_folder, "xbridge.conf")
         if os.path.exists(conf_file_path):
             self.xbridge_conf_local = parse_conf_file(file_path=conf_file_path)
-            logging.info(f"BLOCKNET: Parsed ok: [{conf_file_path}]")
+            logger.info(f"BLOCKNET: Parsed ok: [{conf_file_path}]")
         else:
             self.xbridge_conf_local = {}
-            logging.warning(f"{conf_file_path} file does not exist.")
+            logger.warning(f"{conf_file_path} file does not exist.")
 
     def save_blocknet_conf(self):
         conf_file_path = os.path.join(self.data_folder, "blocknet.conf")
@@ -185,11 +181,11 @@ class BlocknetHandler(BaseBinUtil):
         old_local_json = json.dumps(self.blocknet_conf_local, sort_keys=True)
 
         if self.blocknet_conf_remote is None:
-            logging.error("Remote blocknet.conf not available.")
+            logger.error("Remote blocknet.conf not available.")
             return False
 
         if self.blocknet_conf_local is None:
-            logging.error("Local blocknet.conf not available.")
+            logger.error("Local blocknet.conf not available.")
             return False
 
         section_name = 'global'
@@ -215,7 +211,7 @@ class BlocknetHandler(BaseBinUtil):
         # for node in global_variables.conf_data.nodes_to_add:
         #     if node not in addnode_value:
         #         addnode_value.append(node)
-        #         logging.info(f"Added new node: {node}")
+        #         logger.info(f"Added new node: {node}")
 
         # self.blocknet_conf_local[section_name]['addnode'] = addnode_value
 
@@ -237,17 +233,17 @@ class BlocknetHandler(BaseBinUtil):
         # Handle extra options                                                                                                                                                               
         self._update_extra_config_options()
 
-        logging.info("Local blocknet.conf updated successfully.")
+        logger.info("Local blocknet.conf updated successfully.")
 
         new_local_json = json.dumps(self.blocknet_conf_local, sort_keys=True)
 
         if old_local_json != new_local_json:
-            logging.info("Local blocknet.conf has been updated. Saving...")
+            logger.info("Local blocknet.conf has been updated. Saving...")
             self.save_blocknet_conf()
             self.init_blocknet_rpc()
             return True
         else:
-            logging.info("Local blocknet.conf remains the same. No need to save.")
+            logger.info("Local blocknet.conf remains the same. No need to save.")
             return False
 
     def _update_extra_config_options(self):
@@ -277,7 +273,7 @@ class BlocknetHandler(BaseBinUtil):
                 # Add new value if not already present                                                                                                                                   
                 if str_value not in self.blocknet_conf_local[section_name][key]:
                     self.blocknet_conf_local[section_name][key].append(str_value)
-                    logging.info(f"Added config option: {key}={str_value}")
+                    logger.info(f"Added config option: {key}={str_value}")
 
     def retrieve_coin_conf(self, coin):
         latest_version = None
@@ -300,7 +296,7 @@ class BlocknetHandler(BaseBinUtil):
             self.parsed_xbridge_confs[coin] = parsed_xbridge_conf
             self.parsed_wallet_confs[coin] = parsed_wallet_conf
         else:
-            logging.error("No entries found in the manifest. " + coin)
+            logger.error("No entries found in the manifest. " + coin)
 
     def check_xbridge_conf(self, xlite_daemon_conf):
         self.parse_xbridge_conf()
@@ -310,11 +306,11 @@ class BlocknetHandler(BaseBinUtil):
             self.xbridge_conf_local['Main'] = global_variables.conf_data.base_xbridge_conf
 
         if self.blocknet_xbridge_conf_remote is None:
-            logging.error("Remote xbridge.conf not available.")
+            logger.error("Remote xbridge.conf not available.")
             return False
 
         if self.xbridge_conf_local is None:
-            logging.error("Local xbridge.conf not available.")
+            logger.error("Local xbridge.conf not available.")
             return False
         if xlite_daemon_conf:
             for coin in xlite_daemon_conf:
@@ -341,7 +337,7 @@ class BlocknetHandler(BaseBinUtil):
             for section, options in self.blocknet_xbridge_conf_remote.items():
                 if section not in self.xbridge_conf_local:
                     self.xbridge_conf_local[section] = {}
-                logging.info(f"section: {section}, options: {options}")
+                logger.info(f"section: {section}, options: {options}")
                 for key, value in options.items():
                     if key == 'Username':
                         self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcuser'])
@@ -367,11 +363,11 @@ class BlocknetHandler(BaseBinUtil):
 
         new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
         if old_local_json != new_local_json:
-            logging.info("Local xbridge.conf has been updated. Saving...")
+            logger.info("Local xbridge.conf has been updated. Saving...")
             self.save_xbridge_conf()
             return True
         else:
-            logging.info("Local xbridge.conf remains the same. No need to save.")
+            logger.info("Local xbridge.conf remains the same. No need to save.")
             return False
 
     def compare_and_update_local_conf(self, xlite_daemon_conf=None):
@@ -399,10 +395,10 @@ class BlocknetHandler(BaseBinUtil):
             local_file_size = os.path.getsize(local_file_path)
 
             if local_file_size == remote_file_size:
-                logging.info("Bootstrap file already exists on disk and matches the remote file.")
+                logger.info("Bootstrap file already exists on disk and matches the remote file.")
                 need_to_download = False
             else:
-                logging.info("Local bootstrap file exists but does not match the remote file. Re-downloading...")
+                logger.info("Local bootstrap file exists but does not match the remote file. Re-downloading...")
                 os.remove(local_file_path)
         try:
             if need_to_download:
@@ -411,7 +407,7 @@ class BlocknetHandler(BaseBinUtil):
                                             timeout=(10, 30))
                     response.raise_for_status()
                     if response.status_code == 200:
-                        logging.info(
+                        logger.info(
                             f"Downloading {global_variables.conf_data.blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
                         bytes_downloaded = 0
                         for chunk in response.iter_content(chunk_size=8192):
@@ -420,7 +416,7 @@ class BlocknetHandler(BaseBinUtil):
                                 bytes_downloaded += len(chunk)
                                 self.bootstrap_percent_download = (bytes_downloaded / remote_file_size) * 100
                     else:
-                        logging.error("Failed to download the Blocknet Bootstrap.")
+                        logger.error("Failed to download the Blocknet Bootstrap.")
 
                 self.bootstrap_percent_download = None
 
@@ -428,29 +424,29 @@ class BlocknetHandler(BaseBinUtil):
                     os.remove(local_file_path)
                     raise ValueError(f"Downloaded {filename} file size doesn't match the expected size. Deleting it")
 
-                logging.info(f"{filename} Bootstrap downloaded successfully.")
+                logger.info(f"{filename} Bootstrap downloaded successfully.")
 
             to_delete = ['blocks', 'chainstate', 'indexes', 'peers.dat', 'banlist.dat']
             for item_name in to_delete:
                 item_path = os.path.join(self.data_folder, item_name)
                 if os.path.exists(item_path):
                     if os.path.isdir(item_path):
-                        logging.info(f"Deleting existing folder: {item_name}...")
+                        logger.info(f"Deleting existing folder: {item_name}...")
                         shutil.rmtree(item_path)
-                        logging.info(f"{item_name} folder deleted successfully.")
+                        logger.info(f"{item_name} folder deleted successfully.")
                     else:
-                        logging.info(f"Deleting existing file: {item_name}...")
+                        logger.info(f"Deleting existing file: {item_name}...")
                         os.remove(item_path)
-                        logging.info(f"{item_name} deleted successfully.")
-            logging.info("Extracting bootstrap...")
+                        logger.info(f"{item_name} deleted successfully.")
+            logger.info("Extracting bootstrap...")
             with zipfile.ZipFile(local_file_path, "r") as zip_ref:
                 self.bootstrap_extracting = True
                 zip_ref.extractall(self.data_folder)
             self.bootstrap_extracting = False
-            logging.info("Extraction completed.")
+            logger.info("Extraction completed.")
 
         except Exception as e:
-            logging.error(f"An error occurred: {str(e)}")
+            logger.error(f"An error occurred: {str(e)}")
             self.bootstrap_percent_download = None
         finally:
             self.bootstrap_checking = False
@@ -492,10 +488,10 @@ def save_conf_to_file(conf_data, file_path):
                     else:
                         f.write(f"{key}={value}\n")
 
-        logging.info(f"Configuration data saved to {file_path} successfully")
+        logger.info(f"Configuration data saved to {file_path} successfully")
         return True
     except Exception as e:
-        logging.error(f"Error saving configuration data to {file_path}: {e}")
+        logger.error(f"Error saving configuration data to {file_path}: {e}")
         return False
 
 
@@ -509,12 +505,12 @@ def retrieve_remote_conf(remote_url, subfolder, expected_filename):
                 conf_data = f.read()
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
-                logging.info(f"REMOTE: found and parsed ok: [{local_conf_file}]")
+                logger.info(f"REMOTE: found and parsed ok: [{local_conf_file}]")
                 return parsed_conf
             else:
-                logging.error(f"Failed to parse: {local_conf_file}")
+                logger.error(f"Failed to parse: {local_conf_file}")
         except Exception as e:
-            logging.error(f"{local_conf_file} Error opening or parsing file: {e}")
+            logger.error(f"{local_conf_file} Error opening or parsing file: {e}")
 
     return download_remote_conf(remote_url, local_conf_file)
 
@@ -527,17 +523,17 @@ def download_remote_conf(url, filepath):
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
                 save_conf_to_file(parsed_conf, filepath)
-                logging.info(f"retrieved and parsed ok: [{filepath}]")
+                logger.info(f"retrieved and parsed ok: [{filepath}]")
                 return parsed_conf
             else:
-                logging.error(f"Failed to parse {filepath} ")
+                logger.error(f"Failed to parse {filepath} ")
                 return None
         else:
-            logging.error(
+            logger.error(
                 f"Failed to retrieve remote blocknet configuration file: {url} {response.status_code}")
             return None
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error retrieving remote blocknet configuration file: {e}")
+        logger.error(f"Error retrieving remote blocknet configuration file: {e}")
         return None
 
 
@@ -553,14 +549,14 @@ def retrieve_xb_manifest():
             os.makedirs(os.path.dirname(local_manifest_file), exist_ok=True)
             with open(local_manifest_file, 'w') as f:
                 f.write(json.dumps(parsed_json, indent=4))
-            logging.info(f"REMOTE: Retrieved and parsed ok: [{local_manifest_file}]")
+            logger.info(f"REMOTE: Retrieved and parsed ok: [{local_manifest_file}]")
             return parsed_json
         else:
-            logging.error(
+            logger.error(
                 f"Failed to retrieve remote configuration file: {global_variables.conf_data.remote_manifest_url} {response.status_code}")
             return None
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error retrieving remote configuration file: {e}")
+        logger.error(f"Error retrieving remote configuration file: {e}")
         return None
 
 
@@ -619,4 +615,4 @@ def get_blocknet_data_folder(custom_path=None):
         expanded_path = os.path.expandvars(os.path.expanduser(path))
         return os.path.normpath(expanded_path)
     else:
-        logging.error(f"invalid blocknet data folder path: {path}")
+        logger.error(f"invalid blocknet data folder path: {path}")

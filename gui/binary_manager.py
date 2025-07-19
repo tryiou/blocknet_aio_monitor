@@ -11,9 +11,7 @@ import widgets_strings
 from gui.binary_frame_manager import BinaryFrameManager
 from utilities import utils, global_variables
 
-# Disable log entries from the urllib3 module (used by requests)
-urllib3_logger = logging.getLogger('watchdog')
-urllib3_logger.setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
 
 class BinaryFileHandler(FileSystemEventHandler):
@@ -36,24 +34,24 @@ class BinaryFileHandler(FileSystemEventHandler):
         """
         Called when a file is modified. Executes binary check/update with rate limiting.
         """
-        # logging.info("File modified detected: %s", event.src_path)
+        # logger.info("File modified detected: %s", event.src_path)
 
         if self.scheduled:
-            # logging.debug("Update already scheduled, skipping immediate execution.")
+            # logger.debug("Update already scheduled, skipping immediate execution.")
             return
 
         time_since_last = time.time() - self.last_run
-        # logging.debug("Time since last run: %.2f seconds", time_since_last)
+        # logger.debug("Time since last run: %.2f seconds", time_since_last)
 
         if time_since_last >= self.max_delay:
             # Execute immediately
-            # logging.info("Executing check_and_update_aio_folder immediately.")
+            # logger.info("Executing check_and_update_aio_folder immediately.")
             self.binary_manager.check_and_update_aio_folder()
             self.last_run = time.time()
         else:
             # Schedule for later
             delay_ms = int((self.max_delay - time_since_last) * 1000)
-            # logging.info("Scheduling check_and_update_aio_folder in %d ms.", delay_ms)
+            # logger.info("Scheduling check_and_update_aio_folder in %d ms.", delay_ms)
             self.scheduled = True
             self.binary_manager.root_gui.after(delay_ms, self._execute_scheduled)
 
@@ -61,7 +59,7 @@ class BinaryFileHandler(FileSystemEventHandler):
         """
         Executes the scheduled update and resets the schedule flag.
         """
-        # logging.info("Executing scheduled check_and_update_aio_folder.")
+        # logger.info("Executing scheduled check_and_update_aio_folder.")
         self.binary_manager.check_and_update_aio_folder()
         self.last_run = time.time()
         self.scheduled = False
@@ -164,7 +162,7 @@ class BinaryManager:
                 # if a wrong version is found, delete it.
                 if 'blocknet-' in item:
                     if blocknet_pruned_version in item:
-                        logging.info(f"deleting {item_path}")
+                        logger.info(f"deleting {item_path}")
                         shutil.rmtree(item_path)
 
     def install_delete_blockdx_command(self):
@@ -194,7 +192,7 @@ class BinaryManager:
                 if os.path.isdir(item_path):
                     if 'BLOCK-DX-' in item:
                         if blockdx_pruned_version in item:
-                            logging.info(f"deleting {item_path}")
+                            logger.info(f"deleting {item_path}")
                             shutil.rmtree(item_path)
 
     def install_delete_xlite_command(self):
@@ -223,11 +221,11 @@ class BinaryManager:
                 if os.path.isdir(item_path):
                     if 'XLite-' in item:
                         if xlite_pruned_version in item:
-                            logging.info(f"deleting {item_path}")
+                            logger.info(f"deleting {item_path}")
                             shutil.rmtree(item_path)
 
     def check_and_update_aio_folder(self):
-        # logging.info("check_and_update_aio_folder")
+        # logger.info("check_and_update_aio_folder")
 
         # Get system information and versions
         is_darwin = global_variables.system == "Darwin"
@@ -265,7 +263,7 @@ class BinaryManager:
         # Scan the AIO folder for matching items
         for item in os.listdir(aio_folder):
             full_path = os.path.join(aio_folder, item)
-            # logging.info(f"item: {item}")
+            # logger.info(f"item: {item}")
 
             for app_name, app_info in apps_info.items():
                 is_match_candidate = False
@@ -279,7 +277,7 @@ class BinaryManager:
 
         # Update GUI with results
         for app_info in apps_info.values():
-            # logging.info(app_info)
+            # logger.info(app_info)
             app_info["boolvar"].set(app_info["found"])
 
     def _prune_version(self, version):
@@ -288,7 +286,7 @@ class BinaryManager:
 
     def _log_incorrect_target(self, target):
         """Log incorrect version found."""
-        logging.info(f"incorrect version: {target}")
+        logger.info(f"incorrect version: {target}")
         # shutil.rmtree(target) if os.path.isdir(target) else os.remove(target)
         return
 

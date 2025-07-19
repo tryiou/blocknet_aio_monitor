@@ -19,6 +19,8 @@ except ModuleNotFoundError:
 
 import pygit2
 
+logger = logging.getLogger(__name__)
+
 
 class ExecutionError(Exception):
     """Custom exception for execution failures."""
@@ -70,15 +72,15 @@ class VirtualEnvironment:
         self.python_exe = "python.exe" if self.is_windows else "python"
         self.pip_exe = "pip.exe" if self.is_windows else "pip"
         self.venv_bin_path = self.venv_dir / self.bin_dir
-        logging.info(f"venv_bin_path: {self.venv_bin_path}")
+        logger.info(f"venv_bin_path: {self.venv_bin_path}")
 
     def create(self) -> None:
         """Create a virtual environment if it doesn't exist, using a specific Python interpreter."""
         if self.venv_bin_path.exists():
-            logging.info("Virtual environment already exists")
+            logger.info("Virtual environment already exists")
             return
 
-        logging.info(f"Creating virtual environment at {self.venv_dir}")
+        logger.info(f"Creating virtual environment at {self.venv_dir}")
         try:
             # Make sure parent directory exists
             self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
@@ -96,18 +98,18 @@ class VirtualEnvironment:
             if not self.venv_bin_path.exists():
                 raise ExecutionError("Virtual environment creation failed: missing bin directory")
 
-            logging.info("Virtual environment created successfully")
+            logger.info("Virtual environment created successfully")
         except Exception as e:
-            logging.error(f"Failed to create virtual environment: {e}")
+            logger.error(f"Failed to create virtual environment: {e}")
             raise
 
     def install_requirements(self, requirements_path: Path) -> None:
         """Install packages from requirements.txt."""
         if not requirements_path.exists():
-            logging.info("No requirements.txt found. Skipping installation.")
+            logger.info("No requirements.txt found. Skipping installation.")
             return
 
-        logging.info("Installing requirements from requirements.txt")
+        logger.info("Installing requirements from requirements.txt")
 
         pip_path = self.get_pip_path()
         python_path = self.get_python_path()
@@ -123,16 +125,16 @@ class VirtualEnvironment:
             if returncode != 0:
                 raise ExecutionError(f"Failed to install requirements: {stderr}")
 
-            logging.info("Requirements installed successfully")
+            logger.info("Requirements installed successfully")
         except Exception as e:
-            logging.error(f"Failed to install requirements: {e}")
+            logger.error(f"Failed to install requirements: {e}")
             raise
 
     def get_python_path(self) -> str:
         """Get the path to Python executable in the virtual environment."""
         venv_python_path = self.venv_bin_path / self.python_exe
         if venv_python_path.exists():
-            logging.info(f"Using virtual environment Python: {venv_python_path}")
+            logger.info(f"Using virtual environment Python: {venv_python_path}")
             return str(venv_python_path)
         else:
             raise FileNotFoundError(f"Virtual environment Python not found at {venv_python_path}")
@@ -141,7 +143,7 @@ class VirtualEnvironment:
         """Get the path to pip executable in the virtual environment."""
         pip_path = self.venv_bin_path / self.pip_exe
         if pip_path.exists():
-            logging.info(f"Using virtual environment pip: {pip_path}")
+            logger.info(f"Using virtual environment pip: {pip_path}")
             return str(pip_path)
         raise FileNotFoundError(f"Virtual environment pip not found in {self.venv_bin_path}")
 
@@ -170,12 +172,12 @@ class GitRepository:
 
             self._update_repo()
         except Exception as e:
-            logging.error(f"Repository operation failed: {e}")
+            logger.error(f"Repository operation failed: {e}")
             raise
 
     def _clone_repo(self) -> None:
         """Clone a fresh repository."""
-        logging.info(f"Cloning repository to {self.target_dir}")
+        logger.info(f"Cloning repository to {self.target_dir}")
         self.target_dir.mkdir(exist_ok=True, parents=True)
         try:
             callbacks = pygit2.RemoteCallbacks()
@@ -190,12 +192,12 @@ class GitRepository:
             )
 
             elapsed_time = time.time() - start_time
-            logging.info(f"Clone completed in {elapsed_time:.2f} seconds")
+            logger.info(f"Clone completed in {elapsed_time:.2f} seconds")
 
             self._checkout_branch()
-            logging.info(f"Repository cloned successfully")
+            logger.info(f"Repository cloned successfully")
         except pygit2.GitError as e:
-            logging.error(f"Failed to clone repository: {e}")
+            logger.error(f"Failed to clone repository: {e}")
             # Clean up partial clone if it exists
             if self.target_dir.exists():
                 shutil.rmtree(self.target_dir)
@@ -207,7 +209,7 @@ class GitRepository:
             branch_ref = f"refs/heads/{self.remote_branch}"
             if branch_ref in self.repo.references:
                 self.repo.checkout(branch_ref)
-                logging.info(f"Checked out existing branch: {self.remote_branch}")
+                logger.info(f"Checked out existing branch: {self.remote_branch}")
                 return
 
             # Try to create and checkout the branch from origin
@@ -216,17 +218,17 @@ class GitRepository:
                 remote_branch = self.repo.references[remote_ref]
                 self.repo.create_branch(self.remote_branch, self.repo.get(remote_branch.target))
                 self.repo.checkout(branch_ref)
-                logging.info(f"Created and checked out branch from remote: {self.remote_branch}")
+                logger.info(f"Created and checked out branch from remote: {self.remote_branch}")
                 return
 
             # If we get here, the branch doesn't exist locally or remotely
-            logging.warning(f"Branch '{self.remote_branch}' not found locally or remotely. Staying on current branch.")
+            logger.warning(f"Branch '{self.remote_branch}' not found locally or remotely. Staying on current branch.")
         except pygit2.GitError as e:
-            logging.warning(f"Could not checkout branch {self.remote_branch}: {e}")
+            logger.warning(f"Could not checkout branch {self.remote_branch}: {e}")
 
     def _recreate_repo(self) -> None:
         """Remove and recreate the repository directory."""
-        logging.info(f"Recreating repository at {self.target_dir}")
+        logger.info(f"Recreating repository at {self.target_dir}")
 
         if self.target_dir.exists():
             shutil.rmtree(self.target_dir)
@@ -239,7 +241,7 @@ class GitRepository:
         mimics the pull method logic from MichaelBoselowitz's pygit2 "pull" example.
         """
         self.repo = pygit2.Repository(str(self.target_dir))
-        logging.info("Opened existing repository")
+        logger.info("Opened existing repository")
 
         remote_name = "origin"
         branch = self.remote_branch
@@ -248,11 +250,11 @@ class GitRepository:
         for remote in self.repo.remotes:
             if remote.name == remote_name:
                 # Fetch from remote
-                logging.info(f"Fetching updates from remote '{remote_name}'")
+                logger.info(f"Fetching updates from remote '{remote_name}'")
                 start_time = time.time()
                 remote.fetch()
                 elapsed_time = time.time() - start_time
-                logging.info(f"Fetch completed in {elapsed_time:.2f} seconds")
+                logger.info(f"Fetch completed in {elapsed_time:.2f} seconds")
 
                 # Get remote master id
                 remote_master_id = None
@@ -261,11 +263,11 @@ class GitRepository:
                         f"refs/remotes/{remote_name}/{branch}"
                     ).target
                 except KeyError:
-                    logging.error(f"Remote branch '{branch}' not found in '{remote_name}'")
+                    logger.error(f"Remote branch '{branch}' not found in '{remote_name}'")
                     return
 
                 current_branch = self.repo.head.shorthand
-                logging.info(f"current_branch: {current_branch}, self.remote_branch: {self.remote_branch}")
+                logger.info(f"current_branch: {current_branch}, self.remote_branch: {self.remote_branch}")
                 if current_branch != self.remote_branch:
                     self._checkout_branch()
 
@@ -273,7 +275,7 @@ class GitRepository:
                 try:
                     repo_branch = self.repo.lookup_reference(f"refs/heads/{branch}")
                 except KeyError:
-                    logging.info(f"Local branch '{branch}' not found. Creating it.")
+                    logger.info(f"Local branch '{branch}' not found. Creating it.")
                     self.repo.create_branch(branch, self.repo.get(remote_master_id))
                     repo_branch = self.repo.lookup_reference(f"refs/heads/{branch}")
 
@@ -282,31 +284,31 @@ class GitRepository:
 
                 # Up to date, do nothing
                 if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
-                    logging.info("Repository is already up to date")
+                    logger.info("Repository is already up to date")
                     return
 
                 # We can just fastforward
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
-                    logging.info("Performing fast-forward merge")
+                    logger.info("Performing fast-forward merge")
                     self.repo.checkout_tree(self.repo.get(remote_master_id))
                     master_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
                     master_ref.set_target(remote_master_id)
                     self.repo.head.set_target(remote_master_id)
-                    logging.info("Fast-forward merge completed")
+                    logger.info("Fast-forward merge completed")
                     return
 
                 # Normal merge would create conflicts
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-                    logging.error("Pulling remote changes leads to a conflict")
+                    logger.error("Pulling remote changes leads to a conflict")
                     raise Exception("Git conflicts detected during pull operation")
 
                 # Unknown result
                 else:
-                    logging.error(f"Unexpected merge result: {merge_result}")
+                    logger.error(f"Unexpected merge result: {merge_result}")
                     raise AssertionError("Unknown merge analysis result")
 
         # If we got here, the remote wasn't found
-        logging.error(f"Remote '{remote_name}' not found")
+        logger.error(f"Remote '{remote_name}' not found")
         raise Exception(f"Remote '{remote_name}' not found")
 
     def get_remote_branches(self) -> List[str]:
@@ -336,10 +338,10 @@ class GitRepository:
             )
             response.raise_for_status()
             branches = [branch["name"] for branch in response.json()]
-            logging.info(f"Found {len(branches)} remote branches")
+            logger.info(f"Found {len(branches)} remote branches")
             return branches
         except Exception as e:
-            logging.warning(f"Error fetching branches via API: {e}")
+            logger.warning(f"Error fetching branches via API: {e}")
             return ["main", "master"]  # Fallback to common default branches
 
 
@@ -374,11 +376,11 @@ class GitRepoManagement:
             True if setup completed successfully
         """
         try:
-            logging.info(f"Setting up repository in {self.target_dir}")
+            logger.info(f"Setting up repository in {self.target_dir}")
 
             # Check if portable Python exists, install if not
             if self.portable_python_dir and not (self.portable_python_dir / "miniforge").exists():
-                logging.info("Portable Python not found. Installing...")
+                logger.info("Portable Python not found. Installing...")
                 installer = miniforge_portable.PortablePythonInstaller(self.portable_python_dir)
                 installer.install()
 
@@ -395,7 +397,7 @@ class GitRepoManagement:
             self.venv.create()
             self.venv.install_requirements(self.target_dir / "requirements.txt")
 
-            logging.info(f"Repository setup complete")
+            logger.info(f"Repository setup complete")
 
         except Exception as e:
             raise Exception(f"Repository setup failed: {e}")
@@ -418,14 +420,14 @@ class GitRepoManagement:
 
         abs_script_path = (self.target_dir / script_path).resolve()
         if not abs_script_path.exists():
-            logging.error(f"Script not found: {abs_script_path}")
+            logger.error(f"Script not found: {abs_script_path}")
             return None
 
         # Use the Python from the virtual environment
         python_path = self.venv.get_python_path()
         cmd = [str(python_path), str(abs_script_path)] + script_args
 
-        logging.info(f"Running script with venv Python: {' '.join(cmd)}")
+        logger.info(f"Running script with venv Python: {' '.join(cmd)}")
 
         try:
             process = subprocess.Popen(
@@ -445,7 +447,7 @@ class GitRepoManagement:
                             print(f"{prefix}: {line.strip()}")
                 except (ValueError, IOError) as e:
                     # Handle pipe closed or other IO errors
-                    logging.debug(f"Stream reader stopped: {e}")
+                    logger.debug(f"Stream reader stopped: {e}")
 
             stdout_thread = threading.Thread(target=stream_reader,
                                              args=(process.stdout, "STDOUT"),
@@ -463,7 +465,7 @@ class GitRepoManagement:
                     start_time = time.time()
                     while process.poll() is None:
                         if time.time() - start_time > timeout:
-                            logging.warning(f"Script execution timed out after {timeout} seconds")
+                            logger.warning(f"Script execution timed out after {timeout} seconds")
                             process.terminate()
                             time.sleep(1)
                             if process.poll() is None:
@@ -476,7 +478,7 @@ class GitRepoManagement:
             return process
 
         except Exception as e:
-            logging.error(f"Failed to run script: {e}")
+            logger.error(f"Failed to run script: {e}")
             return None
 
     def get_remote_branches(self) -> List[str]:
@@ -486,13 +488,12 @@ class GitRepoManagement:
 
 if __name__ == "__main__":
     # Configure logging
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     # Example usage
     git_repo_url = "https://github.com/tryiou/xbridge_trading_bots"
     local_target_dir = "xbridge_trading_bots"
     branch = "main"
-    logging.info(f"aio_folder: {global_variables.aio_folder}")
+    logger.info(f"aio_folder: {global_variables.aio_folder}")
     manager = GitRepoManagement(git_repo_url, local_target_dir, branch, global_variables.aio_folder)
     manager.setup()
 

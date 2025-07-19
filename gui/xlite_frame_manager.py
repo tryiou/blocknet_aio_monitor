@@ -10,6 +10,8 @@ from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, CORNER_RADIUS, H
     CHECK_BOXES_STICKY, XLITE_FRAME_WIDTH
 from utilities import utils
 
+logger = logging.getLogger(__name__)
+
 
 class XliteFrameManager:
     def __init__(self, parent):
@@ -90,7 +92,7 @@ class XliteFrameManager:
         # Check if the right mouse button was clicked
         if event and event.num == 3:
             # wipe_stored_password
-            logging.info("Right click detected")
+            logger.info("Right click detected")
             # Prevent the right-click event from propagating further
             utils.remove_cfg_json_key("salt")
             utils.remove_cfg_json_key("xl_pass")
@@ -107,7 +109,7 @@ class XliteFrameManager:
         if event and event.num == 1:
             # ask_user_pass
             # store_salted_pass
-            logging.info("Left click detected")
+            logger.info("Left click detected")
             fg_color = self.master_frame.cget('fg_color')
             password = ctkInputDialogMod.CTkInputDialog(
                 title="Store XLite Password",
@@ -122,7 +124,7 @@ class XliteFrameManager:
                 # Store the password in a variable
                 self.root_gui.stored_password = password
             else:
-                logging.info("No password entered.")
+                logger.info("No password entered.")
             # Perform actions for left-click (if needed)
             return "break"
 

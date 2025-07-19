@@ -1,14 +1,14 @@
-import unittest
 import os
 import sys
-from unittest.mock import MagicMock, patch, AsyncMock, call
+import unittest
+from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from gui.xlite_manager import XliteManager
-from utilities import global_variables
 import customtkinter as ctk
+
 
 class TestXliteManager(unittest.TestCase):
     def setUp(self):
@@ -46,8 +46,8 @@ class TestXliteManager(unittest.TestCase):
 
         # Initialize XliteManager
         self.xlite_manager = XliteManager(self.mock_root_gui)
-        self.xlite_manager.utility = self.MockXliteHandler.return_value # Assign the mock instance
-        self.xlite_manager.frame_manager = MagicMock() # Mock frame_manager after init
+        self.xlite_manager.utility = self.MockXliteHandler.return_value  # Assign the mock instance
+        self.xlite_manager.frame_manager = MagicMock()  # Mock frame_manager after init
 
     def tearDown(self):
         self.patcher_global_variables.stop()
@@ -64,7 +64,7 @@ class TestXliteManager(unittest.TestCase):
         self.assertEqual(self.xlite_manager.version, ["v1.0.0"])
         self.assertFalse(self.xlite_manager.process_running)
         self.assertFalse(self.xlite_manager.daemon_process_running)
-        self.MockXliteHandler.assert_called_once() # XliteHandler is initialized without custom_path
+        self.MockXliteHandler.assert_called_once()  # XliteHandler is initialized without custom_path
 
     def test_setup(self):
         with patch('gui.xlite_manager.XliteFrameManager') as MockXliteFrameManager:
@@ -87,12 +87,13 @@ class TestXliteManager(unittest.TestCase):
         self.xlite_manager.detect_new_xlite_install_and_add_to_xbridge()
 
         self.mock_root_gui.blocknet_manager.utility.check_xbridge_conf.assert_called_once_with({"test": "conf"})
-        self.mock_root_gui.blocknet_manager.utility.blocknet_rpc.send_rpc_request.assert_called_once_with("dxloadxbridgeConf")
+        self.mock_root_gui.blocknet_manager.utility.blocknet_rpc.send_rpc_request.assert_called_once_with(
+            "dxloadxbridgeConf")
         self.assertTrue(self.mock_root_gui.disable_daemons_conf_check)
 
     def test_detect_new_xlite_install_and_add_to_xbridge_invalid_coins_rpc(self):
         self.xlite_manager.utility.valid_coins_rpc = False
-        self.mock_root_gui.disable_daemons_conf_check = True # Simulate it was enabled before
+        self.mock_root_gui.disable_daemons_conf_check = True  # Simulate it was enabled before
 
         self.xlite_manager.detect_new_xlite_install_and_add_to_xbridge()
 
