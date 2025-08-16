@@ -1,6 +1,11 @@
+import os
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
+
+# Add the project root to the sys.path to allow imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from gui.xbridge_bot_manager import XBridgeBotManager
 
@@ -248,13 +253,14 @@ class TestXBridgeBotManager(unittest.TestCase):
         with patch('gui.xbridge_bot_manager.logger.info') as mock_log_info:
             self.bot_manager._run_script()
 
-            mock_repo_management.run_script.assert_called_once_with("gui_pingpong.py")
+            mock_repo_management.run_script.assert_called_once_with("main_gui.py")
             mock_log_info.assert_called()
 
     def test_handle_config_folder_rename(self):
         """Test handling config folder rename."""
         with patch('os.path.exists') as mock_exists, \
                 patch('os.rename') as mock_rename, \
+                patch.object(self.bot_manager.repo_management, 'setup') as mock_setup, \
                 patch('gui.xbridge_bot_manager.logger.info') as mock_log_info:
             mock_exists.return_value = True
             self.bot_manager.handle_config_folder_rename()
@@ -262,6 +268,7 @@ class TestXBridgeBotManager(unittest.TestCase):
             # Allow for multiple calls to exists
             mock_exists.assert_called()
             mock_rename.assert_called()
+            mock_setup.assert_called_once()
 
     def test_handle_config_folder_rename_no_config(self):
         """Test handling config folder rename when no config exists."""

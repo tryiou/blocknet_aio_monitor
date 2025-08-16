@@ -1,6 +1,11 @@
+import os
+import sys
 import tkinter as tk
 import unittest
 from unittest.mock import MagicMock, patch
+
+# Add the project root to the sys.path to allow imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 class TestBinaryFrameManager(unittest.TestCase):

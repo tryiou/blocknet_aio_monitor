@@ -498,4 +498,4 @@ if __name__ == "__main__":
     manager.setup()
 
     # Example of running a script after setup
-    manager.run_script("gui_pingpong.py")
+    manager.run_script("main_gui.py")

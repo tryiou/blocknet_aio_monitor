@@ -174,8 +174,8 @@ class XBridgeBotManager:
         """Internal method to run the script"""
         try:
             if self.repo_management:
-                logger.info(f"Attempting to run script gui_pingpong.py in {self.target_dir}")
-                self.process = self.repo_management.run_script("gui_pingpong.py")
+                logger.info(f"Attempting to run script main_gui.py in {self.target_dir}")
+                self.process = self.repo_management.run_script("main_gui.py")
                 if self.process:
                     logger.info(f"Script started with PID: {self.process.pid}")
                 else:
