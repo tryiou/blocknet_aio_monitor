@@ -8,7 +8,7 @@ from pathlib import Path
 
 import requests
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class PortablePythonInstaller:
@@ -18,7 +18,7 @@ class PortablePythonInstaller:
         self.target_dir = target_dir.resolve()
         self.system = platform.system()
         self.arch = platform.machine().lower()
-        logging.info(f"Detected OS: {self.system}, Arch: {self.arch}")
+        logger.info(f"Detected OS: {self.system}, Arch: {self.arch}")
 
     def get_installer_filename(self) -> str:
         base = f"Miniforge3-{self.MINIFORGE_VERSION}"
@@ -31,13 +31,13 @@ class PortablePythonInstaller:
         raise RuntimeError(f"Unsupported OS: {self.system}")
 
     def download(self, url: str, dest: Path):
-        logging.info(f"Downloading {url}")
+        logger.info(f"Downloading {url}")
         r = requests.get(url, stream=True)
         r.raise_for_status()
         with open(dest, "wb") as f:
             for chunk in r.iter_content(8192):
                 f.write(chunk)
-        logging.info(f"Saved installer to {dest}")
+        logger.info(f"Saved installer to {dest}")
 
     def install(self):
         self.target_dir.mkdir(parents=True, exist_ok=True)
@@ -47,7 +47,7 @@ class PortablePythonInstaller:
         install_path = self.target_dir / "miniforge"
 
         if install_path.exists():
-            logging.info(f"Removing existing install dir: {install_path}")
+            logger.info(f"Removing existing install dir: {install_path}")
             shutil.rmtree(install_path)
 
         self.download(url, installer_path)
@@ -66,28 +66,28 @@ class PortablePythonInstaller:
             installer_path.chmod(installer_path.stat().st_mode | stat.S_IEXEC)
             cmd = [str(installer_path), "-b", "-p", str(install_path)]
 
-        logging.info(f"Running installer: {' '.join(cmd)}")
+        logger.info(f"Running installer: {' '.join(cmd)}")
         try:
             subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"Installer failed: {e}")
 
         python_bin = install_path / ("Scripts/python.exe" if self.system == "Windows" else "bin/python")
-        logging.info(f"✅ Installed portable Python to: {install_path}")
-        logging.info(f"🔹 Python executable: {python_bin}")
-        # logging.info(f"🔹 pip: {python_bin} -m pip")
-        # logging.info(f"🔹 venv: {python_bin} -m venv {self.venv}")
+        logger.info(f"✅ Installed portable Python to: {install_path}")
+        logger.info(f"🔹 Python executable: {python_bin}")
+        # logger.info(f"🔹 pip: {python_bin} -m pip")
+        # logger.info(f"🔹 venv: {python_bin} -m venv {self.venv}")
         # After successful installation
         if self.system == "Linux":
             # fix for tkinter low quality display. linux only.
             try:
                 conda_path = install_path / "bin" / "conda"
                 # Run conda install command, update tk packages for GUI app
-                logging.info("Installing tk with xft_* support...")
+                logger.info("Installing tk with xft_* support...")
                 conda_cmd = [str(conda_path), "install", "-c", "conda-forge", "tk=*=xft_*", "-y"]
                 subprocess.run(conda_cmd, check=True, cwd=str(install_path))
             except Exception as e:
-                logging.error(f"❌ Conda package installation failed: {e}")
+                logger.error(f"❌ Conda package installation failed: {e}")
                 raise
         return python_bin
 
@@ -98,5 +98,5 @@ if __name__ == "__main__":
     try:
         python_path = installer.install()
     except Exception as e:
-        logging.error(f"❌ Installation failed: {e}")
+        logger.error(f"❌ Installation failed: {e}")
         sys.exit(1)
