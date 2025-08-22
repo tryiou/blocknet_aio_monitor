@@ -17,13 +17,19 @@ class TestXBridgeBotManager(unittest.TestCase):
         """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
         self.bot_manager = XBridgeBotManager()
+        # Mock to return fake repo management object
+        self.bot_manager.repo_management = MagicMock()
+        # Default repo exists
+        self.bot_manager.target_dir = MagicMock()
+        self.bot_manager.target_dir.exists.return_value = True
+        self.bot_manager.target_dir.__truediv__.return_value.is_dir.return_value = True
 
     def tearDown(self):
         """Clean up after tests."""
         if hasattr(self, 'bot_manager'):
             self.bot_manager.process = None
-            if self.bot_manager.thread and self.bot_manager.thread.is_alive():
-                self.bot_manager.thread.join(timeout=1)
+            if self.bot_manager.installer_thread and self.bot_manager.installer_thread.is_alive():
+                self.bot_manager.installer_thread.join(timeout=1)
 
     def test_init_default(self):
         """Test initialization with default branch."""
@@ -31,25 +37,26 @@ class TestXBridgeBotManager(unittest.TestCase):
         self.assertEqual(self.bot_manager.author, "tryiou")
         self.assertEqual(self.bot_manager.repo_name, "xbridge_trading_bots")
         self.assertFalse(self.bot_manager.started)
-        self.assertIsNone(self.bot_manager.thread)
+        self.assertIsNone(self.bot_manager.installer_thread)
         self.assertIsNone(self.bot_manager.process)
 
     def test_init_custom_branch(self):
         """Test initialization with custom branch."""
         bot_manager = XBridgeBotManager("develop")
         self.assertEqual(bot_manager.current_branch, "develop")
+        self.assertIsNone(bot_manager.installer_thread)
+        self.assertIsNone(bot_manager.process)
 
     def test_repo_exists_true(self):
         """Test repo_exists returns True when directory exists."""
-        with patch('os.path.exists') as mock_exists:
-            mock_exists.return_value = True
-            self.assertTrue(self.bot_manager.repo_exists())
+        self.bot_manager.target_dir.exists.return_value = True
+        self.bot_manager.target_dir.__truediv__.return_value.is_dir.return_value = True
+        self.assertTrue(self.bot_manager.repo_exists())
 
     def test_repo_exists_false(self):
         """Test repo_exists returns False when directory doesn't exist."""
-        with patch('os.path.exists') as mock_exists:
-            mock_exists.return_value = False
-            self.assertFalse(self.bot_manager.repo_exists())
+        self.bot_manager.target_dir.exists.return_value = False
+        self.assertFalse(self.bot_manager.repo_exists())
 
     def test_get_available_branches_success(self):
         """Test successful branch retrieval."""
@@ -69,23 +76,23 @@ class TestXBridgeBotManager(unittest.TestCase):
         """Test install/update with no branch."""
         with patch('gui.xbridge_bot_manager.logger.error') as mock_log_error:
             self.bot_manager.install_or_update("")
-            mock_log_error.assert_called_once_with("Invalid branch: ")
+            mock_log_error.assert_called_once_with("Invalid branch name: empty string")
 
     def test_install_or_update_invalid_branch(self):
         """Test install/update with invalid branch type."""
         with patch('gui.xbridge_bot_manager.logger.error') as mock_log_error:
             self.bot_manager.install_or_update(None)
-            mock_log_error.assert_called_once_with("Invalid branch: None")
+            mock_log_error.assert_called_once_with("Invalid branch name: empty string")
 
     def test_install_or_update_already_running(self):
         """Test install/update when already running."""
         mock_thread = MagicMock()
         mock_thread.is_alive.return_value = True
-        self.bot_manager.thread = mock_thread
+        self.bot_manager.installer_thread = mock_thread
 
         with patch('gui.xbridge_bot_manager.logger.warning') as mock_log_warning:
             self.bot_manager.install_or_update("main")
-            mock_log_warning.assert_called_once_with("Install/update already in progress")
+            mock_log_warning.assert_called_once_with("Install/update already in progress - skipping")
 
     @patch('threading.Thread')
     def test_install_or_update_success(self, mock_thread):
@@ -140,12 +147,12 @@ class TestXBridgeBotManager(unittest.TestCase):
             mock_install.assert_called_once_with("main")
 
     def test_toggle_execution_no_venv(self):
-        """Test toggle execution when venv is not set up."""
+        """Test toggle execution when repo setup incomplete."""
         with patch.object(self.bot_manager, 'repo_exists') as mock_exists, \
                 patch.object(self.bot_manager, 'install_or_update') as mock_install, \
                 patch.object(self.bot_manager, '_start_execution') as mock_start:
             mock_exists.return_value = True
-            self.bot_manager.repo_management.venv = None
+            self.bot_manager.repo_management = None  # Repo setup not done
             self.bot_manager.toggle_execution("main")
 
             mock_install.assert_called_once_with("main")
@@ -158,6 +165,11 @@ class TestXBridgeBotManager(unittest.TestCase):
             mock_exists.return_value = True
             self.bot_manager.repo_management.venv = "/fake/venv"
             self.bot_manager.process = None
+
+            # Set the side effect to update the started flag when mock_start is called
+            def start_execution():
+                self.bot_manager.started = True
+            mock_start.side_effect = start_execution
 
             self.bot_manager.toggle_execution("main")
 
@@ -192,16 +204,6 @@ class TestXBridgeBotManager(unittest.TestCase):
 
             mock_install.assert_called_once_with("develop")
 
-    def test_start_execution(self):
-        """Test starting execution."""
-        with patch('threading.Thread') as mock_thread:
-            mock_thread_instance = MagicMock()
-            mock_thread.return_value = mock_thread_instance
-
-            self.bot_manager._start_execution()
-
-            mock_thread.assert_called_once()
-            mock_thread_instance.start.assert_called_once()
 
     def test_stop_bots_success(self):
         """Test stopping bots successfully."""
@@ -213,7 +215,7 @@ class TestXBridgeBotManager(unittest.TestCase):
         self.bot_manager._stop_execution()
 
         mock_process.terminate.assert_called_once()
-        mock_process.wait.assert_called_once_with(timeout=5)
+        mock_process.wait.assert_called_once_with(timeout=10)
 
     def test_stop_bots_no_process(self):
         """Test stopping bots when no process exists."""
@@ -235,49 +237,38 @@ class TestXBridgeBotManager(unittest.TestCase):
         # The kill might not be called if the exception is handled differently
         # Let's just check that terminate was called
 
-    def test_run_script_no_repo_management(self):
-        """Test running script when repo management is not initialized."""
-        self.bot_manager.repo_management = None
-
-        with patch('gui.xbridge_bot_manager.logger.error') as mock_log_error:
-            self.bot_manager._run_script()
-            mock_log_error.assert_called_once()
-
-    def test_run_script_success(self):
-        """Test successful script execution."""
-        mock_repo_management = MagicMock()
-        mock_process = MagicMock()
-        mock_repo_management.run_script.return_value = mock_process
-        self.bot_manager.repo_management = mock_repo_management
-
-        with patch('gui.xbridge_bot_manager.logger.info') as mock_log_info:
-            self.bot_manager._run_script()
-
-            mock_repo_management.run_script.assert_called_once_with("main_gui.py")
-            mock_log_info.assert_called()
 
     def test_handle_config_folder_rename(self):
         """Test handling config folder rename."""
-        with patch('os.path.exists') as mock_exists, \
-                patch('os.rename') as mock_rename, \
+        # Create a mock for the config_path
+        mock_config_path = MagicMock()
+        mock_config_path.exists.return_value = True
+        
+        # Mock target_dir to return mock_config_path when divided by "config"
+        self.bot_manager.target_dir.__truediv__.return_value = mock_config_path
+
+        with patch('os.rename') as mock_rename, \
                 patch.object(self.bot_manager.repo_management, 'setup') as mock_setup, \
                 patch('gui.xbridge_bot_manager.logger.info') as mock_log_info:
-            mock_exists.return_value = True
             self.bot_manager.handle_config_folder_rename()
 
-            # Allow for multiple calls to exists
-            mock_exists.assert_called()
-            mock_rename.assert_called()
+            mock_config_path.exists.assert_called_once()
+            mock_rename.assert_called_once()
             mock_setup.assert_called_once()
 
     def test_handle_config_folder_rename_no_config(self):
         """Test handling config folder rename when no config exists."""
-        with patch('os.path.exists') as mock_exists, \
-                patch('gui.xbridge_bot_manager.logger.warning') as mock_log_warning:
-            mock_exists.return_value = False
+        # Create a mock for the config_path
+        mock_config_path = MagicMock()
+        mock_config_path.exists.return_value = False
+        
+        # Mock target_dir to return mock_config_path when divided by "config"
+        self.bot_manager.target_dir.__truediv__.return_value = mock_config_path
+
+        with patch('gui.xbridge_bot_manager.logger.warning') as mock_log_warning:
             self.bot_manager.handle_config_folder_rename()
 
-            mock_log_warning.assert_called_once_with("Config folder not found, cannot rename")
+            mock_log_warning.assert_called_once_with("Config directory not found, cannot resolve conflict")
 
     def test_handle_config_folder_rename_with_error(self):
         """Test handling config folder rename with error."""

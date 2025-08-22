@@ -23,30 +23,31 @@ logger = logging.getLogger(__name__)
 
 
 class ExecutionError(Exception):
-    """Custom exception for execution failures."""
+    """Custom exception for Git execution failures."""
     pass
 
 
-def run_command(cmd_list: List[str], cwd: Optional[Path] = None,
-                timeout: int = 300) -> Tuple[int, str, str]:
+def run_command(cmd_list: List[str], 
+               cwd: Optional[Path] = None,
+               timeout: int = 300) -> Tuple[int, str, str]:
     """
-    Run a command and return its output.
+    Execute a command and capture its output.
 
     Args:
-        cmd_list: Command and arguments as a list
-        cwd: Working directory
-        timeout: Command timeout in seconds
+        cmd_list: Command and arguments as list of strings
+        cwd: Working directory path (default: None)
+        timeout: Timeout in seconds (default: 300)
 
     Returns:
         Tuple of (return_code, stdout, stderr)
 
     Raises:
-        ExecutionError: On command execution failure
+        ExecutionError: On command failure or timeout
     """
     try:
         process = subprocess.run(
             cmd_list,
-            check=False,  # Don't raise exception, we'll handle the return code
+            check=False,
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -54,98 +55,127 @@ def run_command(cmd_list: List[str], cwd: Optional[Path] = None,
             timeout=timeout
         )
         return process.returncode, process.stdout, process.stderr
-    except subprocess.TimeoutExpired:
-        raise ExecutionError(f"Command timed out after {timeout} seconds: {' '.join(cmd_list)}")
-    except FileNotFoundError:
-        raise ExecutionError(f"Command not found: {cmd_list[0]}")
+    except subprocess.TimeoutExpired as e:
+        raise ExecutionError(f"Command timed out after {timeout} seconds: {' '.join(cmd_list)}") from e
+    except FileNotFoundError as e:
+        raise ExecutionError(f"Command not found: {cmd_list[0]}") from e
     except Exception as e:
-        raise ExecutionError(f"Command execution failed: {e}")
+        raise ExecutionError(f"Command execution failed: {e}") from e
 
 
 class VirtualEnvironment:
+    """Manages Python virtual environments with portable support."""
+
     def __init__(self, target_dir: Path, portable_python_path: str = None):
+        """
+        Initialize virtual environment manager.
+        
+        Args:
+            target_dir: Base directory for environment
+            portable_python_path: Path to portable Python binary
+        """
         self.target_dir = target_dir
         self.venv_dir = target_dir / "venv"
         self.portable_python_path = portable_python_path
         self.is_windows = sys.platform == "win32"
+        self.is_darwin = sys.platform == "darwin"
         self.bin_dir = "Scripts" if self.is_windows else "bin"
         self.python_exe = "python.exe" if self.is_windows else "python"
         self.pip_exe = "pip.exe" if self.is_windows else "pip"
         self.venv_bin_path = self.venv_dir / self.bin_dir
-        logger.info(f"venv_bin_path: {self.venv_bin_path}")
+        logger.info(f"Virtual environment path: {self.venv_bin_path}")
 
     def create(self) -> None:
-        """Create a virtual environment if it doesn't exist, using a specific Python interpreter."""
+        """Create virtual environment using specified Python interpreter."""
         if self.venv_bin_path.exists():
-            logger.info("Virtual environment already exists")
+            logger.info("Virtual environment already exists - skipping creation")
             return
 
         logger.info(f"Creating virtual environment at {self.venv_dir}")
+        self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
+
+        if self.is_darwin and self.portable_python_path:
+            python_path = Path(self.portable_python_path)
+            if not python_path.exists():
+                # logger.warning(f"Portable Python path invalid: {python_path}")
+                raise FileNotFoundError(f"Python not found: {python_path}")
+            real_python_path = python_path.resolve()
+        else:
+            real_python_path = self.portable_python_path
+
         try:
-            # Make sure parent directory exists
-            self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
-
-            # Use portable Python if provided, else system Python
-            python_path = self.portable_python_path
             returncode, stdout, stderr = run_command(
-                [python_path, "-m", "venv", str(self.venv_dir)]
+                [str(real_python_path), "-m", "venv", str(self.venv_dir)],
+                timeout=300
             )
-
             if returncode != 0:
+                logger.error(f"venv creation failed: {stderr}")
                 raise ExecutionError(f"Virtual environment creation failed: {stderr}")
-
-            # Verify creation
+                
             if not self.venv_bin_path.exists():
-                raise ExecutionError("Virtual environment creation failed: missing bin directory")
-
+                raise ExecutionError("Virtual environment bin directory not created")
+                
             logger.info("Virtual environment created successfully")
         except Exception as e:
-            logger.error(f"Failed to create virtual environment: {e}")
+            logger.error(f"Failed to create virtual environment: {str(e)}")
             raise
 
     def install_requirements(self, requirements_path: Path) -> None:
-        """Install packages from requirements.txt."""
+        """
+        Install packages from requirements file.
+        
+        Args:
+            requirements_path: Path to requirements.txt
+        """
         if not requirements_path.exists():
-            logger.info("No requirements.txt found. Skipping installation.")
+            logger.info("requirements.txt not found - skipping install")
             return
 
         logger.info("Installing requirements from requirements.txt")
-
         pip_path = self.get_pip_path()
         python_path = self.get_python_path()
 
         try:
-            if os.path.exists(pip_path):
-                cmd = [pip_path, "install", "-r", str(requirements_path)]
-            else:
-                cmd = [python_path, "-m", "pip", "install", "-r", str(requirements_path)]
-
-            returncode, stdout, stderr = run_command(cmd, self.target_dir)
-
+            cmd = [str(pip_path), "install", "-r", str(requirements_path)]
+            returncode, stdout, stderr = run_command(cmd, self.target_dir, timeout=300)
             if returncode != 0:
-                raise ExecutionError(f"Failed to install requirements: {stderr}")
-
+                raise ExecutionError(f"Requirements installation failed: {stderr}")
             logger.info("Requirements installed successfully")
         except Exception as e:
-            logger.error(f"Failed to install requirements: {e}")
+            logger.error(f"Failed to install requirements: {str(e)}")
             raise
 
     def get_python_path(self) -> str:
-        """Get the path to Python executable in the virtual environment."""
+        """
+        Get path to virtual environment's Python binary.
+        
+        Returns:
+            Path to Python interpreter as string
+            
+        Raises:
+            FileNotFoundError: When binary not found
+        """
         venv_python_path = self.venv_bin_path / self.python_exe
         if venv_python_path.exists():
-            logger.info(f"Using virtual environment Python: {venv_python_path}")
+            logger.debug(f"Using virtual environment Python: {venv_python_path}")
             return str(venv_python_path)
-        else:
-            raise FileNotFoundError(f"Virtual environment Python not found at {venv_python_path}")
+        raise FileNotFoundError(f"Python not found in {self.venv_bin_path}")
 
     def get_pip_path(self) -> str:
-        """Get the path to pip executable in the virtual environment."""
+        """
+        Get path to virtual environment's pip binary.
+        
+        Returns:
+            Path to pip as string
+            
+        Raises:
+            FileNotFoundError: When binary not found
+        """
         pip_path = self.venv_bin_path / self.pip_exe
         if pip_path.exists():
-            logger.info(f"Using virtual environment pip: {pip_path}")
+            logger.debug(f"Using virtual environment pip: {pip_path}")
             return str(pip_path)
-        raise FileNotFoundError(f"Virtual environment pip not found in {self.venv_bin_path}")
+        raise FileNotFoundError(f"pip not found in {self.venv_bin_path}")
 
 
 class GitRepository:

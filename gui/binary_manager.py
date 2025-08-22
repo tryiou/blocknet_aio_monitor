@@ -484,14 +484,14 @@ class BinaryManager:
 
     def update_xbridge_bots_install_delete_button(self):
         bots_boolvar = self.frame_manager.bots_installed_boolvar.get()
-        if bots_boolvar:
+        # if bots_boolvar:
             # self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
             #                                     msg=self.frame_manager.xbridge_bot_manager.target_dir)
-            button_condition = self.frame_manager.xbridge_bot_manager.process or self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
-        else:
-            # self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
-            #                                     msg=self.frame_manager.xbridge_bot_manager.repo_url)
-            button_condition = self.frame_manager.xbridge_bot_manager.process or self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
+        button_condition = self.frame_manager.xbridge_bot_manager.process or self.frame_manager.xbridge_bot_manager.installer_thread and self.frame_manager.xbridge_bot_manager.installer_thread.is_alive()
+        # else:
+        #     # self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
+        #     #                                     msg=self.frame_manager.xbridge_bot_manager.repo_url)
+        #     button_condition = self.frame_manager.xbridge_bot_manager.process or self.frame_manager.xbridge_bot_manager.installer_thread and self.frame_manager.xbridge_bot_manager.installer_thread.is_alive()
 
             # Set install/delete button image based on state
         if button_condition:
@@ -512,7 +512,7 @@ class BinaryManager:
                                                 msg=widgets_strings.start_string)
 
             # Determine if button should be enabled/disabled based on download status
-        disable_start_close_button = self.frame_manager.xbridge_bot_manager.thread and self.frame_manager.xbridge_bot_manager.thread.is_alive()
+        disable_start_close_button = self.frame_manager.xbridge_bot_manager.installer_thread and self.frame_manager.xbridge_bot_manager.installer_thread.is_alive()
         # or not self.frame_manager.xbridge_bot_manager.repo_management.venv
 
         if not disable_start_close_button:
