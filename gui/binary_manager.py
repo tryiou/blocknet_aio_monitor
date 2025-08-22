@@ -5,6 +5,7 @@ import queue
 import threading
 from threading import Thread
 import time
+import customtkinter as ctk
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
@@ -95,7 +96,19 @@ class BinaryManager:
         self.root_gui.after(0, self.update_all_binary_buttons)
         self.root_gui.after(0, self.update_xbridge_bots_buttons)
 
-    def _start_or_close_binary(self, process_running, stop_func, start_func, button, disable_flag):
+    def _start_or_close_binary(self, process_running: bool, stop_func: callable, 
+                              start_func: callable, button: ctk.CTkButton, 
+                              disable_flag: str) -> None:
+        """
+        Starts or stops a binary process and updates UI state accordingly.
+
+        Args:
+            process_running: Indicates if the binary process is currently running
+            stop_func: Function to call for stopping the process
+            start_func: Function to call for starting the process
+            button: The UI button being processed
+            disable_flag: Attribute name for the button disable flag
+        """
         img = self.root_gui.stop_greyed_img if process_running else self.root_gui.start_greyed_img
         utils.disable_button(button, img=img)
         setattr(self, disable_flag, True)
@@ -227,64 +240,99 @@ class BinaryManager:
                             logger.info(f"deleting {item_path}")
                             shutil.rmtree(item_path)
 
-    def check_and_update_aio_folder(self):
-        current_mtime = os.stat(global_variables.aio_folder).st_mtime_ns
-        if current_mtime == self.last_directory_mtime:
-            return  # Skip if unchanged
+    def get_directory_mtime(self) -> int:
+        """
+        Retrieves the last modified time of the AIO directory with nanosecond
+        precision where available, falling back to second precision on FAT filesystems.
+        
+        Returns:
+            int: Directory modification time in nanoseconds
+        """
+        try:
+            stat_info = os.stat(global_variables.aio_folder)
+            try:
+                return stat_info.st_mtime_ns
+            except AttributeError:
+                return int(stat_info.st_mtime * 1_000_000_000)
+        except OSError as e:
+            logger.warning(f"Directory stat error: {e}", exc_info=True)
+            return 0
 
-        self.last_directory_mtime = current_mtime  # Update tracker
-
-        # logger.info("check_and_update_aio_folder")
-
-        # Get system information and versions
-        is_darwin = global_variables.system == "Darwin"
+    def scan_directory_for_binaries(self, apps_info: dict) -> None:
+        """
+        Scans the AIO folder directory and updates the found status of each application.
+        
+        Args:
+            apps_info: Dictionary containing app information structures
+        """
         aio_folder = global_variables.aio_folder
+        for base_name in os.listdir(aio_folder):
+            full_path = os.path.join(aio_folder, base_name)
+            for app_info in apps_info.values():
+                if self._is_item_match(app_info, base_name, full_path):
+                    self._check_app_version(app_info, base_name, full_path)
 
-        # Define version info for each application
+    def _is_item_match(self, app_info: dict, base_name: str, full_path: str) -> bool:
+        """
+        Determines if a directory item matches the expected pattern for an application.
+        
+        Args:
+            app_info: Application information structure
+            base_name: The base name of the directory item
+            full_path: The full path to the directory item
+            
+        Returns:
+            bool: True if item matches the application's pattern, False otherwise
+        """
+        if app_info["is_dir"] and os.path.isdir(full_path):
+            return app_info["dir_prefix"] in base_name
+        elif not app_info["is_dir"]:
+            return app_info["darwin_file"] in base_name
+        return False
+
+    def check_and_update_aio_folder(self) -> None:
+        """
+        Checks the AIO folder contents and updates installation statuses.
+        
+        Compares directory modification timestamps to skip redundant checks,
+        scans for installed binaries, and updates UI state accordingly.
+        """
+        current_mtime = self.get_directory_mtime()
+        if current_mtime == self.last_directory_mtime:
+            return
+            
+        self.last_directory_mtime = current_mtime
+        is_darwin = global_variables.system == "Darwin"
+        
         apps_info = {
             "blocknet": {
                 "version": self._prune_version(self.root_gui.blocknet_manager.version),
                 "dir_prefix": "blocknet-",
                 "is_dir": True,
                 "darwin_file": None,
-                "boolvar": self.frame_manager.blocknet_installed_boolvar
+                "boolvar": self.frame_manager.blocknet_installed_boolvar,
+                "found": False
             },
             "blockdx": {
                 "version": self._prune_version(self.root_gui.blockdx_manager.version),
                 "dir_prefix": "BLOCK-DX-",
                 "is_dir": not is_darwin,
                 "darwin_file": os.path.basename(global_variables.blockdx_release_url) if is_darwin else None,
-                "boolvar": self.frame_manager.blockdx_installed_boolvar
+                "boolvar": self.frame_manager.blockdx_installed_boolvar,
+                "found": False
             },
             "xlite": {
                 "version": self._prune_version(self.root_gui.xlite_manager.version),
                 "dir_prefix": "XLite-",
                 "is_dir": not is_darwin,
                 "darwin_file": os.path.basename(global_variables.xlite_release_url) if is_darwin else None,
-                "boolvar": self.frame_manager.xlite_installed_boolvar
+                "boolvar": self.frame_manager.xlite_installed_boolvar,
+                "found": False
             }
         }
 
-        # Check each application
-        for app_name, app_info in apps_info.items():
-            app_info["found"] = False
+        self.scan_directory_for_binaries(apps_info)
 
-        # Scan the AIO folder for matching items
-        for item in os.listdir(aio_folder):
-            full_path = os.path.join(aio_folder, item)
-            # logger.info(f"item: {item}")
-
-            for app_name, app_info in apps_info.items():
-                is_match_candidate = False
-                if app_info["is_dir"] and app_info["dir_prefix"] in item:
-                    is_match_candidate = True
-                elif not app_info["is_dir"] and app_info["darwin_file"] and app_info["darwin_file"] in item:
-                    is_match_candidate = True
-
-                if is_match_candidate:
-                    self._check_app_version(app_info, item, full_path)
-
-        # All updates are in main thread now
         for app_info in apps_info.values():
             app_info["boolvar"].set(app_info["found"])
 
@@ -292,11 +340,14 @@ class BinaryManager:
         """Remove 'v' prefix from version string."""
         return version[0].replace('v', '')
 
-    def _log_incorrect_target(self, target):
-        """Log incorrect version found."""
+    def _log_incorrect_target(self, target: str) -> None:
+        """
+        Logs incorrect binary version found in directory scan.
+
+        Args:
+            target: Path to the incorrect binary version
+        """
         logger.info(f"incorrect version: {target}")
-        # shutil.rmtree(target) if os.path.isdir(target) else os.remove(target)
-        return
 
     def _check_app_version(self, app_info, item, full_path):
         """Check if the item matches the expected version for the given app."""
@@ -368,16 +419,19 @@ class BinaryManager:
                                                self.root_gui.xlite_manager, global_variables.xlite_release_url,
                                                folder_path, "process_running")
 
-    def process_file_changes(self):
-        """Process file change events from background threads"""
+    def process_file_changes(self) -> None:
+        """
+        Processes file change events from a thread-safe queue.
+
+        Continuously checks for file system events and schedules corresponding 
+        UI updates in the main thread.
+        """
         try:
             while True:
                 msg_type, param = self.file_change_queue.get_nowait()
                 if msg_type == "delayed_update":
-                    # Handle delayed updates in main thread
                     self.root_gui.after(param, self.handler._execute_scheduled)
                 elif msg_type == "delayed_task":
-                    # Handle other delayed tasks
                     self.root_gui.after(param, self.handler._execute_scheduled)
         except queue.Empty:
             pass

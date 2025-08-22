@@ -95,7 +95,8 @@ class XBridgeBotManager:
                 self.handle_config_folder_rename()
             else:
                 logger.error(f"Repository update failed: {str(e)}", exc_info=True)
-                self.installer_thread = None
+            self.installer_thread = None
+            self.deferred_start = False  # Reset deferred flag on failure   
         finally:
             # Start execution if flag was set
             if self.deferred_start:
