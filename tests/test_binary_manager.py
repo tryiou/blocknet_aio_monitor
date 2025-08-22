@@ -89,6 +89,10 @@ class TestBinaryManager(unittest.TestCase):
         self.mock_observer.return_value.schedule = MagicMock()
         self.mock_observer.return_value.start = MagicMock()
 
+        # Mock os.stat for the aio_folder
+        self.mock_os_stat = patch('gui.binary_manager.os.stat').start()
+        self.mock_os_stat.return_value.st_mtime_ns = 123456789
+
         # Initialize BinaryManager
         self.binary_manager = BinaryManager(self.mock_root_gui)
         self.binary_manager.frame_manager = MagicMock()  # Mock frame_manager after init

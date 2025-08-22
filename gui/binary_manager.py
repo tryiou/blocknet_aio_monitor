@@ -86,6 +86,7 @@ class BinaryManager:
         self.tooltip_manager = self.root_gui.tooltip_manager
         self.file_change_queue = queue.Queue()
         self.process_file_changes()
+        self.last_directory_mtime = 0  # Added tracker
 
     async def setup(self):
         self.frame_manager = BinaryFrameManager(self)
@@ -227,6 +228,12 @@ class BinaryManager:
                             shutil.rmtree(item_path)
 
     def check_and_update_aio_folder(self):
+        current_mtime = os.stat(global_variables.aio_folder).st_mtime_ns
+        if current_mtime == self.last_directory_mtime:
+            return  # Skip if unchanged
+
+        self.last_directory_mtime = current_mtime  # Update tracker
+
         # logger.info("check_and_update_aio_folder")
 
         # Get system information and versions
