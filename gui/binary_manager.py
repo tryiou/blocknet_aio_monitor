@@ -380,6 +380,8 @@ class BinaryManager:
         """
         Updates all binary-related buttons.
         """
+        if not self.root_gui.winfo_exists():
+            return
         self.update_binary_buttons("blocknet")
         self.update_binary_buttons("blockdx")
         self.update_binary_buttons("xlite")
@@ -461,6 +463,8 @@ class BinaryManager:
             utils.disable_button(self.frame_manager.xlite_toggle_execution_button, img=img)
 
     def update_xbridge_bots_buttons(self):
+        if not self.root_gui.winfo_exists():
+            return
         # XBridge Bots
         self.update_xbridge_bots_start_close_button()
         self.update_xbridge_bots_install_delete_button()
