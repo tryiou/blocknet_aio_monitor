@@ -1,8 +1,10 @@
 import logging
 import os
 import shutil
-import time
+import queue
+import threading
 from threading import Thread
+import time
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
@@ -32,34 +34,32 @@ class BinaryFileHandler(FileSystemEventHandler):
 
     def on_modified(self, event: 'FileSystemEvent') -> None:
         """
-        Called when a file is modified. Executes binary check/update with rate limiting.
+        Called when a file is modified. Schedules binary update after delay.
         """
-        # logger.info("File modified detected: %s", event.src_path)
-
         if self.scheduled:
-            # logger.debug("Update already scheduled, skipping immediate execution.")
             return
 
         time_since_last = time.time() - self.last_run
-        # logger.debug("Time since last run: %.2f seconds", time_since_last)
+        delay_seconds = max(0, self.max_delay - time_since_last)
+        delay_ms = int(delay_seconds * 1000)
+        
+        self.scheduled = True
+        # Use thread-safe queue instead of direct after() call
+        self.binary_manager.file_change_queue.put(("delayed_update", delay_ms))
 
-        if time_since_last >= self.max_delay:
-            # Execute immediately
-            # logger.info("Executing check_and_update_aio_folder immediately.")
-            self.binary_manager.check_and_update_aio_folder()
-            self.last_run = time.time()
-        else:
-            # Schedule for later
-            delay_ms = int((self.max_delay - time_since_last) * 1000)
-            # logger.info("Scheduling check_and_update_aio_folder in %d ms.", delay_ms)
-            self.scheduled = True
+    def schedule_delayed_task(self, delay_ms):
+        # Only the main thread should execute after()
+        if threading.current_thread().name == 'MainThread':
             self.binary_manager.root_gui.after(delay_ms, self._execute_scheduled)
+        else:
+            # Schedule through queue if in worker thread
+            self.binary_manager.file_change_queue.put(("delayed_task", delay_ms))
 
     def _execute_scheduled(self) -> None:
         """
         Executes the scheduled update and resets the schedule flag.
         """
-        # logger.info("Executing scheduled check_and_update_aio_folder.")
+        # Run file handling through main thread only
         self.binary_manager.check_and_update_aio_folder()
         self.last_run = time.time()
         self.scheduled = False
@@ -84,6 +84,8 @@ class BinaryManager:
         self.observer.start()
 
         self.tooltip_manager = self.root_gui.tooltip_manager
+        self.file_change_queue = queue.Queue()
+        self.process_file_changes()
 
     async def setup(self):
         self.frame_manager = BinaryFrameManager(self)
@@ -275,9 +277,8 @@ class BinaryManager:
                 if is_match_candidate:
                     self._check_app_version(app_info, item, full_path)
 
-        # Update GUI with results
+        # All updates are in main thread now
         for app_info in apps_info.values():
-            # logger.info(app_info)
             app_info["boolvar"].set(app_info["found"])
 
     def _prune_version(self, version):
@@ -359,6 +360,21 @@ class BinaryManager:
                                                self.frame_manager.install_delete_xlite_string_var,
                                                self.root_gui.xlite_manager, global_variables.xlite_release_url,
                                                folder_path, "process_running")
+
+    def process_file_changes(self):
+        """Process file change events from background threads"""
+        try:
+            while True:
+                msg_type, param = self.file_change_queue.get_nowait()
+                if msg_type == "delayed_update":
+                    # Handle delayed updates in main thread
+                    self.root_gui.after(param, self.handler._execute_scheduled)
+                elif msg_type == "delayed_task":
+                    # Handle other delayed tasks
+                    self.root_gui.after(param, self.handler._execute_scheduled)
+        except queue.Empty:
+            pass
+        self.root_gui.after(100, self.process_file_changes)
 
     def update_all_binary_buttons(self):
         """

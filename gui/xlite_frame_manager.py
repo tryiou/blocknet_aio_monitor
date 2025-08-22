@@ -44,10 +44,10 @@ class XliteFrameManager:
                                                                          width=PANEL_CHECKBOXES_WIDTH)
 
         self.reverse_proxy_process_status_checkbox_state = ctk.BooleanVar()
-        self.reverse_proxy_process_status_checkbox_string_var = ctk.StringVar(
+        self.reverse_proxy_status_str = ctk.StringVar(
             value=widgets_strings.xlite_reverse_proxy_not_running_string)
         self.reverse_proxy_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(self.master_frame,
-                                                                                textvariable=self.reverse_proxy_process_status_checkbox_string_var,
+                                                                                textvariable=self.reverse_proxy_status_str,
                                                                                 variable=self.reverse_proxy_process_status_checkbox_state,
                                                                                 corner_radius=CORNER_RADIUS,
                                                                                 state='disabled',
@@ -128,6 +128,7 @@ class XliteFrameManager:
             # Perform actions for left-click (if needed)
             return "break"
 
+
     def grid_widgets(self, x, y):
         # xlite
         self.xlite_label.grid(row=x, column=y, padx=5, pady=5)
@@ -135,6 +136,7 @@ class XliteFrameManager:
         self.daemon_process_status_checkbox.grid(row=x + 2, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
         self.valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
         self.daemon_valid_config_checkbox.grid(row=x + 2, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+        self.reverse_proxy_process_status_checkbox.grid(row=x+3, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
         self.store_password_button.grid(row=x, column=y + 3, padx=2, pady=2, sticky="e")
 
     def update_xlite_process_status_checkbox(self):
@@ -175,3 +177,11 @@ class XliteFrameManager:
 
         var = widgets_strings.xlite_daemon_valid_config_string if valid_config else widgets_strings.xlite_daemon_not_valid_config_string
         self.daemon_valid_config_checkbox_string_var.set(var)
+
+    def update_xlite_reverse_proxy_process_status(self):
+        if self.parent.reverse_proxy_running:
+            self.reverse_proxy_status_str.set(widgets_strings.xlite_reverse_proxy_running_string)
+            self.reverse_proxy_process_status_checkbox_state.set(True)
+        else:
+            self.reverse_proxy_status_str.set(widgets_strings.xlite_reverse_proxy_not_running_string)
+            self.reverse_proxy_process_status_checkbox_state.set(False)

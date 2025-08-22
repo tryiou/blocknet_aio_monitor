@@ -102,6 +102,10 @@ class TestXliteManager(unittest.TestCase):
         self.assertFalse(self.mock_root_gui.disable_daemons_conf_check)
 
     def test_update_status_xlite(self):
+        # Mock reverse proxy
+        self.xlite_manager.reverse_proxy = MagicMock()
+        self.xlite_manager.reverse_proxy_running = False
+        
         with patch.object(self.xlite_manager, 'detect_new_xlite_install_and_add_to_xbridge') as mock_detect:
             self.xlite_manager.update_status_xlite()
             mock_detect.assert_called_once()
@@ -110,4 +114,5 @@ class TestXliteManager(unittest.TestCase):
             self.xlite_manager.frame_manager.update_xlite_daemon_process_status.assert_called_once()
             self.xlite_manager.frame_manager.update_xlite_valid_config_checkbox.assert_called_once()
             self.xlite_manager.frame_manager.update_xlite_daemon_valid_config_checkbox.assert_called_once()
+            self.xlite_manager.frame_manager.update_xlite_reverse_proxy_process_status.assert_called_once()
             self.mock_root_gui.after.assert_called_once_with(2000, self.xlite_manager.update_status_xlite)

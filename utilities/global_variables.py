@@ -22,6 +22,8 @@ xlite_curpath = conf_data.xlite_bin_path.get(system)
 blocknet_release_url = conf_data.blocknet_releases_urls.get((system, machine))
 blockdx_release_url = conf_data.blockdx_releases_urls.get((system, machine))
 xlite_release_url = conf_data.xlite_releases_urls.get((system, machine))
+xlite_reverse_proxy_release_url = conf_data.xlite_reverse_proxy_releases_urls.get((system, machine))
+xlite_reverse_proxy_bin = conf_data.xlite_reverse_proxy_bin_name.get((system, machine))
 
 blockdx_url = conf_data.blockdx_releases_urls.get((system, machine))
 if system == "Darwin":

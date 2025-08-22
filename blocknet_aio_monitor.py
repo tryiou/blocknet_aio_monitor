@@ -262,6 +262,13 @@ class Blocknet_AIO_GUI(ctk.CTk):
     def on_close(self) -> None:
         """Handle application close event."""
         logger.info("Closing application...")
+        # Stop proxy if running
+        try:
+            if hasattr(self, 'xlite_manager') and hasattr(self.xlite_manager, 'reverse_proxy'):
+                self.xlite_manager.reverse_proxy.stop()
+        except Exception as e:
+            logger.error(f"Proxy shutdown error: {e}")
+            
         utils.terminate_all_threads()
         logger.info("Threads terminated.")
         os._exit(0)

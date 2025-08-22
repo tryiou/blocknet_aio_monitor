@@ -1,5 +1,6 @@
 import asyncio
 import os
+import queue
 import sys
 import time
 import unittest
@@ -150,6 +151,12 @@ class TestBinaryManager(unittest.TestCase):
         self.patcher_thread.stop()
         self.patcher_observer.stop()
         self.patcher_binary_file_handler.stop()
+        # Clean up any pending queue tasks
+        try:
+            while True:
+                self.binary_manager.file_change_queue.get_nowait()
+        except queue.Empty:
+            pass
 
     def test_init(self):
         self.assertIsNotNone(self.binary_manager.root_gui)
@@ -188,10 +195,17 @@ class TestBinaryManager(unittest.TestCase):
         self.assertTrue(self.binary_manager.disable_start_blocknet_button)
         mock_thread.assert_called_once()
         mock_thread.return_value.start.assert_called_once()
-        self.mock_root_gui.after.assert_called_once_with(
-            self.mock_root_gui.time_disable_button,
-            self.binary_manager._enable_binary_start_button,
-            'disable_start_blocknet_button'
+        # Should be 2 calls: one for recurring task (100ms), one for button enable
+        self.assertEqual(self.mock_root_gui.after.call_count, 2)
+        # Extract button enable call
+        enable_call = self.mock_root_gui.after.call_args_list[1]
+        self.assertEqual(
+            enable_call,
+            call(
+                self.mock_root_gui.time_disable_button,
+                self.binary_manager._enable_binary_start_button,
+                'disable_start_blocknet_button'
+            )
         )
 
     @patch('gui.binary_manager.Thread')
@@ -211,10 +225,17 @@ class TestBinaryManager(unittest.TestCase):
         self.assertTrue(self.binary_manager.disable_start_blocknet_button)
         mock_thread.assert_called_once()
         mock_thread.return_value.start.assert_called_once()
-        self.mock_root_gui.after.assert_called_once_with(
-            self.mock_root_gui.time_disable_button,
-            self.binary_manager._enable_binary_start_button,
-            'disable_start_blocknet_button'
+        # Should be 2 calls: one for recurring task (100ms), one for button enable
+        self.assertEqual(self.mock_root_gui.after.call_count, 2)
+        # Extract button enable call
+        enable_call = self.mock_root_gui.after.call_args_list[1]
+        self.assertEqual(
+            enable_call,
+            call(
+                self.mock_root_gui.time_disable_button,
+                self.binary_manager._enable_binary_start_button,
+                'disable_start_blocknet_button'
+            )
         )
 
     def test_enable_binary_start_button(self):
@@ -495,7 +516,14 @@ class TestBinaryManager(unittest.TestCase):
                 call("blockdx"),
                 call("xlite")
             ])
-            self.mock_root_gui.after.assert_called_once_with(2000, self.binary_manager.update_all_binary_buttons)
+            # Should be 2 calls: one for recurring task (100ms), one for our scheduled task (2000ms)
+            self.assertEqual(self.mock_root_gui.after.call_count, 2)
+            # Extract our scheduled task
+            scheduled_call = self.mock_root_gui.after.call_args_list[1]
+            self.assertEqual(
+                scheduled_call,
+                call(2000, self.binary_manager.update_all_binary_buttons)
+            )
 
     def test_update_blockdx_start_close_button_enabled(self):
         self.mock_root_gui.blockdx_manager.process_running = False
@@ -576,33 +604,36 @@ class TestBinaryManager(unittest.TestCase):
         self.mock_utils.enable_button.assert_not_called()
 
     def test_binary_file_handler_on_modified_immediate_execution(self):
-        handler = BinaryFileHandler(self.binary_manager)
+        import queue
+        mock_binary_manager = MagicMock()
+        mock_binary_manager.file_change_queue = queue.Queue()
+        handler = BinaryFileHandler(mock_binary_manager)
         handler.last_run = time.time() - handler.max_delay - 1  # Ensure enough time has passed
         mock_event = MagicMock(spec=FileSystemEvent)
         mock_event.src_path = "/mock/path/file.txt"
-
-        with patch.object(self.binary_manager, 'check_and_update_aio_folder') as mock_check_update:
-            handler.on_modified(mock_event)
-            mock_check_update.assert_called_once()
-            self.assertFalse(handler.scheduled)
+    
+        handler.on_modified(mock_event)
+        self.assertEqual(mock_binary_manager.file_change_queue.qsize(), 1)
+        msg_type, delay_ms = mock_binary_manager.file_change_queue.get_nowait()
+        self.assertEqual(msg_type, "delayed_update")
+        self.assertEqual(delay_ms, 0)
+        self.assertTrue(handler.scheduled)
 
     def test_binary_file_handler_on_modified_scheduled_execution(self):
-        handler = BinaryFileHandler(self.binary_manager)
-        handler.last_run = time.time() - 1  # Less than max_delay
+        import queue
+        mock_binary_manager = MagicMock()
+        mock_binary_manager.file_change_queue = queue.Queue()
+        handler = BinaryFileHandler(mock_binary_manager)
+        handler.last_run = time.time() - 1  # Less than max_delay (5s)
         mock_event = MagicMock(spec=FileSystemEvent)
         mock_event.src_path = "/mock/path/file.txt"
-
-        with patch.object(self.binary_manager, 'check_and_update_aio_folder') as mock_check_update:
-            handler.on_modified(mock_event)
-            mock_check_update.assert_not_called()
-            self.assertTrue(handler.scheduled)
-            self.mock_root_gui.after.assert_called_once()
-            # Manually call the scheduled function to test its execution
-            call_args = self.mock_root_gui.after.call_args
-            scheduled_func = call_args[0][1]
-            scheduled_func()
-            mock_check_update.assert_called_once()
-            self.assertFalse(handler.scheduled)
+    
+        handler.on_modified(mock_event)
+        self.assertEqual(mock_binary_manager.file_change_queue.qsize(), 1)
+        msg_type, delay_ms = mock_binary_manager.file_change_queue.get_nowait()
+        self.assertEqual(msg_type, "delayed_update")
+        self.assertTrue(3950 <= delay_ms <= 4050, f"Expected delay between 3950 and 4050ms, got {delay_ms}ms")
+        self.assertTrue(handler.scheduled)
 
     def test_binary_file_handler_on_modified_already_scheduled(self):
         handler = BinaryFileHandler(self.binary_manager)
@@ -612,7 +643,13 @@ class TestBinaryManager(unittest.TestCase):
         mock_event.src_path = "/mock/path/file.txt"
 
         with patch.object(self.binary_manager, 'check_and_update_aio_folder') as mock_check_update:
+            # Clear mock before test
+            self.mock_root_gui.after.reset_mock()
+            
             handler.on_modified(mock_event)
             mock_check_update.assert_not_called()
-            self.mock_root_gui.after.assert_not_called()
+            # Should not add to queue or call after()
+            self.assertFalse(self.mock_root_gui.after.called)
             self.assertTrue(handler.scheduled)  # Should remain scheduled
+            # Queue should remain empty
+            self.assertEqual(self.binary_manager.file_change_queue.qsize(), 0)

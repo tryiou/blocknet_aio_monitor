@@ -3,6 +3,7 @@ import logging
 from gui.xlite_frame_manager import XliteFrameManager
 from utilities import global_variables
 from utilities.bin_handlers.xlite_handler import XliteHandler
+from utilities.bin_handlers.xlite_reverse_proxy_handler import XliteReverseProxyHandler
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,12 @@ class XliteManager:
 
     async def setup(self):
         self.frame_manager = XliteFrameManager(self)
+        self.reverse_proxy = XliteReverseProxyHandler()
+        self.reverse_proxy_running = False
+        try:
+            self.reverse_proxy.start()
+        except Exception as e:
+            logger.error(f"Proxy init failed: {e}")
         self.root_gui.after(0, self.update_status_xlite)
 
     def refresh_xlite_confs(self):
@@ -43,4 +50,10 @@ class XliteManager:
         self.frame_manager.update_xlite_daemon_process_status()
         self.frame_manager.update_xlite_valid_config_checkbox()
         self.frame_manager.update_xlite_daemon_valid_config_checkbox()
+        # Update proxy status
+        self.reverse_proxy_running = (
+            self.reverse_proxy.port_occupied() or
+            self.reverse_proxy.running_locally
+        )
+        self.frame_manager.update_xlite_reverse_proxy_process_status()
         self.root_gui.after(2000, self.update_status_xlite)

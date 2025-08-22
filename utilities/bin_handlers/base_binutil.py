@@ -159,6 +159,40 @@ class BaseBinUtil:
                     logger.warning(f"Process {name} PID {pid}: Timeout expired, killed process")
                 else:
                     logger.warning(f"Process {name} PID {pid}: {str(e)}")
+    
+    def download_standalone_binary(self, url: str, target_path: str) -> bool:
+        """Download non-archive binaries with security checks"""
+        try:
+            target_dir = os.path.dirname(target_path)
+            os.makedirs(target_dir, exist_ok=True)
+            temp_path = f"{target_path}.tmp"
+
+            # Only download if doesn't exist
+            if not os.path.exists(target_path):
+                logger.info(f"Downloading {url}")
+                response = requests.get(url, stream=True, timeout=30)
+                response.raise_for_status()
+
+                with open(temp_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+
+                # Atomic replace
+                os.replace(temp_path, target_path)
+
+                # Set executable permissions
+                if sys.platform in ["linux", "darwin"]:
+                    os.chmod(target_path, 0o755)
+
+                logger.info(f"Binary saved to {target_path}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Download failed: {e}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return False
 
     # Shared by BlockdxUtility and XliteUtility
     def handle_dmg(self, action):

@@ -12,6 +12,8 @@ SYSTEM_SPECIFIC_KEYS = [
     'blocknet_releases_urls',
     'blockdx_releases_urls',
     'xlite_releases_urls',
+    'xlite_reverse_proxy_releases_urls',
+    'xlite_reverse_proxy_bin_name',
     'blocknet_default_paths',
     'blockdx_default_paths',
     'xlite_default_paths',
@@ -154,7 +156,23 @@ class ConfigManager:
                 "autofillAddresses": False,
                 "upgradedToV4": True
             },
-            'vc_redist_win_url': "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+            'vc_redist_win_url': "https://aka.ms/vs/17/release/vc_redist.x64.exe",
+            'xlite_reverse_proxy_releases_urls': {
+                ("Windows", "AMD64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_windows-amd64.exe",
+                ("Windows", "arm64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_windows-arm64.exe",
+                ("Linux", "x86_64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_linux-amd64",
+                ("Linux", "aarch64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_linux-arm64",
+                ("Darwin", "x86_64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_macos-amd64",
+                ("Darwin", "arm64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_macos-arm64",
+            },
+            'xlite_reverse_proxy_bin_name': {
+                ("Windows", "AMD64"): "xlite-reverse-proxy_windows-amd64.exe",
+                ("Windows", "arm64"): "xlite-reverse-proxy_windows-arm64.exe",
+                ("Linux", "x86_64"): "xlite-reverse-proxy_linux-amd64",
+                ("Linux", "aarch64"): "xlite-reverse-proxy_linux-arm64",
+                ("Darwin", "x86_64"): "xlite-reverse-proxy_macos-amd64",
+                ("Darwin", "arm64"): "xlite-reverse-proxy_macos-arm64",
+            }
         }
         if self.system == "Windows":
             self.config_template['extra_option_blocknet_core_conf'].append({'bantime': 0})
