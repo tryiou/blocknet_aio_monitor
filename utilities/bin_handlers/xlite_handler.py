@@ -10,6 +10,7 @@ import requests
 
 from utilities import global_variables
 from utilities.bin_handlers.base_binutil import BaseBinUtil
+from utilities.rpc_client import RPCClient
 
 logger = logging.getLogger(__name__)
 
@@ -60,39 +61,6 @@ if global_variables.system == 'Windows':
             logger.error(f"Error: {e}")
 
 
-class XliteRPCClient:
-    def __init__(self, rpc_user, rpc_password, rpc_port):
-        self.rpc_user = rpc_user
-        self.rpc_password = rpc_password
-        self.rpc_port = rpc_port
-
-    def send_rpc_request(self, method=None, params=None):
-        url = f"http://localhost:{self.rpc_port}"
-        headers = {'content-type': 'application/json'}
-        auth = (self.rpc_user, self.rpc_password)
-        data = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params if params is not None else [],
-            "id": 1,
-        }
-        try:
-            response = requests.post(url, json=data, headers=headers, auth=auth)
-            if response.status_code != 200:
-                return None
-
-            json_answer = response.json()
-            if 'result' in json_answer:
-                return json_answer['result']
-            else:
-                logger.error(f"No result in json: {json_answer}")
-        except requests.RequestException as e:
-            return None
-        except Exception as ex:
-            logger.exception(f"An unexpected error occurred while sending RPC request: {ex}")
-            return None
-
-
 class XliteHandler(BaseBinUtil):
     def __init__(self):
         super().__init__("Xlite")
@@ -126,7 +94,7 @@ class XliteHandler(BaseBinUtil):
                 port = self.xlite_daemon_confs_local[coin]['rpcPort']
                 user = self.xlite_daemon_confs_local[coin]['rpcUsername']
                 password = self.xlite_daemon_confs_local[coin]['rpcPassword']
-                self.coins_rpc[coin] = XliteRPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
+                self.coins_rpc[coin] = RPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
 
     def check_xlite_daemon_confs(self):
         while self.running and not self.valid_coins_rpc:

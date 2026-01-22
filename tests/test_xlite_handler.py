@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch, mock_open
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utilities.bin_handlers.xlite_handler import XliteHandler, XliteRPCClient
+from utilities.bin_handlers.xlite_handler import XliteHandler
+from utilities.rpc_client import RPCClient
 
 
 class TestXliteHandler(unittest.TestCase):
@@ -245,14 +246,14 @@ class TestXliteHandler(unittest.TestCase):
             )
 
     def test_xlite_rpc_client_success(self):
-        with patch('utilities.bin_handlers.xlite_handler.requests.post') as mock_post:
+        with patch('utilities.rpc_client.requests.Session.post') as mock_post:
             # Mock successful RPC response
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"result": {"balance": 100}}
             mock_post.return_value = mock_response
 
-            client = XliteRPCClient("testuser", "testpass", 8080)
+            client = RPCClient("testuser", "testpass", 8080)
             result = client.send_rpc_request("getbalance")
 
             self.assertEqual(result, {"balance": 100})
@@ -262,13 +263,13 @@ class TestXliteHandler(unittest.TestCase):
             self.assertEqual(call_args[1]['auth'], ("testuser", "testpass"))
 
     def test_xlite_rpc_client_failure(self):
-        with patch('utilities.bin_handlers.xlite_handler.requests.post') as mock_post:
+        with patch('utilities.rpc_client.requests.Session.post') as mock_post:
             # Mock failed RPC response (non-200 status)
             mock_response = MagicMock()
             mock_response.status_code = 500
             mock_post.return_value = mock_response
 
-            client = XliteRPCClient("testuser", "testpass", 8080)
+            client = RPCClient("testuser", "testpass", 8080)
             result = client.send_rpc_request("getbalance")
 
             self.assertIsNone(result)

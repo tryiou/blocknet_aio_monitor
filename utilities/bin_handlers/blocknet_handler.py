@@ -11,41 +11,9 @@ import zipfile
 import requests
 
 from utilities import global_variables
+from utilities.rpc_client import RPCClient
 
 logger = logging.getLogger(__name__)
-
-
-class BlocknetRPCClient:
-    def __init__(self, rpc_user, rpc_password, rpc_port):
-        self.rpc_user = rpc_user
-        self.rpc_password = rpc_password
-        self.rpc_port = rpc_port
-
-    def send_rpc_request(self, method=None, params=None):
-        url = f"http://localhost:{self.rpc_port}"
-        headers = {'content-type': 'application/json'}
-        auth = (self.rpc_user, self.rpc_password)
-        data = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params if params is not None else [],
-            "id": 1,
-        }
-        try:
-            response = requests.post(url, json=data, headers=headers, auth=auth)
-            if response.status_code != 200:
-                return None
-
-            json_answer = response.json()
-            if 'result' in json_answer:
-                return json_answer['result']
-            else:
-                logger.error(f"No result in json: {json_answer}")
-        except requests.RequestException as e:
-            return None
-        except Exception as ex:
-            logger.exception(f"An unexpected error occurred while sending RPC request: {ex}")
-            return None
 
 
 from utilities.bin_handlers.base_binutil import BaseBinUtil
@@ -107,7 +75,7 @@ class BlocknetHandler(BaseBinUtil):
             rpc_port = 0
 
         if rpc_user is not None and rpc_password is not None and rpc_port != 0:
-            self.blocknet_rpc = BlocknetRPCClient(rpc_user, rpc_password, rpc_port)
+            self.blocknet_rpc = RPCClient(rpc_user, rpc_password, rpc_port)
         else:
             logger.error("RPC user, password, or port not found in the configuration.")
             self.blocknet_rpc = None
