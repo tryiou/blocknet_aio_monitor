@@ -55,12 +55,17 @@ class TestBinaryFrameManager(unittest.TestCase):
         self.patcher_bot_manager = patch('gui.xbridge_bot_manager.XBridgeBotManager',
                                          return_value=self.mock_bot_manager)
 
+        # Mock the GitHub API call to prevent network requests during initialization
+        self.patcher_get_remote_branches = patch('utilities.git_repo_management.GitRepoManagement.get_remote_branches',
+                                                 return_value=["main", "develop"])
+
         self.patcher_frame.start()
         self.patcher_label.start()
         self.patcher_button.start()
         self.patcher_option_menu.start()
         self.patcher_checkbox.start()
         self.patcher_bot_manager.start()
+        self.patcher_get_remote_branches.start()
 
         # Import after patching
         from gui.binary_frame_manager import BinaryFrameManager
@@ -74,6 +79,7 @@ class TestBinaryFrameManager(unittest.TestCase):
         self.patcher_option_menu.stop()
         self.patcher_checkbox.stop()
         self.patcher_bot_manager.stop()
+        self.patcher_get_remote_branches.stop()
 
         if hasattr(self, 'root'):
             self.root.destroy()

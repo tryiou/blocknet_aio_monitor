@@ -1,12 +1,12 @@
 import copy
 import logging
+import os
 import platform
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-import os
-import sys
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

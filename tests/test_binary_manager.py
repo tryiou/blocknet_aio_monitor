@@ -615,7 +615,7 @@ class TestBinaryManager(unittest.TestCase):
         handler.last_run = time.time() - handler.max_delay - 1  # Ensure enough time has passed
         mock_event = MagicMock(spec=FileSystemEvent)
         mock_event.src_path = "/mock/path/file.txt"
-    
+
         handler.on_modified(mock_event)
         self.assertEqual(mock_binary_manager.file_change_queue.qsize(), 1)
         msg_type, delay_ms = mock_binary_manager.file_change_queue.get_nowait()
@@ -631,7 +631,7 @@ class TestBinaryManager(unittest.TestCase):
         handler.last_run = time.time() - 1  # Less than max_delay (5s)
         mock_event = MagicMock(spec=FileSystemEvent)
         mock_event.src_path = "/mock/path/file.txt"
-    
+
         handler.on_modified(mock_event)
         self.assertEqual(mock_binary_manager.file_change_queue.qsize(), 1)
         msg_type, delay_ms = mock_binary_manager.file_change_queue.get_nowait()
@@ -649,7 +649,7 @@ class TestBinaryManager(unittest.TestCase):
         with patch.object(self.binary_manager, 'check_and_update_aio_folder') as mock_check_update:
             # Clear mock before test
             self.mock_root_gui.after.reset_mock()
-            
+
             handler.on_modified(mock_event)
             mock_check_update.assert_not_called()
             # Should not add to queue or call after()

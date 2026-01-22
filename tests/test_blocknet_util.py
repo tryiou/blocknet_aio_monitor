@@ -1,7 +1,7 @@
 import os
 import sys
-import threading
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -19,8 +19,10 @@ class TestExtraConfigHandling(unittest.TestCase):
             {'addnode': 'node3.example.com:41412'}
         ]
 
-        # Mock BlocknetUtility instance                                                                                                                                                  
-        self.util = BlocknetHandler(custom_path="/test/path")
+        # Mock BlocknetUtility instance with patched threading to prevent background thread creation
+        with patch('utilities.bin_handlers.blocknet_handler.threading.Thread'):
+            self.util = BlocknetHandler(custom_path="/test/path")
+
         self.util.blocknet_conf_local = {
             'global': {
                 'rpcuser': 'testuser',
@@ -29,15 +31,12 @@ class TestExtraConfigHandling(unittest.TestCase):
             }
         }
 
-    def tearDown(self):
-        # Set running flag to False to stop the background thread                                                                                                                        
+        # Mock the running flag to prevent any background operations
         self.util.running = False
 
-        # Find and join the background thread                                                                                                                                            
-        for thread in threading.enumerate():
-            if thread._target == self.util.check_blocknet_rpc:
-                thread.join(timeout=2.0)
-                break
+    def tearDown(self):
+        # No need to join threads since we mocked them out
+        pass
 
     def test_list_conversion(self):
         """Test string-to-list conversion for existing keys"""

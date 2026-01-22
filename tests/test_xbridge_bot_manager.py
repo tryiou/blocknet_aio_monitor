@@ -169,6 +169,7 @@ class TestXBridgeBotManager(unittest.TestCase):
             # Set the side effect to update the started flag when mock_start is called
             def start_execution():
                 self.bot_manager.started = True
+
             mock_start.side_effect = start_execution
 
             self.bot_manager.toggle_execution("main")
@@ -204,7 +205,6 @@ class TestXBridgeBotManager(unittest.TestCase):
 
             mock_install.assert_called_once_with("develop")
 
-
     def test_stop_bots_success(self):
         """Test stopping bots successfully."""
         mock_process = MagicMock()
@@ -237,13 +237,12 @@ class TestXBridgeBotManager(unittest.TestCase):
         # The kill might not be called if the exception is handled differently
         # Let's just check that terminate was called
 
-
     def test_handle_config_folder_rename(self):
         """Test handling config folder rename."""
         # Create a mock for the config_path
         mock_config_path = MagicMock()
         mock_config_path.exists.return_value = True
-        
+
         # Mock target_dir to return mock_config_path when divided by "config"
         self.bot_manager.target_dir.__truediv__.return_value = mock_config_path
 
@@ -261,7 +260,7 @@ class TestXBridgeBotManager(unittest.TestCase):
         # Create a mock for the config_path
         mock_config_path = MagicMock()
         mock_config_path.exists.return_value = False
-        
+
         # Mock target_dir to return mock_config_path when divided by "config"
         self.bot_manager.target_dir.__truediv__.return_value = mock_config_path
 

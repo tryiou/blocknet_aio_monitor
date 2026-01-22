@@ -105,7 +105,7 @@ class TestXliteManager(unittest.TestCase):
         # Mock reverse proxy
         self.xlite_manager.reverse_proxy = MagicMock()
         self.xlite_manager.reverse_proxy_running = False
-        
+
         with patch.object(self.xlite_manager, 'detect_new_xlite_install_and_add_to_xbridge') as mock_detect:
             self.xlite_manager.update_status_xlite()
             mock_detect.assert_called_once()
