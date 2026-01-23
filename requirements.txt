@@ -7,3 +7,4 @@ pillow
 pygit2==1.18.0
 watchdog
 PyYAML~=6.0.1
+keyring~=25.5.0

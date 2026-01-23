@@ -71,9 +71,10 @@ class Blocknet_AIO_GUI(ctk.CTk):
         if self.cfg:
             if 'custom_path' in self.cfg:
                 self.custom_path = self.cfg['custom_path']
-            if 'salt' in self.cfg and 'xl_pass' in self.cfg:
+            if 'xl_pass' in self.cfg:
                 try:
-                    self.stored_password = utils.decrypt_password(self.cfg['xl_pass'], self.cfg['salt'].encode())
+                    # Decrypt password using keyring (migration handled in load_cfg_json)
+                    self.stored_password = utils.decrypt_password(self.cfg['xl_pass'])
                 except Exception as e:
                     logger.error(f"Error decrypting XLite password: {e}")
                     self.stored_password = None

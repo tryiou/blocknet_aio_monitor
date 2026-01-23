@@ -8,6 +8,7 @@ import psutil
 from cryptography.fernet import Fernet
 
 from utilities import global_variables
+from utilities.keyring_manager import KeyringManager, KeyringMigration
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,23 @@ def load_cfg_json():
     if os.path.exists(full_new_path):
         with open(full_new_path, 'r') as file:
             cfg_data = json.load(file)
+        
+        # Check if migration from old format (with salt) is needed
+        if cfg_data and "salt" in cfg_data:
+            logger.info("Detected old format with salt key. Starting migration to keyring...")
+            keyring_manager = KeyringManager(local_conf_path)
+            migration = KeyringMigration(local_conf_path, keyring_manager)
+            
+            success, new_cfg_data, message, old_key = migration.migrate_from_old_format(cfg_data)
+            if success:
+                # Save the migrated config (may or may not include salt depending on keyring availability)
+                with open(full_new_path, 'w') as file:
+                    json.dump(new_cfg_data, file, indent=2)
+                logger.info(f"Migration successful: {message}")
+                cfg_data = new_cfg_data
+            else:
+                logger.error(f"Migration failed: {message}")
+        
         logger.info(f"Configuration file loaded ok: [{full_new_path}]")
         return cfg_data
     else:
@@ -70,6 +88,10 @@ def remove_cfg_json_key(key):
         with open(filename, 'w') as file:
             json.dump(cfg_data, file)
         logger.info(f"Key '{key}' was removed from configuration file: [{filename}]")
+        
+        # If removing password-related keys, also delete encryption key from keyring
+        if key in ["salt", "xl_pass"]:
+            delete_encryption_key()
     else:
         logger.warning(f"Key '{key}' not found in configuration file: [{filename}]")
 
@@ -95,20 +117,75 @@ def save_cfg_json(key, data):
     logger.info(f"{key} {data} was saved to configuration file: [{filename}]")
 
 
+def save_encryption_key(key):
+    """Save encryption key to keyring (or fallback storage)."""
+    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
+    keyring_manager = KeyringManager(local_conf_path)
+    success, message = keyring_manager.store_key(key)
+    if success:
+        logger.info(f"Encryption key saved: {message}")
+    else:
+        logger.error(f"Failed to save encryption key: {message}")
+    return success
+
+
+def load_encryption_key():
+    """Load encryption key from keyring (or fallback storage)."""
+    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
+    keyring_manager = KeyringManager(local_conf_path)
+    key, message = keyring_manager.retrieve_key()
+    if key:
+        logger.info(f"Encryption key loaded: {message}")
+        return key.encode('utf-8') if isinstance(key, str) else key
+    else:
+        logger.error(f"Failed to load encryption key: {message}")
+        return None
+
+
+def delete_encryption_key():
+    """Delete encryption key from keyring and fallback storage."""
+    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
+    keyring_manager = KeyringManager(local_conf_path)
+    success, message = keyring_manager.delete_key()
+    if success:
+        logger.info(f"Encryption key deleted: {message}")
+    else:
+        logger.error(f"Failed to delete encryption key: {message}")
+    return success
+
+
 def generate_key():
-    """Generate a new encryption key."""
-    return Fernet.generate_key()
+    """Generate a new encryption key and store it in keyring."""
+    key = Fernet.generate_key()
+    # Store the key in keyring
+    if save_encryption_key(key.decode('utf-8')):
+        return key
+    else:
+        logger.error("Failed to store encryption key in keyring")
+        return None
 
 
-def encrypt_password(password, key):
-    """Encrypt the password using the provided key."""
+def encrypt_password(password, key=None):
+    """Encrypt the password using the provided key or from keyring."""
+    if key is None:
+        key = load_encryption_key()
+        if key is None:
+            logger.error("No encryption key available for password encryption")
+            return None
+    
     cipher_suite = Fernet(key)
     encrypted_password = cipher_suite.encrypt(password.encode())
     return encrypted_password.decode()
 
 
-def decrypt_password(encrypted_password, key):
-    """Decrypt the encrypted password using the provided key."""
+def decrypt_password(encrypted_password, key=None):
+    """Decrypt the encrypted password using the provided key or from keyring."""
+    if key is None:
+        key = load_encryption_key()
+        if key is None:
+            logger.error("No encryption key available for password decryption")
+            return None
+    
     cipher_suite = Fernet(key)
     decrypted_password = cipher_suite.decrypt(encrypted_password.encode())
     return decrypted_password.decode()

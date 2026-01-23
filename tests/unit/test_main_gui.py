@@ -125,7 +125,6 @@ class TestBlocknetAioGui(unittest.TestCase):
         """Test initialization with custom path and encrypted password."""
         self.mocks['utils'].load_cfg_json.return_value = {
             'custom_path': '/test/path',
-            'salt': 'mock_salt',
             'xl_pass': 'encrypted_pass'
         }
         with patch('blocknet_aio_monitor.BinaryManager', return_value=self.mock_binary_manager), \
@@ -136,7 +135,7 @@ class TestBlocknetAioGui(unittest.TestCase):
             app = Blocknet_AIO_GUI()
             self.assertEqual(app.custom_path, '/test/path')
             self.assertEqual(app.stored_password, 'decrypted_pass')
-            self.mocks['utils'].decrypt_password.assert_called_once_with('encrypted_pass', b'mock_salt')
+            self.mocks['utils'].decrypt_password.assert_called_once_with('encrypted_pass')
 
     def test_init_with_password_decryption_error(self):
         """Test initialization handles password decryption errors gracefully."""

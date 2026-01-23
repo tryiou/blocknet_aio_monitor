@@ -94,8 +94,8 @@ class XliteFrameManager:
             # wipe_stored_password
             logger.info("Right click detected")
             # Prevent the right-click event from propagating further
-            utils.remove_cfg_json_key("salt")
             utils.remove_cfg_json_key("xl_pass")
+            # Note: remove_cfg_json_key will also delete encryption key from keyring
             self.root_gui.stored_password = None
             # Delete CC_WALLET_PASS variable
             if "CC_WALLET_PASS" in os.environ:
@@ -117,9 +117,19 @@ class XliteFrameManager:
                 show='*',
                 fg_color=fg_color).get_input()
             if password:
+                # Generate key and store in keyring
                 encryption_key = utils.generate_key()
-                salted_pass = utils.encrypt_password(password, encryption_key)
-                utils.save_cfg_json(key="salt", data=encryption_key.decode())
+                if encryption_key is None:
+                    logger.error("Failed to generate encryption key")
+                    return "break"
+                
+                # Encrypt password using keyring
+                salted_pass = utils.encrypt_password(password)
+                if salted_pass is None:
+                    logger.error("Failed to encrypt password")
+                    return "break"
+                
+                # Store only encrypted password in JSON (key is in keyring)
                 utils.save_cfg_json(key="xl_pass", data=salted_pass)
                 # Store the password in a variable
                 self.root_gui.stored_password = password

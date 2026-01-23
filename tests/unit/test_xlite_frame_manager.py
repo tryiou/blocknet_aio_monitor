@@ -221,9 +221,8 @@ class TestXliteFrameManager(unittest.TestCase):
         # Call the method
         result = self.manager.xlite_store_password_button_mouse_click(mock_event)
 
-        # Verify that password was wiped
-        mock_remove_cfg_json_key.assert_any_call("salt")
-        mock_remove_cfg_json_key.assert_any_call("xl_pass")
+        # Verify that password was wiped (remove_cfg_json_key will also delete encryption key)
+        mock_remove_cfg_json_key.assert_called_once_with("xl_pass")
         self.assertEqual(self.mock_root_gui.stored_password, None)
         mock_environ.pop.assert_any_call("CC_WALLET_PASS")
         mock_environ.pop.assert_any_call("CC_WALLET_AUTOLOGIN")
@@ -247,9 +246,8 @@ class TestXliteFrameManager(unittest.TestCase):
         # Call the method
         result = self.manager.xlite_store_password_button_mouse_click(mock_event)
 
-        # Verify that password was wiped
-        mock_remove_cfg_json_key.assert_any_call("salt")
-        mock_remove_cfg_json_key.assert_any_call("xl_pass")
+        # Verify that password was wiped (remove_cfg_json_key will also delete encryption key)
+        mock_remove_cfg_json_key.assert_called_once_with("xl_pass")
         self.assertEqual(self.mock_root_gui.stored_password, None)
         mock_environ.pop.assert_not_called()
         self.assertEqual(result, "break")
@@ -278,12 +276,11 @@ class TestXliteFrameManager(unittest.TestCase):
         # Call the method
         result = self.manager.xlite_store_password_button_mouse_click(mock_event)
 
-        # Verify that password was stored
+        # Verify that password was stored (key is in keyring, only encrypted password in JSON)
         mock_ctk_input_dialog.assert_called_once()
         mock_generate_key.assert_called_once()
-        mock_encrypt_password.assert_called_once_with("test_password", b"test_key")
-        mock_save_cfg_json.assert_any_call(key="salt", data="test_key")
-        mock_save_cfg_json.assert_any_call(key="xl_pass", data="encrypted_password")
+        mock_encrypt_password.assert_called_once_with("test_password")
+        mock_save_cfg_json.assert_called_once_with(key="xl_pass", data="encrypted_password")
         self.assertEqual(self.mock_root_gui.stored_password, "test_password")
         self.assertEqual(result, "break")
 
