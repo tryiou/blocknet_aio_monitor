@@ -65,25 +65,27 @@ class BaseBinUtil:
             raise
 
         if url.endswith(".zip"):
-            with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
-                # Use handler class name to determine extraction method
-                handler_class = instance.__class__.__name__
+            # Skip extraction for empty files
+            if os.path.getsize(tmp_path) > 0:
+                with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
+                    # Use handler class name to determine extraction method
+                    handler_class = instance.__class__.__name__
 
-                # Blocknet preserves internal folder structure
-                if handler_class == "BlocknetHandler":
-                    zip_ref.extractall(extract_to)
-                    logger.info(f"Extracted Blocknet ZIP directly to {extract_to}")
-                    # XLite/BlockDX create new archive-named subfolders
-                elif handler_class in ["XliteHandler", "BlockDXHandler"]:
-                    archive_name = os.path.splitext(os.path.basename(url))[0]
-                    target_path = os.path.join(extract_to, archive_name)
-                    os.makedirs(target_path, exist_ok=True)
-                    zip_ref.extractall(target_path)
-                    logger.info(f"Extracted {handler_class} to new folder {target_path}")
-                    # Other handlers use default extraction
-                else:
-                    zip_ref.extractall(extract_to)
-                    logger.info(f"Extracted {handler_class} ZIP to {extract_to}")
+                    # Blocknet preserves internal folder structure
+                    if handler_class == "BlocknetHandler":
+                        zip_ref.extractall(extract_to)
+                        logger.info(f"Extracted Blocknet ZIP directly to {extract_to}")
+                        # XLite/BlockDX create new archive-named subfolders
+                    elif handler_class in ["XliteHandler", "BlockDXHandler"]:
+                        archive_name = os.path.splitext(os.path.basename(url))[0]
+                        target_path = os.path.join(extract_to, archive_name)
+                        os.makedirs(target_path, exist_ok=True)
+                        zip_ref.extractall(target_path)
+                        logger.info(f"Extracted {handler_class} to new folder {target_path}")
+                        # Other handlers use default extraction
+                    else:
+                        zip_ref.extractall(extract_to)
+                        logger.info(f"Extracted {handler_class} ZIP to {extract_to}")
 
             os.remove(tmp_path)
         elif url.endswith(".tar.gz"):
@@ -162,10 +164,10 @@ class BaseBinUtil:
     
     def download_standalone_binary(self, url: str, target_path: str) -> bool:
         """Download non-archive binaries with security checks"""
+        temp_path = f"{target_path}.tmp"
         try:
             target_dir = os.path.dirname(target_path)
             os.makedirs(target_dir, exist_ok=True)
-            temp_path = f"{target_path}.tmp"
 
             # Only download if doesn't exist
             if not os.path.exists(target_path):

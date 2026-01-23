@@ -99,7 +99,7 @@ class XliteHandler(BaseBinUtil):
     def check_xlite_daemon_confs(self):
         while self.running and not self.valid_coins_rpc:
             self.check_xlite_daemon_confs_sequence(silent=True)
-            time.sleep(10)
+            time.sleep(1)
 
     def check_valid_xlite_coins_rpc(self, runonce=False):
         while self.running:
@@ -120,7 +120,7 @@ class XliteHandler(BaseBinUtil):
             if runonce:
                 return
 
-            time.sleep(5)
+            time.sleep(1)
 
     def start_threads(self):
         thread = threading.Thread(target=self.check_xlite_daemon_confs)

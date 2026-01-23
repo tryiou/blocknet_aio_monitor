@@ -61,7 +61,7 @@ class BlocknetHandler(BaseBinUtil):
                     valid = True
             self.valid_rpc = valid
 
-            time.sleep(2)
+            time.sleep(1)
 
     def init_blocknet_rpc(self):
         if 'global' in self.blocknet_conf_local:
@@ -566,7 +566,11 @@ def parse_conf_file(file_path=None, input_string=None):
                 continue
             if '=' in line:
                 key, value = line.split('=', 1)
-                conf_data.setdefault(current_section.strip('[]'), {})[key.strip()] = value.strip()
+                if key.strip() == 'addnode':
+                    conf_data.setdefault(current_section.strip('[]'), {}).setdefault(key.strip(), []).append(
+                        value.strip())
+                else:
+                    conf_data.setdefault(current_section.strip('[]'), {})[key.strip()] = value.strip()
             else:
                 current_section = line.strip()
                 conf_data.setdefault(current_section.strip('[]'), {})

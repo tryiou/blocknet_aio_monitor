@@ -30,10 +30,10 @@ SYSTEM_SPECIFIC_KEYS = [
 
 
 class ConfigManager:
-    def __init__(self):
+    def __init__(self, aio_folder=None):
         self.system = platform.system()
         self.machine = platform.machine()
-        self.aio_folder = None
+        self.aio_folder = aio_folder
         self.config_template = {
             'blocknet_bootstrap_url': "https://utils.blocknet.org/Blocknet.zip",
             'extra_option_blocknet_core_conf': [
@@ -180,17 +180,24 @@ class ConfigManager:
         self._load_config()
 
     def _get_aio_path(self) -> Path:
-        aio_path = os.path.expandvars(os.path.expanduser({
-                                                             "Windows": "%appdata%\\AIO_Blocknet",
-                                                             "Linux": "~/.AIO_Blocknet",
-                                                             "Darwin": "~/Library/AIO_Blocknet"
-                                                         }[self.system]))
+        # If aio_folder was provided (e.g., for testing), use it
+        if self.aio_folder:
+            aio_path = self.aio_folder
+        else:
+            # Otherwise compute the default path
+            aio_path = os.path.expandvars(os.path.expanduser({
+                                                                 "Windows": "%appdata%\\AIO_Blocknet",
+                                                                 "Linux": "~/.AIO_Blocknet",
+                                                                 "Darwin": "~/Library/AIO_Blocknet"
+                                                             }[self.system]))
         os.makedirs(aio_path, exist_ok=True)
         return Path(aio_path)
 
     def _load_config(self) -> None:
-        self.aio_folder = self._get_aio_path()
-        config_file = self.aio_folder / "aio_config.yaml"
+        # Only set aio_folder if it wasn't already set (e.g., via constructor parameter)
+        if not self.aio_folder:
+            self.aio_folder = self._get_aio_path()
+        config_file = Path(self.aio_folder) / "aio_config.yaml"
 
         # Start with template as base config                                                                                                                                                 
         self.config = self.config_template.copy()
@@ -252,7 +259,7 @@ class ConfigManager:
                 elif self.system in self.config[key]:
                     self.config[key][self.system] = value
                 else:
-                    self.config[key] = value
+                    self.config[key][current_system_key] = value
             else:
                 self.config[key] = value
         else:
@@ -271,7 +278,7 @@ class ConfigManager:
         return filtered
 
     def _save_config(self) -> None:
-        config_file = self.aio_folder / "aio_config.yaml"
+        config_file = Path(self.aio_folder) / "aio_config.yaml"
         filtered_config = self._filter_config_for_saving()
         with open(config_file, "w") as f:
             yaml.dump(filtered_config, f, default_flow_style=False)

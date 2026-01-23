@@ -83,16 +83,64 @@ class XliteReverseProxyHandler(BaseBinUtil):
             self.running_locally = False
 
     def stop(self):
-        if self.running_locally and self.process:
-            try:
-                self.process.terminate()
-                try:
-                    self.process.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    self.process.kill()
-                logger.info("Proxy terminated")
-            except Exception as e:
-                logger.error(f"Proxy stop error: {e}")
-            finally:
+        if not self.running_locally or not self.process:
+            return
+        
+        try:
+            # Check if process is still running
+            if self.process.poll() is not None:
+                logger.info("Proxy already stopped")
                 self.process = None
                 self.running_locally = False
+                return
+            
+            # Try graceful termination first
+            logger.info(f"Terminating proxy (PID: {self.process.pid})")
+            self.process.terminate()
+            
+            # Wait for process to exit
+            try:
+                self.process.wait(timeout=5)
+                logger.info("Proxy terminated gracefully")
+            except subprocess.TimeoutExpired:
+                logger.warning("Proxy didn't terminate gracefully, forcing kill")
+                # Kill the entire process group to ensure cleanup
+                try:
+                    import signal
+                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                except (ProcessLookupError, AttributeError):
+                    # Process already dead or pgid not available
+                    pass
+                self.process.kill()
+                self.process.wait(timeout=2)
+                logger.info("Proxy killed forcefully")
+            
+            # Verify process is actually dead
+            if self.process.poll() is None:
+                logger.error("Proxy process still running after stop attempt")
+                # Final attempt to kill
+                try:
+                    import signal
+                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                except (ProcessLookupError, AttributeError):
+                    pass
+            
+        except Exception as e:
+            logger.error(f"Proxy stop error: {e}")
+            # Try emergency cleanup
+            try:
+                if self.process and self.process.poll() is None:
+                    import signal
+                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            except (ProcessLookupError, AttributeError):
+                pass
+        finally:
+            self.process = None
+            self.running_locally = False
+
+    def __del__(self):
+        """Ensure cleanup when object is destroyed"""
+        try:
+            self.stop()
+        except Exception:
+            pass

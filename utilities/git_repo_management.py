@@ -356,8 +356,11 @@ class GitRepository:
                     repo_name = repo_name[:-4]
             else:
                 # Handle SSH URLs (git@github.com:owner/repo.git)
-                repo_part = url_parts[-1]
-                owner, repo_name = repo_part.split(':')[-1].split('/')
+                # For git@github.com:test/repo.git, url_parts = ['git@github.com:test', 'repo.git']
+                # owner is in first part after ':', repo_name is last part
+                first_part = url_parts[0]
+                owner = first_part.split(':')[-1]
+                repo_name = url_parts[-1]
                 if repo_name.endswith('.git'):
                     repo_name = repo_name[:-4]
 
