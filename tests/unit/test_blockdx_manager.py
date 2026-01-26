@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from gui.blockdx_manager import BlockDXManager
+from utilities.app_container import AppContainer
 import customtkinter as ctk
 
 
@@ -15,9 +16,9 @@ class TestBlockDXManager(unittest.TestCase):
 
     def setUp(self):
         """Set up common test fixtures."""
-        # Mock global_variables
-        self.mock_global_variables = MagicMock()
-        self.mock_global_variables.blockdx_release_url = (
+        # Mock AppContainer
+        self.mock_container = MagicMock()
+        self.mock_container.blockdx_release_url = (
             "https://github.com/blocknetdx/block-dx/releases/download/v1.0.0/blockdx.zip"
         )
 
@@ -28,7 +29,7 @@ class TestBlockDXManager(unittest.TestCase):
         self.mock_root_gui.children = {}
 
         # Create BlockDXManager instance with mocked dependencies
-        with patch('gui.blockdx_manager.global_variables', new=self.mock_global_variables):
+        with patch('gui.blockdx_manager.get_container', return_value=self.mock_container):
             with patch('gui.blockdx_manager.BlockDXHandler') as MockBlockDXHandler:
                 self.mock_blockdx_handler = MockBlockDXHandler.return_value
                 self.blockdx_manager = BlockDXManager(self.mock_root_gui)

@@ -2,24 +2,37 @@ import copy
 import json
 import logging
 import os
+from typing import Optional
 
-from utilities import global_variables
+from utilities.app_container import get_container, AppContainer
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 logger = logging.getLogger(__name__)
 
 
 class BlockDXHandler(BaseBinUtil):
-    def __init__(self):
-        super().__init__("Blockdx")
-        if global_variables.system == "Darwin":
-            self.dmg_mount_path = f"/Volumes/{global_variables.blockdx_volume_name}"
-            self.executable_path = os.path.join(global_variables.aio_folder,
-                                                os.path.basename(global_variables.blockdx_url))
+    def __init__(self, container: Optional[AppContainer] = None):
+        super().__init__("Blockdx", container)
+        if self.container.system == "Darwin":
+            blockdx_volume_name = self.container.blockdx_volume_name
+            if blockdx_volume_name:
+                self.dmg_mount_path = f"/Volumes/{blockdx_volume_name}"
+            else:
+                self.dmg_mount_path = None
+            blockdx_release_url = self.container.blockdx_release_url
+            if blockdx_release_url and self.container.aio_folder:
+                self.executable_path = os.path.join(self.container.aio_folder,
+                                                    os.path.basename(blockdx_release_url))
+            else:
+                self.executable_path = None
         else:
-            self.executable_path = os.path.join(global_variables.aio_folder,
-                                                global_variables.conf_data.blockdx_bin_path[global_variables.system],
-                                                global_variables.conf_data.blockdx_bin_name[global_variables.system])
+            aio_folder = self.container.aio_folder
+            curpath = self.container.blockdx_curpath
+            bin_name = self.container.blockdx_bin
+            if aio_folder and curpath and bin_name:
+                self.executable_path = os.path.join(aio_folder, curpath, bin_name)
+            else:
+                self.executable_path = None
         self.process_running = None
         self.blockdx_process = None
         self.blockdx_conf_local = None
@@ -51,11 +64,13 @@ class BlockDXHandler(BaseBinUtil):
     def compare_and_update_local_conf(self, xbridgeconfpath, rpc_user, rpc_password):
         xbridgeconfpath = r"{}".format(xbridgeconfpath)
         data_folder = get_blockdx_data_folder()
+        if not data_folder:
+            raise ValueError("BlockDX data folder not configured")
         file_path = os.path.join(data_folder, "app-meta.json")
         self.parse_blockdx_conf()
         org_data = copy.deepcopy(self.blockdx_conf_local)
         if not self.blockdx_conf_local:
-            meta_data = global_variables.conf_data.blockdx_base_conf
+            meta_data = self.container.conf_data.blockdx_base_conf
         else:
             meta_data = copy.deepcopy(self.blockdx_conf_local)
 
@@ -73,14 +88,11 @@ class BlockDXHandler(BaseBinUtil):
         # Update 'selectedWallets' if needed
         if 'selectedWallets' not in meta_data:
             meta_data['selectedWallets'] = []
-            meta_data['selectedWallets'].append(global_variables.conf_data.blockdx_selectedWallets_blocknet)
-            logger.debug(
-                f"Initialized 'selectedWallets' with '{global_variables.conf_data.blockdx_selectedWallets_blocknet}' in meta_data")
-        elif not isinstance(meta_data['selectedWallets'], list):
-            logger.warning("'selectedWallets' is not a list. Converting to list.")
-            meta_data['selectedWallets'] = [global_variables.conf_data.blockdx_selectedWallets_blocknet]
-        elif global_variables.conf_data.blockdx_selectedWallets_blocknet not in meta_data['selectedWallets']:
-            meta_data['selectedWallets'].append(global_variables.conf_data.blockdx_selectedWallets_blocknet)
+            meta_data['selectedWallets'].append(self.container.conf_data.blockdx_selectedWallets_blocknet)
+            logger.info(
+                f"Initialized 'selectedWallets' with '{self.container.conf_data.blockdx_selectedWallets_blocknet}' in meta_data")
+        elif self.container.conf_data.blockdx_selectedWallets_blocknet not in meta_data['selectedWallets']:
+            meta_data['selectedWallets'] = [self.container.conf_data.blockdx_selectedWallets_blocknet]
             logger.debug("Updated 'selectedWallets' in meta_data")
 
         # Save file if changes were made
@@ -95,24 +107,28 @@ class BlockDXHandler(BaseBinUtil):
             self.is_config_sync = True  # No changes, so config is in sync
 
     def start_blockdx(self):
-        if not os.path.exists(self.executable_path):
+        if not self.executable_path or not os.path.exists(self.executable_path):
             logger.info(f"Blockdx executable not found at {self.executable_path}. Downloading...")
             self.download_blockdx_bin()
-            if not os.path.exists(self.executable_path):
+            if not self.executable_path or not os.path.exists(self.executable_path):
                 logger.error("Failed to download Blockdx binary. Aborting start.")
                 return  # Abort if download failed
 
         try:
-            if global_variables.system == "Darwin":
-
+            if self.container.system == "Darwin":
                 self.handle_dmg("mount")
-                full_path = os.path.join(self.dmg_mount_path,
-                                         *global_variables.conf_data.blockdx_bin_name[global_variables.system])
+                bin_name = self.container.conf_data.blockdx_bin_name.get(self.container.system)
+                if not (self.dmg_mount_path and bin_name):
+                    raise ValueError("Required configuration not available for macOS")
+                full_path = os.path.join(self.dmg_mount_path, bin_name)
+                volume_name = self.container.blockdx_volume_name
                 logger.info(
-                    f"volume_name: {global_variables.blockdx_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
+                    f"volume_name: {volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 command = [full_path]
                 cwd = os.path.dirname(full_path)
             else:
+                if not self.executable_path:
+                    raise ValueError("Executable path not configured")
                 command = [self.executable_path]
                 cwd = os.path.dirname(self.executable_path)
 
@@ -131,21 +147,29 @@ class BlockDXHandler(BaseBinUtil):
         self.terminate_processes(self.blockdx_pids, "BlockDX")
 
     def download_blockdx_bin(self):
-        url = global_variables.conf_data.blockdx_releases_urls.get((global_variables.system, global_variables.machine))
+        url = self.container.blockdx_release_url
         if url is None:
-            raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
+            raise ValueError(f"Unsupported OS or architecture {self.container.system} {self.container.machine}")
 
-        tmp_filename = "tmp_dx_bin"
-        return self.download_binary(  # Return the result of download_binary
+        aio_folder = self.container.aio_folder
+        if not aio_folder:
+            raise ValueError("AIO folder not configured")
+            
+        if not self.executable_path:
+            raise ValueError("Executable path not configured")
+            
+        # Type assertion for mypy
+        exe_path = self.executable_path  # type: ignore
+        self.download_binary(
             url,
-            tmp_filename,
-            self.executable_path,
-            global_variables.aio_folder
+            os.path.basename(url),
+            exe_path,
+            aio_folder
         )
 
     def unmount_dmg(self):
-        if global_variables.system != "Darwin":
-            logger.warning(f"Call unmount_dmg with wrong OS, {global_variables.system} ?")
+        if self.container.system != "Darwin":
+            logger.warning(f"Call unmount_dmg with wrong OS, {self.container.system} ?")
             return
         try:
             self.handle_dmg("unmount")
@@ -154,7 +178,8 @@ class BlockDXHandler(BaseBinUtil):
 
 
 def get_blockdx_data_folder():
-    path = global_variables.conf_data.blockdx_default_paths.get(global_variables.system)
+    container = get_container()
+    path = container.conf_data.blockdx_default_paths.get(container.system)
     if path:
         return os.path.expandvars(os.path.expanduser(path))
     else:

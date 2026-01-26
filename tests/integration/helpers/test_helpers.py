@@ -8,9 +8,11 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from unittest.mock import patch, MagicMock
 import json
+
+from utilities.app_container import AppContainer
 
 
 class IntegrationTestHelper:
@@ -122,8 +124,8 @@ selectedWallets_blocknet=BLOCK
         return test_data
 
     @staticmethod
-    def patch_global_variables(workspace: Path, **kwargs):
-        """Patch global variables for testing.
+    def patch_app_container(workspace: Path, **kwargs):
+        """Patch AppContainer for testing.
         
         Note: The isolate_test_environment fixture in conftest.py already patches
         aio_folder, DIRPATH, and themepath for all tests. This method is kept for
@@ -131,26 +133,65 @@ selectedWallets_blocknet=BLOCK
         """
         patches = []
 
-        # Patch aio_folder (only if explicitly requested, as it's already patched by conftest)
-        if 'aio_folder' in kwargs:
-            patches.append(patch('utilities.global_variables.aio_folder', kwargs['aio_folder']))
-
-        # Patch DIRPATH (only if explicitly requested, as it's already patched by conftest)
-        if 'DIRPATH' in kwargs:
-            patches.append(patch('utilities.global_variables.DIRPATH', kwargs['DIRPATH']))
-
-        # Patch themepath (only if explicitly requested, as it's already patched by conftest)
-        if 'themepath' in kwargs:
-            patches.append(patch('utilities.global_variables.themepath', kwargs['themepath']))
-
-        # Patch system
+        # Create a mock AppContainer
+        container = MagicMock(spec=AppContainer)
+        
+        # Set up common properties from workspace
+        container.dirpath = str(workspace)
+        container.aio_folder = str(workspace / "aio")
+        container.theme_path = str(workspace / "theme" / "aio.json")
+        
+        # Set up system-specific properties if provided
         if 'system' in kwargs:
-            patches.append(patch('utilities.global_variables.system', kwargs['system']))
-
-        # Patch machine
+            container.system = kwargs['system']
+        else:
+            container.system = "Linux"
+            
         if 'machine' in kwargs:
-            patches.append(patch('utilities.global_variables.machine', kwargs['machine']))
-
+            container.machine = kwargs['machine']
+        else:
+            container.machine = "x86_64"
+        
+        # Set up binary configurations if provided
+        if 'blocknet_bin' in kwargs:
+            container.blocknet_bin = kwargs['blocknet_bin']
+        if 'blockdx_bin' in kwargs:
+            container.blockdx_bin = kwargs['blockdx_bin']
+        if 'xlite_bin' in kwargs:
+            container.xlite_bin = kwargs['xlite_bin']
+        if 'xlite_daemon_bin' in kwargs:
+            container.xlite_daemon_bin = kwargs['xlite_daemon_bin']
+        if 'xlite_reverse_proxy_bin' in kwargs:
+            container.xlite_reverse_proxy_bin = kwargs['xlite_reverse_proxy_bin']
+        
+        # Set up release URLs if provided
+        if 'blocknet_release_url' in kwargs:
+            container.blocknet_release_url = kwargs['blocknet_release_url']
+        if 'blockdx_release_url' in kwargs:
+            container.blockdx_release_url = kwargs['blockdx_release_url']
+        if 'xlite_release_url' in kwargs:
+            container.xlite_release_url = kwargs['xlite_release_url']
+        if 'xlite_reverse_proxy_release_url' in kwargs:
+            container.xlite_reverse_proxy_release_url = kwargs['xlite_reverse_proxy_release_url']
+        
+        # Set up current paths if provided
+        if 'blockdx_curpath' in kwargs:
+            container.blockdx_curpath = kwargs['blockdx_curpath']
+        if 'xlite_curpath' in kwargs:
+            container.xlite_curpath = kwargs['xlite_curpath']
+        
+        # Set up volume names if provided (macOS specific)
+        if 'blockdx_volume_name' in kwargs:
+            container.blockdx_volume_name = kwargs['blockdx_volume_name']
+        if 'xlite_volume_name' in kwargs:
+            container.xlite_volume_name = kwargs['xlite_volume_name']
+        
+        # Mock conf_data access
+        container.conf_data = MagicMock()
+        
+        # Patch get_container to return the mock
+        patches.append(patch('utilities.app_container.get_container', return_value=container))
+        
         # Apply all patches
         for p in patches:
             p.start()

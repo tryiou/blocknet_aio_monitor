@@ -22,16 +22,17 @@ from utilities.bin_handlers.blocknet_handler import (
     download_remote_conf,
     get_remote_file_size
 )
-from utilities import global_variables
+from utilities.app_container import get_container
 
 
 class TestExtraConfigHandling(unittest.TestCase):
-    """Test suite for BlocknetHandler._update_extra_config_options() method."""
+    """Test suite for BlocknetHandler extra config handling."""
 
     def setUp(self):
         """Set up test fixtures before each test."""
-        # Reset config before each test
-        global_variables.conf_data.extra_option_blocknet_core_conf = [
+        # Get the container and set up test config
+        container = get_container()
+        container.conf_data.extra_option_blocknet_core_conf = [
             {'addnode': 'node1.example.com:41412'},
             {'addnode': 'node2.example.com:41412'},
             {'rpcallowip': '192.168.1.1'},
@@ -45,7 +46,7 @@ class TestExtraConfigHandling(unittest.TestCase):
                 patch('utilities.bin_handlers.blocknet_handler.threading.Thread'), \
                 patch('utilities.bin_handlers.blocknet_handler.parse_conf_file'), \
                 patch('utilities.bin_handlers.blocknet_handler.save_conf_to_file'):
-            self.util = BlocknetHandler(custom_path="/test/path")
+            self.util = BlocknetHandler(custom_path="/test/path", container=container)
 
         # Set up initial blocknet configuration
         self.util.blocknet_conf_local = {
@@ -82,7 +83,8 @@ class TestExtraConfigHandling(unittest.TestCase):
     def test_duplicate_prevention(self):
         """Test duplicate values aren't added."""
         # Add duplicate entry
-        global_variables.conf_data.extra_option_blocknet_core_conf.append(
+        container = get_container()
+        container.conf_data.extra_option_blocknet_core_conf.append(
             {'addnode': 'existing.node:41412'}
         )
 
@@ -100,7 +102,8 @@ class TestExtraConfigHandling(unittest.TestCase):
 
     def test_special_characters(self):
         """Test special characters in values are preserved."""
-        global_variables.conf_data.extra_option_blocknet_core_conf.append(
+        container = get_container()
+        container.conf_data.extra_option_blocknet_core_conf.append(
             {'testkey': 'specialvalue:123_$%^@!~'}
         )
 
@@ -111,7 +114,8 @@ class TestExtraConfigHandling(unittest.TestCase):
 
     def test_empty_extra_config(self):
         """Test behavior when extra_option_blocknet_core_conf is empty."""
-        global_variables.conf_data.extra_option_blocknet_core_conf = []
+        container = get_container()
+        container.conf_data.extra_option_blocknet_core_conf = []
 
         config = self._execute_update()
 
@@ -120,7 +124,8 @@ class TestExtraConfigHandling(unittest.TestCase):
 
     def test_none_extra_config(self):
         """Test behavior when extra_option_blocknet_core_conf is None."""
-        global_variables.conf_data.extra_option_blocknet_core_conf = None
+        container = get_container()
+        container.conf_data.extra_option_blocknet_core_conf = None
 
         config = self._execute_update()
 
@@ -151,7 +156,8 @@ class TestExtraConfigHandling(unittest.TestCase):
 
     def test_numeric_value_conversion(self):
         """Test conversion of numeric values to strings."""
-        global_variables.conf_data.extra_option_blocknet_core_conf.append(
+        container = get_container()
+        container.conf_data.extra_option_blocknet_core_conf.append(
             {'testport': 41412}
         )
 
@@ -162,13 +168,15 @@ class TestExtraConfigHandling(unittest.TestCase):
 
     def test_boolean_value_conversion(self):
         """Test conversion of boolean values to strings."""
-        global_variables.conf_data.extra_option_blocknet_core_conf.append(
+        container = get_container()
+        container.conf_data.extra_option_blocknet_core_conf.append(
             {'testflag': True}
         )
 
         config = self._execute_update()
 
         self.assertIn('testflag', config)
+        self.assertIsNotNone(config['testflag'])
         self.assertEqual(config['testflag'], ['True'])
 
 
@@ -332,10 +340,11 @@ class TestGetBlocknetDataFolder(unittest.TestCase):
 
     def test_get_blocknet_data_folder_with_default_path(self):
         """Test getting data folder with default path."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals:
-            mock_globals.conf_data.blocknet_default_paths = {'Linux': '/default/path'}
-            mock_globals.system = 'Linux'
+        mock_container = MagicMock()
+        mock_container.conf_data.blocknet_default_paths = {'Linux': '/default/path'}
+        mock_container.system = 'Linux'
 
+        with patch('utilities.bin_handlers.blocknet_handler.get_container', return_value=mock_container):
             result = get_blocknet_data_folder()
 
             self.assertEqual(result, '/default/path')
@@ -496,10 +505,11 @@ class TestRetrieveXbManifest(unittest.TestCase):
         mock_response.json.return_value = [{'ticker': 'BTC', 'ver_id': 1}]
         mock_get.return_value = mock_response
 
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals:
-            mock_globals.aio_folder = '/tmp/aio'
-            mock_globals.conf_data.remote_manifest_url = 'http://example.com/manifest.json'
+        mock_container = MagicMock()
+        mock_container.aio_folder = '/tmp/aio'
+        mock_container.conf_data.remote_manifest_url = 'http://example.com/manifest.json'
 
+        with patch('utilities.bin_handlers.blocknet_handler.get_container', return_value=mock_container):
             result = retrieve_xb_manifest()
 
             self.assertEqual(result, [{'ticker': 'BTC', 'ver_id': 1}])
@@ -511,9 +521,10 @@ class TestRetrieveXbManifest(unittest.TestCase):
         mock_response.status_code = 404
         mock_get.return_value = mock_response
 
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals:
-            mock_globals.conf_data.remote_manifest_url = 'http://example.com/manifest.json'
+        mock_container = MagicMock()
+        mock_container.conf_data.remote_manifest_url = 'http://example.com/manifest.json'
 
+        with patch('utilities.bin_handlers.blocknet_handler.get_container', return_value=mock_container):
             result = retrieve_xb_manifest()
 
             self.assertIsNone(result)
@@ -523,9 +534,10 @@ class TestRetrieveXbManifest(unittest.TestCase):
         """Test retrieving XB manifest with request exception."""
         mock_get.side_effect = requests.exceptions.RequestException("Network error")
 
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals:
-            mock_globals.conf_data.remote_manifest_url = 'http://example.com/manifest.json'
+        mock_container = MagicMock()
+        mock_container.conf_data.remote_manifest_url = 'http://example.com/manifest.json'
 
+        with patch('utilities.bin_handlers.blocknet_handler.get_container', return_value=mock_container):
             result = retrieve_xb_manifest()
 
             self.assertIsNone(result)
@@ -539,9 +551,10 @@ class TestRetrieveRemoteBlocknetConf(unittest.TestCase):
         """Test retrieving remote blocknet conf."""
         mock_retrieve.return_value = {'global': {'rpcuser': 'test'}}
 
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals:
-            mock_globals.conf_data.remote_blocknet_conf_url = 'http://example.com/blocknet.conf'
+        mock_container = MagicMock()
+        mock_container.conf_data.remote_blocknet_conf_url = 'http://example.com/blocknet.conf'
 
+        with patch('utilities.bin_handlers.blocknet_handler.get_container', return_value=mock_container):
             result = retrieve_remote_blocknet_conf()
 
             self.assertEqual(result, {'global': {'rpcuser': 'test'}})
@@ -555,9 +568,10 @@ class TestRetrieveRemoteBlocknetXbridgeConf(unittest.TestCase):
         """Test retrieving remote blocknet xbridge conf."""
         mock_retrieve.return_value = {'Main': {'Username': 'test'}}
 
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals:
-            mock_globals.conf_data.remote_xbridge_conf_url = 'http://example.com/xbridge.conf'
+        mock_container = MagicMock()
+        mock_container.conf_data.remote_xbridge_conf_url = 'http://example.com/xbridge.conf'
 
+        with patch('utilities.bin_handlers.blocknet_handler.get_container', return_value=mock_container):
             result = retrieve_remote_blocknet_xbridge_conf()
 
             self.assertEqual(result, {'Main': {'Username': 'test'}})
@@ -568,13 +582,19 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
+        # Set up mock container
+        self.mock_container = MagicMock()
+        self.mock_container.aio_folder = '/aio/path'
+        
         # Mock all external dependencies
         with patch('utilities.bin_handlers.blocknet_handler.retrieve_xb_manifest'), \
                 patch('utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_conf'), \
                 patch('utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_xbridge_conf'), \
                 patch('utilities.bin_handlers.blocknet_handler.threading.Thread'), \
                 patch('utilities.bin_handlers.blocknet_handler.parse_conf_file'), \
-                patch('utilities.bin_handlers.blocknet_handler.save_conf_to_file'):
+                patch('utilities.bin_handlers.blocknet_handler.save_conf_to_file'), \
+                patch('utilities.bin_handlers.blocknet_handler.get_container', return_value=self.mock_container), \
+                patch.object(self.mock_container, 'get_blocknet_executable_path', return_value='/aio/path/blocknet-4.4.1/blocknetd'):
             self.handler = BlocknetHandler(custom_path="/test/path")
 
         self.handler.running = False
@@ -604,10 +624,9 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
 
     def test_create_aio_folder(self):
         """Test creating AIO folder."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals, \
-                patch('os.path.exists', return_value=False), \
+        with patch('os.path.exists', return_value=False), \
                 patch('os.makedirs') as mock_makedirs:
-            mock_globals.aio_folder = '/aio/path'
+            self.handler.container.aio_folder = '/aio/path'
             self.handler.create_aio_folder()
 
             mock_makedirs.assert_called_once_with('/aio/path')
@@ -866,8 +885,7 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
 
     def test_download_bootstrap_downloads_new_file(self):
         """Test downloading bootstrap when file doesn't exist."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals, \
-                patch('os.path.exists', return_value=False), \
+        with patch('os.path.exists', return_value=False), \
                 patch('utilities.bin_handlers.blocknet_handler.get_remote_file_size', return_value=1000), \
                 patch('requests.get') as mock_get, \
                 patch('zipfile.ZipFile'), \
@@ -878,8 +896,8 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
             mock_response.iter_content.return_value = [b'x' * 8192]
             mock_get.return_value = mock_response
 
-            mock_globals.aio_folder = '/aio'
-            mock_globals.conf_data.blocknet_bootstrap_url = 'http://example.com/bootstrap.zip'
+            self.handler.container.aio_folder = '/aio'
+            self.handler.container.conf_data.blocknet_bootstrap_url = 'http://example.com/bootstrap.zip'
 
             with patch('builtins.open', MagicMock()):
                 self.handler.download_bootstrap()
@@ -889,14 +907,13 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
 
     def test_download_bootstrap_file_exists_same_size(self):
         """Test bootstrap when file exists with same size."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals, \
-                patch('os.path.exists', return_value=True), \
+        with patch('os.path.exists', return_value=True), \
                 patch('os.path.getsize', return_value=1000), \
                 patch('utilities.bin_handlers.blocknet_handler.get_remote_file_size', return_value=1000), \
                 patch('zipfile.ZipFile'), \
                 patch.object(self.handler, 'create_data_folder'), \
                 patch.object(self.handler, 'create_aio_folder'):
-            mock_globals.aio_folder = '/aio'
+            self.handler.container.aio_folder = '/aio'
 
             self.handler.download_bootstrap()
 
@@ -904,8 +921,7 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
 
     def test_download_bootstrap_file_exists_different_size(self):
         """Test bootstrap when file exists with different size."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals, \
-                patch('os.path.exists', return_value=True), \
+        with patch('os.path.exists', return_value=True), \
                 patch('os.path.getsize', side_effect=[500, 1000]), \
                 patch('utilities.bin_handlers.blocknet_handler.get_remote_file_size', return_value=1000), \
                 patch('os.remove') as mock_remove, \
@@ -919,8 +935,8 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
             mock_response.iter_content.return_value = [b'x' * 8192]
             mock_get.return_value = mock_response
 
-            mock_globals.aio_folder = '/aio'
-            mock_globals.conf_data.blocknet_bootstrap_url = 'http://example.com/bootstrap.zip'
+            self.handler.container.aio_folder = '/aio'
+            self.handler.container.conf_data.blocknet_bootstrap_url = 'http://example.com/bootstrap.zip'
 
             self.handler.download_bootstrap()
 
@@ -929,8 +945,7 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
 
     def test_download_bootstrap_deletes_existing_data(self):
         """Test bootstrap deletes existing blockchain data."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals, \
-                patch('utilities.bin_handlers.blocknet_handler.os.path.exists',
+        with patch('utilities.bin_handlers.blocknet_handler.os.path.exists',
                       side_effect=[False, True, True, True, False, False, False]), \
                 patch('utilities.bin_handlers.blocknet_handler.os.path.isdir', return_value=True), \
                 patch('utilities.bin_handlers.blocknet_handler.os.path.getsize', return_value=1000), \
@@ -947,8 +962,8 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
             mock_response.iter_content.return_value = [b'x' * 8192]
             mock_get.return_value = mock_response
 
-            mock_globals.aio_folder = '/aio'
-            mock_globals.conf_data.blocknet_bootstrap_url = 'http://example.com/bootstrap.zip'
+            self.handler.container.aio_folder = '/aio'
+            self.handler.container.conf_data.blocknet_bootstrap_url = 'http://example.com/bootstrap.zip'
             self.handler.data_folder = '/data'
 
             self.handler.download_bootstrap()
@@ -960,14 +975,13 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
 
     def test_download_bootstrap_error_handling(self):
         """Test bootstrap error handling."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals, \
-                patch('os.path.exists', return_value=False), \
+        with patch('os.path.exists', return_value=False), \
                 patch('utilities.bin_handlers.blocknet_handler.get_remote_file_size', return_value=1000), \
                 patch('requests.get', side_effect=Exception("Network error")), \
                 patch.object(self.handler, 'create_data_folder'), \
                 patch.object(self.handler, 'create_aio_folder'):
-            mock_globals.aio_folder = '/aio'
-            mock_globals.conf_data.blocknet_bootstrap_url = 'http://example.com/bootstrap.zip'
+            self.handler.container.aio_folder = '/aio'
+            self.handler.container.conf_data.blocknet_bootstrap_url = 'http://example.com/bootstrap.zip'
 
             self.handler.download_bootstrap()
 
@@ -976,12 +990,11 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
 
     def test_download_blocknet_bin(self):
         """Test downloading blocknet binary."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals, \
-                patch.object(self.handler, 'download_binary') as mock_download:
-            mock_globals.system = 'Linux'
-            mock_globals.machine = 'x86_64'
-            mock_globals.conf_data.blocknet_releases_urls = {('Linux', 'x86_64'): 'http://example.com/blocknet.tar.gz'}
-            mock_globals.aio_folder = '/aio'
+        with patch.object(self.handler, 'download_binary') as mock_download:
+            self.handler.container.system = 'Linux'
+            self.handler.container.machine = 'x86_64'
+            self.handler.container.blocknet_release_url = 'http://example.com/blocknet.tar.gz'
+            self.handler.container.aio_folder = '/aio'
 
             self.handler.download_blocknet_bin()
 
@@ -994,13 +1007,12 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
 
     def test_download_blocknet_bin_unsupported(self):
         """Test downloading blocknet binary on unsupported platform."""
-        with patch('utilities.bin_handlers.blocknet_handler.global_variables') as mock_globals:
-            mock_globals.system = 'Unsupported'
-            mock_globals.machine = 'x86_64'
-            mock_globals.conf_data.blocknet_releases_urls = {}
+        self.handler.container.system = 'Unsupported'
+        self.handler.container.machine = 'x86_64'
+        self.handler.container.blocknet_release_url = None
 
-            with self.assertRaises(ValueError):
-                self.handler.download_blocknet_bin()
+        with self.assertRaises(ValueError):
+            self.handler.download_blocknet_bin()
 
 
 class TestBlocknetHandlerRPC(unittest.TestCase):

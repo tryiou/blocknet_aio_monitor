@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from gui.xlite_manager import XliteManager
+from utilities.app_container import AppContainer
 import customtkinter as ctk
 
 
@@ -24,18 +25,18 @@ class TestXliteManager:
         return mock_root_gui
 
     @staticmethod
-    def _create_mock_global_variables():
-        """Create mock global variables."""
-        mock_global_variables = MagicMock()
-        mock_global_variables.xlite_release_url = (
+    def _create_mock_container():
+        """Create mock AppContainer."""
+        mock_container = MagicMock()
+        mock_container.xlite_release_url = (
             "https://github.com/BlocknetDX/Xlite/releases/download/v1.0.0/Xlite-v1.0.0-linux-x64.tar.gz"
         )
-        return mock_global_variables
+        return mock_container
 
     @staticmethod
-    def _create_xlite_manager_with_mocks(mock_root_gui, mock_global_variables):
+    def _create_xlite_manager_with_mocks(mock_root_gui, mock_container):
         """Create XliteManager instance with mocked dependencies."""
-        with patch('gui.xlite_manager.global_variables', new=mock_global_variables):
+        with patch('gui.xlite_manager.get_container', return_value=mock_container):
             with patch('gui.xlite_manager.XliteHandler') as MockXliteHandler:
                 mock_handler = MagicMock()
                 MockXliteHandler.return_value = mock_handler
@@ -47,9 +48,9 @@ class TestXliteManager:
     def test_init(self):
         """Test XliteManager initialization."""
         mock_root_gui = self._create_mock_root_gui()
-        mock_global_variables = self._create_mock_global_variables()
+        mock_container = self._create_mock_container()
 
-        with patch('gui.xlite_manager.global_variables', new=mock_global_variables):
+        with patch('gui.xlite_manager.get_container', return_value=mock_container):
             with patch('gui.xlite_manager.XliteHandler') as MockXliteHandler:
                 manager = XliteManager(mock_root_gui)
 
@@ -63,9 +64,9 @@ class TestXliteManager:
     def test_setup(self):
         """Test setup method initializes frame manager and schedules status update."""
         mock_root_gui = self._create_mock_root_gui()
-        mock_global_variables = self._create_mock_global_variables()
+        mock_container = self._create_mock_container()
 
-        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_global_variables)
+        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_container)
 
         with patch('gui.xlite_manager.XliteFrameManager') as MockXliteFrameManager:
             asyncio.run(manager.setup())
@@ -75,9 +76,9 @@ class TestXliteManager:
     def test_refresh_xlite_confs(self):
         """Test refresh_xlite_confs calls utility methods."""
         mock_root_gui = self._create_mock_root_gui()
-        mock_global_variables = self._create_mock_global_variables()
+        mock_container = self._create_mock_container()
 
-        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_global_variables)
+        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_container)
 
         manager.refresh_xlite_confs()
 
@@ -87,9 +88,9 @@ class TestXliteManager:
     def test_detect_new_xlite_install_and_add_to_xbridge_valid_coins_rpc(self):
         """Test detection when valid coins RPC and blocknet process is running."""
         mock_root_gui = self._create_mock_root_gui()
-        mock_global_variables = self._create_mock_global_variables()
+        mock_container = self._create_mock_container()
 
-        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_global_variables)
+        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_container)
 
         manager.utility.valid_coins_rpc = True
         mock_root_gui.blocknet_manager.blocknet_process_running = True
@@ -107,9 +108,9 @@ class TestXliteManager:
     def test_detect_new_xlite_install_and_add_to_xbridge_invalid_coins_rpc(self):
         """Test detection when invalid coins RPC resets disable_daemons_conf_check."""
         mock_root_gui = self._create_mock_root_gui()
-        mock_global_variables = self._create_mock_global_variables()
+        mock_container = self._create_mock_container()
 
-        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_global_variables)
+        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_container)
 
         manager.utility.valid_coins_rpc = False
         mock_root_gui.disable_daemons_conf_check = True
@@ -123,9 +124,9 @@ class TestXliteManager:
     def test_update_status_xlite(self):
         """Test update_status_xlite calls all frame manager updates and schedules next update."""
         mock_root_gui = self._create_mock_root_gui()
-        mock_global_variables = self._create_mock_global_variables()
+        mock_container = self._create_mock_container()
 
-        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_global_variables)
+        manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_container)
 
         manager.reverse_proxy = MagicMock()
         manager.reverse_proxy_running = False

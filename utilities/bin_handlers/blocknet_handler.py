@@ -9,8 +9,9 @@ import time
 import zipfile
 
 import requests
+from typing import Optional
 
-from utilities import global_variables
+from utilities.app_container import get_container, AppContainer
 from utilities.rpc_client import RPCClient
 
 logger = logging.getLogger(__name__)
@@ -20,11 +21,9 @@ from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 
 class BlocknetHandler(BaseBinUtil):
-    def __init__(self, custom_path=None):
-        super().__init__("Blocknet")
-        self.blocknet_exe = os.path.join(global_variables.aio_folder,
-                                         *global_variables.conf_data.blocknet_bin_path,
-                                         global_variables.blocknet_bin)
+    def __init__(self, custom_path: Optional[str] = None, container: Optional[AppContainer] = None):
+        super().__init__("Blocknet", container)
+        self.blocknet_exe = self.container.get_blocknet_executable_path()
         self.parsed_wallet_confs = {}
         self.parsed_xbridge_confs = {}
         self.bootstrap_checking = False
@@ -64,7 +63,7 @@ class BlocknetHandler(BaseBinUtil):
             time.sleep(1)
 
     def init_blocknet_rpc(self):
-        if 'global' in self.blocknet_conf_local:
+        if self.blocknet_conf_local and 'global' in self.blocknet_conf_local:
             global_conf = self.blocknet_conf_local['global']
             rpc_user = global_conf.get('rpcuser')
             rpc_password = global_conf.get('rpcpassword')
@@ -105,7 +104,7 @@ class BlocknetHandler(BaseBinUtil):
         self.terminate_processes(self.blocknet_pids, "Blocknet")
 
     def check_data_folder_existence(self):
-        return os.path.exists(self.data_folder)
+        return self.data_folder is not None and os.path.exists(self.data_folder)
 
     def set_custom_data_path(self, custom_path):
         if not os.path.exists(custom_path):
@@ -118,6 +117,11 @@ class BlocknetHandler(BaseBinUtil):
         self.init_blocknet_rpc()
 
     def parse_blocknet_conf(self):
+        if not self.data_folder:
+            logger.error("Data folder not configured")
+            self.blocknet_conf_local = {}
+            return
+            
         file = "blocknet.conf"
         conf_file_path = os.path.join(self.data_folder, file)
         if os.path.exists(conf_file_path):
@@ -128,6 +132,11 @@ class BlocknetHandler(BaseBinUtil):
             logger.warning(f"{conf_file_path} file does not exist.")
 
     def parse_xbridge_conf(self):
+        if not self.data_folder:
+            logger.error("Data folder not configured")
+            self.xbridge_conf_local = {}
+            return
+            
         conf_file_path = os.path.join(self.data_folder, "xbridge.conf")
         if os.path.exists(conf_file_path):
             self.xbridge_conf_local = parse_conf_file(file_path=conf_file_path)
@@ -137,10 +146,16 @@ class BlocknetHandler(BaseBinUtil):
             logger.warning(f"{conf_file_path} file does not exist.")
 
     def save_blocknet_conf(self):
+        if not self.data_folder:
+            logger.error("Data folder not configured")
+            return
         conf_file_path = os.path.join(self.data_folder, "blocknet.conf")
         save_conf_to_file(self.blocknet_conf_local, conf_file_path)
 
     def save_xbridge_conf(self):
+        if not self.data_folder:
+            logger.error("Data folder not configured")
+            return
         conf_file_path = os.path.join(self.data_folder, "xbridge.conf")
         save_conf_to_file(self.xbridge_conf_local, conf_file_path)
 
@@ -160,29 +175,7 @@ class BlocknetHandler(BaseBinUtil):
         if section_name not in self.blocknet_conf_local:
             self.blocknet_conf_local[section_name] = {}
 
-        # if 'rpcthreads' not in self.blocknet_conf_local[section_name] or int(
-        #         self.blocknet_conf_local[section_name]['rpcthreads']) < 32:
-        #     self.blocknet_conf_local[section_name]['rpcthreads'] = 32
-
-        # if 'rpcworkqueue' not in self.blocknet_conf_local[section_name] or int(
-        #         self.blocknet_conf_local[section_name]['rpcworkqueue']) < 64:
-        #     self.blocknet_conf_local[section_name]['rpcworkqueue'] = 64
-
-        # if 'rpcxbridgetimeout' not in self.blocknet_conf_local[section_name] or int(
-        #         self.blocknet_conf_local[section_name]['rpcxbridgetimeout']) < 120:
-        #     self.blocknet_conf_local[section_name]['rpcxbridgetimeout'] = 120
-
-        # addnode_value = self.blocknet_conf_local[section_name].get('addnode', [])
-        # if not isinstance(addnode_value, list):
-        #     addnode_value = [addnode_value]
-
-        # for node in global_variables.conf_data.nodes_to_add:
-        #     if node not in addnode_value:
-        #         addnode_value.append(node)
-        #         logger.info(f"Added new node: {node}")
-
-        # self.blocknet_conf_local[section_name]['addnode'] = addnode_value
-
+        # Process remote config options
         for section, options in self.blocknet_conf_remote.items():
             for key, value in options.items():
                 if key == 'rpcuser' or key == 'rpcpassword':
@@ -198,8 +191,27 @@ class BlocknetHandler(BaseBinUtil):
                         key] != value:
                         self.blocknet_conf_local[section][key] = value
 
-        # Handle extra options                                                                                                                                                               
-        self._update_extra_config_options()
+        # Handle extra options
+        extra_options = self.container.conf_data.extra_option_blocknet_core_conf
+        if extra_options and len(extra_options) > 0:
+            # Process each option
+            for option in extra_options:
+                for key, value in option.items():
+                    conf_value = self.blocknet_conf_local[section_name].get(key)
+
+                    # Initialize or convert to list if needed
+                    if not isinstance(conf_value, list):
+                        self.blocknet_conf_local[section_name][key] = list(
+                            conf_value.split(',') if conf_value else []
+                        )
+
+                    # Convert option value to string for comparison
+                    str_value = str(value)
+
+                    # Add new value if not already present
+                    if str_value not in self.blocknet_conf_local[section_name][key]:
+                        self.blocknet_conf_local[section_name][key].append(str_value)
+                        logger.info(f"Added config option: {key}={str_value}")
 
         logger.info("Local blocknet.conf updated successfully.")
 
@@ -217,33 +229,37 @@ class BlocknetHandler(BaseBinUtil):
     def _update_extra_config_options(self):
         """Helper method to handle extra config options with list value handling"""
         section_name = 'global'
-        if not global_variables.conf_data.extra_option_blocknet_core_conf:
+        if not self.container.conf_data.extra_option_blocknet_core_conf:
             return
 
-            # Ensure global section exists
+        # Ensure global section exists
         if section_name not in self.blocknet_conf_local:
             self.blocknet_conf_local[section_name] = {}
 
-            # Process each option
-        for option in global_variables.conf_data.extra_option_blocknet_core_conf:
+        # Process each option
+        for option in self.container.conf_data.extra_option_blocknet_core_conf:
             for key, value in option.items():
                 conf_value = self.blocknet_conf_local[section_name].get(key)
 
-                # Initialize or convert to list if needed                                                                                                                                
+                # Initialize or convert to list if needed
                 if not isinstance(conf_value, list):
                     self.blocknet_conf_local[section_name][key] = list(
                         conf_value.split(',') if conf_value else []
                     )
 
-                    # Convert option value to string for comparison
+                # Convert option value to string for comparison
                 str_value = str(value)
 
-                # Add new value if not already present                                                                                                                                   
+                # Add new value if not already present
                 if str_value not in self.blocknet_conf_local[section_name][key]:
                     self.blocknet_conf_local[section_name][key].append(str_value)
                     logger.info(f"Added config option: {key}={str_value}")
 
     def retrieve_coin_conf(self, coin):
+        if not self.xb_manifest:
+            logger.error("XB manifest not available")
+            return
+            
         latest_version = None
         highest_version_id = None
 
@@ -256,9 +272,9 @@ class BlocknetHandler(BaseBinUtil):
 
         if latest_version:
             xbridge_conf = latest_version['xbridge_conf']
-            xbridge_url = f"{global_variables.conf_data.remote_blockchain_configuration_repo}/xbridge-confs/{xbridge_conf}"
+            xbridge_url = f"{self.container.conf_data.remote_blockchain_configuration_repo}/xbridge-confs/{xbridge_conf}"
             wallet_conf = latest_version['wallet_conf']
-            wallet_conf_url = f"{global_variables.conf_data.remote_blockchain_configuration_repo}/wallet-confs/{wallet_conf}"
+            wallet_conf_url = f"{self.container.conf_data.remote_blockchain_configuration_repo}/wallet-confs/{wallet_conf}"
             parsed_xbridge_conf = retrieve_remote_conf(xbridge_url, "xbridge-confs", xbridge_conf)
             parsed_wallet_conf = retrieve_remote_conf(wallet_conf_url, "wallet-confs", wallet_conf)
             self.parsed_xbridge_confs[coin] = parsed_xbridge_conf
@@ -270,15 +286,14 @@ class BlocknetHandler(BaseBinUtil):
         self.parse_xbridge_conf()
         old_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
 
+        if self.xbridge_conf_local is None:
+            self.xbridge_conf_local = {}
+        
         if 'Main' not in self.xbridge_conf_local:
-            self.xbridge_conf_local['Main'] = global_variables.conf_data.base_xbridge_conf
+            self.xbridge_conf_local['Main'] = self.container.conf_data.base_xbridge_conf
 
         if self.blocknet_xbridge_conf_remote is None:
             logger.error("Remote xbridge.conf not available.")
-            return False
-
-        if self.xbridge_conf_local is None:
-            logger.error("Local xbridge.conf not available.")
             return False
         if xlite_daemon_conf:
             for coin in xlite_daemon_conf:
@@ -289,6 +304,8 @@ class BlocknetHandler(BaseBinUtil):
                     if coin not in self.xbridge_conf_local:
                         self.xbridge_conf_local[coin] = {}
                     for section, options in self.parsed_xbridge_confs[coin].items():
+                        if section not in self.xbridge_conf_local:
+                            self.xbridge_conf_local[section] = {}
                         for key, value in options.items():
                             if key == 'Username':
                                 self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]['rpcUsername'])
@@ -308,16 +325,24 @@ class BlocknetHandler(BaseBinUtil):
                 logger.info(f"section: {section}, options: {options}")
                 for key, value in options.items():
                     if key == 'Username':
-                        self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcuser'])
+                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and 
+                            'rpcuser' in self.blocknet_conf_local['global']):
+                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcuser'])
                     elif key == 'Password':
-                        self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcpassword'])
+                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and 
+                            'rpcpassword' in self.blocknet_conf_local['global']):
+                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcpassword'])
                     elif key == 'Port':
-                        self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcport'])
+                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and 
+                            'rpcport' in self.blocknet_conf_local['global']):
+                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcport'])
                     else:
                         if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][
                             key] != value:
                             self.xbridge_conf_local[section][key] = str(value)
 
+        if self.xbridge_conf_local is None:
+            self.xbridge_conf_local = {}
         sections_string = ','.join(section for section in self.xbridge_conf_local.keys() if section != 'Main')
 
         if 'Main' in self.xbridge_conf_local:
@@ -325,8 +350,8 @@ class BlocknetHandler(BaseBinUtil):
         else:
             self.xbridge_conf_local['Main'] = {
                 'ExchangeWallets': sections_string,
-                'FullLog': global_variables.conf_data.base_xbridge_conf['FullLog'],
-                'ShowAllOrders': global_variables.conf_data.base_xbridge_conf['ShowAllOrders'],
+                'FullLog': self.container.conf_data.base_xbridge_conf['FullLog'],
+                'ShowAllOrders': self.container.conf_data.base_xbridge_conf['ShowAllOrders'],
             }
 
         new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
@@ -347,8 +372,9 @@ class BlocknetHandler(BaseBinUtil):
             os.makedirs(self.data_folder)
 
     def create_aio_folder(self):
-        if global_variables.aio_folder and not os.path.exists(global_variables.aio_folder):
-            os.makedirs(global_variables.aio_folder)
+        aio_folder = self.container.aio_folder
+        if aio_folder and not os.path.exists(aio_folder):
+            os.makedirs(aio_folder)
 
     def download_bootstrap(self):
         self.create_data_folder()
@@ -356,8 +382,11 @@ class BlocknetHandler(BaseBinUtil):
 
         self.bootstrap_checking = True
         filename = "Blocknet.zip"
-        local_file_path = os.path.join(global_variables.aio_folder, filename)
-        remote_file_size = get_remote_file_size(global_variables.conf_data.blocknet_bootstrap_url)
+        aio_folder = self.container.aio_folder
+        if aio_folder is None:
+            raise ValueError("AIO folder not configured")
+        local_file_path = os.path.join(aio_folder, filename)
+        remote_file_size = get_remote_file_size(self.container.conf_data.blocknet_bootstrap_url)
         need_to_download = True
         if os.path.exists(local_file_path):
             local_file_size = os.path.getsize(local_file_path)
@@ -371,12 +400,12 @@ class BlocknetHandler(BaseBinUtil):
         try:
             if need_to_download:
                 with open(local_file_path, 'wb') as f:
-                    response = requests.get(global_variables.conf_data.blocknet_bootstrap_url, stream=True,
+                    response = requests.get(self.container.conf_data.blocknet_bootstrap_url, stream=True,
                                             timeout=(10, 30))
                     response.raise_for_status()
                     if response.status_code == 200:
                         logger.info(
-                            f"Downloading {global_variables.conf_data.blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+                            f"Downloading {self.container.conf_data.blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
                         bytes_downloaded = 0
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:
@@ -395,6 +424,9 @@ class BlocknetHandler(BaseBinUtil):
                 logger.info(f"{filename} Bootstrap downloaded successfully.")
 
             to_delete = ['blocks', 'chainstate', 'indexes', 'peers.dat', 'banlist.dat']
+            if not self.data_folder:
+                logger.error("Data folder not configured for bootstrap cleanup")
+                return
             for item_name in to_delete:
                 item_path = os.path.join(self.data_folder, item_name)
                 if os.path.exists(item_path):
@@ -420,15 +452,19 @@ class BlocknetHandler(BaseBinUtil):
             self.bootstrap_checking = False
 
     def download_blocknet_bin(self):
-        url = global_variables.conf_data.blocknet_releases_urls.get((global_variables.system, global_variables.machine))
+        url = self.container.blocknet_release_url
         if url is None:
-            raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
+            raise ValueError(f"Unsupported OS or architecture {self.container.system} {self.container.machine}")
+
+        aio_folder = self.container.aio_folder
+        if aio_folder is None:
+            raise ValueError("AIO folder not configured")
 
         self.download_binary(
             url,
             os.path.basename(url),
             self.blocknet_exe,
-            global_variables.aio_folder
+            aio_folder
         )
 
 
@@ -463,9 +499,13 @@ def save_conf_to_file(conf_data, file_path):
         return False
 
 
-def retrieve_remote_conf(remote_url, subfolder, expected_filename):
+def retrieve_remote_conf(remote_url: str, subfolder: str, expected_filename: str):
+    container = get_container()
     folder = "xb_conf"
-    local_conf_file = os.path.join(global_variables.aio_folder, folder, subfolder, expected_filename)
+    aio_folder = container.aio_folder
+    if aio_folder is None:
+        raise ValueError("AIO folder not configured")
+    local_conf_file = os.path.join(aio_folder, folder, subfolder, expected_filename)
 
     if os.path.exists(local_conf_file):
         try:
@@ -506,12 +546,16 @@ def download_remote_conf(url, filepath):
 
 
 def retrieve_xb_manifest():
+    container = get_container()
     folder = "xb_conf"
-    filename = os.path.basename(global_variables.conf_data.remote_manifest_url)
-    local_manifest_file = os.path.join(global_variables.aio_folder, folder, filename)
+    filename = os.path.basename(container.conf_data.remote_manifest_url)
+    aio_folder = container.aio_folder
+    if aio_folder is None:
+        raise ValueError("AIO folder not configured")
+    local_manifest_file = os.path.join(aio_folder, folder, filename)
 
     try:
-        response = requests.get(global_variables.conf_data.remote_manifest_url)
+        response = requests.get(container.conf_data.remote_manifest_url)
         if response.status_code == 200:
             parsed_json = response.json()
             os.makedirs(os.path.dirname(local_manifest_file), exist_ok=True)
@@ -521,7 +565,7 @@ def retrieve_xb_manifest():
             return parsed_json
         else:
             logger.error(
-                f"Failed to retrieve remote configuration file: {global_variables.conf_data.remote_manifest_url} {response.status_code}")
+                f"Failed to retrieve remote configuration file: {container.conf_data.remote_manifest_url} {response.status_code}")
             return None
     except requests.exceptions.RequestException as e:
         logger.error(f"Error retrieving remote configuration file: {e}")
@@ -529,13 +573,15 @@ def retrieve_xb_manifest():
 
 
 def retrieve_remote_blocknet_conf():
-    filename = os.path.basename(global_variables.conf_data.remote_blocknet_conf_url)
-    return retrieve_remote_conf(global_variables.conf_data.remote_blocknet_conf_url, "wallet-confs", filename)
+    container = get_container()
+    filename = os.path.basename(container.conf_data.remote_blocknet_conf_url)
+    return retrieve_remote_conf(container.conf_data.remote_blocknet_conf_url, "wallet-confs", filename)
 
 
 def retrieve_remote_blocknet_xbridge_conf():
-    filename = os.path.basename(global_variables.conf_data.remote_xbridge_conf_url)
-    return retrieve_remote_conf(global_variables.conf_data.remote_xbridge_conf_url, "xbridge-confs", filename)
+    container = get_container()
+    filename = os.path.basename(container.conf_data.remote_xbridge_conf_url)
+    return retrieve_remote_conf(container.conf_data.remote_xbridge_conf_url, "xbridge-confs", filename)
 
 
 def parse_conf_file(file_path=None, input_string=None):
@@ -578,11 +624,12 @@ def parse_conf_file(file_path=None, input_string=None):
     return conf_data
 
 
-def get_blocknet_data_folder(custom_path=None):
+def get_blocknet_data_folder(custom_path: Optional[str] = None):
+    container = get_container()
     if custom_path:
         path = custom_path
     else:
-        path = global_variables.conf_data.blocknet_default_paths.get(global_variables.system)
+        path = container.conf_data.blocknet_default_paths.get(container.system)
     if path:
         expanded_path = os.path.expandvars(os.path.expanduser(path))
         return os.path.normpath(expanded_path)

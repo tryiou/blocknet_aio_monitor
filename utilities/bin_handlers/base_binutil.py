@@ -4,32 +4,37 @@ import subprocess
 import sys
 import tarfile
 import zipfile
+from typing import Optional
 
 import psutil
 import requests
 
-from utilities import global_variables
+from utilities.app_container import get_container, AppContainer
 
 # from utilities.helper_util import UtilityHelper
 logger = logging.getLogger(__name__)
 
 
 class BaseBinUtil:
-    def __init__(self, app_name):
-        self.executable_path = None
-        self.dmg_mount_path = None
+    def __init__(self, app_name: str, container: Optional[AppContainer] = None):
+        self.executable_path: Optional[str] = None
+        self.dmg_mount_path: Optional[str] = None
         self.app_name = app_name
-        self.binary_percent_download = None
+        self.binary_percent_download: Optional[float] = None
         self.downloading_bin = False
         self.system = os.name
         self.process = None
+        self.container = container or get_container()
 
-    def download_binary(self, url, tmp_filename, exe_path, extract_path):
+    def download_binary(self, url: str, tmp_filename: str, exe_path: str, extract_path: str) -> None:
         self.downloading_bin = True
         try:
+            aio_folder = self.container.aio_folder
+            if aio_folder is None:
+                raise ValueError("AIO folder not configured")
             self.download_file(
                 url,
-                os.path.join(global_variables.aio_folder, tmp_filename),
+                os.path.join(aio_folder, tmp_filename),
                 exe_path,
                 extract_path,
                 self.system,
@@ -93,7 +98,7 @@ class BaseBinUtil:
                 tar.extractall(extract_to)
             os.remove(tmp_path)
             logger.info(f"Extracted TAR.GZ file to {extract_to}")
-        elif url.endswith(".dmg") and global_variables.system == "Darwin":
+        elif url.endswith(".dmg") and self.container.system == "Darwin":
             os.rename(tmp_path, final_path)
             logger.info(f"Renamed DMG file to {final_path}")
 
@@ -157,7 +162,11 @@ class BaseBinUtil:
                 logger.info(f"Process {name} PID {pid} terminated successfully")
             except (psutil.NoSuchProcess, psutil.TimeoutExpired) as e:
                 if isinstance(e, psutil.TimeoutExpired):
-                    proc.kill()
+                    try:
+                        proc = psutil.Process(pid)
+                        proc.kill()
+                    except Exception:
+                        pass
                     logger.warning(f"Process {name} PID {pid}: Timeout expired, killed process")
                 else:
                     logger.warning(f"Process {name} PID {pid}: {str(e)}")
@@ -197,19 +206,20 @@ class BaseBinUtil:
             return False
 
     # Shared by BlockdxUtility and XliteUtility
-    def handle_dmg(self, action):
-        if global_variables.system != "Darwin":
-            logger.warning(f"Call handle_dmg with wrong OS, {global_variables.system} ?")
+    def handle_dmg(self, action: str) -> None:
+        if self.container.system != "Darwin":
+            logger.warning(f"Call handle_dmg with wrong OS, {self.container.system} ?")
             return
         if action == "mount":
-            if not os.path.ismount(self.dmg_mount_path):
-                subprocess.run(["hdiutil", "attach", self.executable_path], check=True)
-                logger.info(f"Mounted DMG {self.executable_path} to {self.dmg_mount_path}")
-            else:
+            if self.dmg_mount_path and not os.path.ismount(self.dmg_mount_path):
+                if self.executable_path:
+                    subprocess.run(["hdiutil", "attach", self.executable_path], check=True)
+                    logger.info(f"Mounted DMG {self.executable_path} to {self.dmg_mount_path}")
+            elif self.dmg_mount_path:
                 logger.warning(f"{self.dmg_mount_path} is already mounted")
         elif action == "unmount":
-            if os.path.ismount(self.dmg_mount_path):
+            if self.dmg_mount_path and os.path.ismount(self.dmg_mount_path):
                 subprocess.run(["hdiutil", "detach", self.dmg_mount_path], check=True)
                 logger.info(f"Unmounted DMG from {self.dmg_mount_path}")
             else:
-                logger.warning(f"{self.dmg_mount_path} is not mounted")
+                logger.warning(f"{self.dmg_mount_path or 'Unknown path'} is not mounted")

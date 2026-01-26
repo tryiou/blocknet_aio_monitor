@@ -1,9 +1,11 @@
-.venv
-build
-dist
+venv/
+build/
+dist/
 .idea
 .aider*
 .env
 __pycache__*
 *.spec
 .coverage
+.kilocodemodes
+.roomodes

@@ -1,9 +1,12 @@
 import logging
 import os
+import re
 import socket
 import subprocess
+from typing import Optional
+
 import requests
-from utilities import global_variables
+from utilities.app_container import AppContainer, get_container
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 logger = logging.getLogger(__name__)
@@ -11,11 +14,11 @@ logger = logging.getLogger(__name__)
 class XliteReverseProxyHandler(BaseBinUtil):
     PORT = 11111
 
-    def __init__(self):
-        super().__init__("XliteReverseProxy")
+    def __init__(self, container: Optional[AppContainer] = None):
+        super().__init__("XliteReverseProxy", container)
         
-        self.release_url = global_variables.xlite_reverse_proxy_release_url
-        self.bin_name = global_variables.xlite_reverse_proxy_bin
+        self.release_url = self.container.xlite_reverse_proxy_release_url
+        self.bin_name = self.container.xlite_reverse_proxy_bin
         
         if not self.release_url or not self.bin_name:
             logger.error("Reverse proxy not configured for current system")
@@ -25,17 +28,20 @@ class XliteReverseProxyHandler(BaseBinUtil):
         # Extract version from URL (expecting format: .../vX.Y.Z/...)
         version = None
         if self.release_url:
-            import re
             match = re.search(r'/v(\d+\.\d+\.\d+)/', self.release_url)
             if match:
                 version = match.group(1)
         
         folder_name = f"xlite-reverse-proxy-{version}" if version else "xlite-reverse-proxy-unknown"
-        self.executable_path = os.path.join(
-            global_variables.aio_folder,
-            folder_name,
-            self.bin_name
-        )
+        aio_folder = self.container.aio_folder
+        if aio_folder:
+            self.executable_path = os.path.join(
+                aio_folder,
+                folder_name,
+                self.bin_name
+            )
+        else:
+            self.executable_path = None
         self.process = None
         self.running_locally = False
 
@@ -56,20 +62,27 @@ class XliteReverseProxyHandler(BaseBinUtil):
             return
         
         try:
+            if not self.executable_path:
+                logger.error("Executable path not configured")
+                return
+            
+            # Type assertion for mypy
+            exe_path = self.executable_path  # type: ignore
+                
             # Create directory if needed
-            bin_dir = os.path.dirname(self.executable_path)
-            if not os.path.exists(bin_dir):
+            bin_dir = os.path.dirname(exe_path)
+            if bin_dir and not os.path.exists(bin_dir):
                 os.makedirs(bin_dir, exist_ok=True)
             
             # Download if missing
-            if not os.path.exists(self.executable_path):
-                if not self.download_standalone_binary(self.release_url, self.executable_path):
+            if not os.path.exists(exe_path):
+                if not self.download_standalone_binary(self.release_url, exe_path):
                     logger.error("Proxy download failed")
                     return
             
             # Start proxy with dynlist=true argument
             self.process = subprocess.Popen(
-                [self.executable_path, '-dynlist=true'],
+                [exe_path, '-dynlist=true'],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,

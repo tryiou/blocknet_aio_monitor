@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch, mock_open
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utilities.bin_handlers.xlite_reverse_proxy_handler import XliteReverseProxyHandler
+from utilities.app_container import AppContainer
 
 
 class TestXliteReverseProxyHandler(unittest.TestCase):
@@ -20,25 +21,25 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
     def setUp(self):
         """Set up common mocks and patches for all tests."""
         self.patches = []
-        self._setup_global_variables()
+        self._setup_app_container()
         self._apply_common_patches()
-        self.handler = XliteReverseProxyHandler()
+        self.handler = XliteReverseProxyHandler(self.mock_container)
 
-    def _setup_global_variables(self):
-        """Set up global_variables mock."""
-        self.mock_global_variables = MagicMock()
-        self.mock_global_variables.system = 'Linux'
-        self.mock_global_variables.machine = 'x86_64'
-        self.mock_global_variables.aio_folder = '/mock/aio_folder'
-        self.mock_global_variables.xlite_reverse_proxy_release_url = (
+    def _setup_app_container(self):
+        """Set up AppContainer mock."""
+        self.mock_container = MagicMock()
+        self.mock_container.system = 'Linux'
+        self.mock_container.machine = 'x86_64'
+        self.mock_container.aio_folder = '/mock/aio_folder'
+        self.mock_container.xlite_reverse_proxy_release_url = (
             'https://github.com/blocknetdx/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy-v1.0.0-linux-x64.tar.gz'
         )
-        self.mock_global_variables.xlite_reverse_proxy_bin = 'xlite-reverse-proxy'
+        self.mock_container.xlite_reverse_proxy_bin = 'xlite-reverse-proxy'
 
     def _apply_common_patches(self):
         """Apply common patches needed for handler initialization."""
         self.patches.append(
-            patch('utilities.bin_handlers.xlite_reverse_proxy_handler.global_variables', self.mock_global_variables))
+            patch('utilities.app_container.get_container', return_value=self.mock_container))
         self.patches.append(
             patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists', return_value=True))
         self.patches.append(patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs'))
@@ -64,19 +65,19 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         """Test handler initialization sets up expected attributes."""
         self.assertEqual(self.handler.app_name, "XliteReverseProxy")
         self.assertEqual(self.handler.PORT, 11111)
-        self.assertEqual(self.handler.release_url, self.mock_global_variables.xlite_reverse_proxy_release_url)
-        self.assertEqual(self.handler.bin_name, self.mock_global_variables.xlite_reverse_proxy_bin)
+        self.assertEqual(self.handler.release_url, self.mock_container.xlite_reverse_proxy_release_url)
+        self.assertEqual(self.handler.bin_name, self.mock_container.xlite_reverse_proxy_bin)
         self.assertIsNotNone(self.handler.executable_path)
         self.assertIsNone(self.handler.process)
         self.assertFalse(self.handler.running_locally)
 
     def test_init_missing_config(self):
         """Test handler initialization when config is missing."""
-        self.mock_global_variables.xlite_reverse_proxy_release_url = None
-        self.mock_global_variables.xlite_reverse_proxy_bin = None
+        self.mock_container.xlite_reverse_proxy_release_url = None
+        self.mock_container.xlite_reverse_proxy_bin = None
 
         with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
-            handler = XliteReverseProxyHandler()
+            handler = XliteReverseProxyHandler(self.mock_container)
             self.assertIsNone(handler.executable_path)
             mock_logger.error.assert_called_once_with("Reverse proxy not configured for current system")
 
@@ -87,7 +88,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         mock_match.group.return_value = "1.0.0"
 
         with patch('re.search', return_value=mock_match):
-            handler = XliteReverseProxyHandler()
+            handler = XliteReverseProxyHandler(self.mock_container)
             # The path should be constructed from aio_folder, version folder, and bin_name
             expected_path = '/mock/aio_folder/xlite-reverse-proxy-1.0.0/xlite-reverse-proxy'
             self.assertEqual(handler.executable_path, expected_path)
@@ -168,11 +169,11 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
 
     def test_start_missing_config(self):
         """Test start when config is missing."""
-        self.mock_global_variables.xlite_reverse_proxy_release_url = None
-        self.mock_global_variables.xlite_reverse_proxy_bin = None
+        self.mock_container.xlite_reverse_proxy_release_url = None
+        self.mock_container.xlite_reverse_proxy_bin = None
 
         with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
-            handler = XliteReverseProxyHandler()
+            handler = XliteReverseProxyHandler(self.mock_container)
             handler.start()
 
             # Verify logger was called (called twice: once in __init__, once in start)

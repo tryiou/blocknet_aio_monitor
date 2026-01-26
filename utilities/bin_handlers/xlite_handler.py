@@ -5,73 +5,85 @@ import subprocess
 import threading
 import time
 import traceback
+from typing import Optional
 
 import requests
 
-from utilities import global_variables
+from utilities.app_container import AppContainer, get_container
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 from utilities.rpc_client import RPCClient
 
 logger = logging.getLogger(__name__)
 
-if global_variables.system == 'Windows':
+
+def check_vc_redist_installed(container: AppContainer):
     import winreg
+    base_key_path = r"SOFTWARE\Classes\Installer\Dependencies\Microsoft.VS.VC_RuntimeMinimumVSU_amd64,v14"
+    value_name = "DisplayName"
+
+    display_name = check_registry_value(base_key_path, value_name)
+    if display_name is not None:
+        return True
+    else:
+        logger.info("No vc_redist found. Installing")
+        install_vc_redist(container.conf_data.vc_redist_win_url)
 
 
-    def check_vc_redist_installed():
-        base_key_path = r"SOFTWARE\Classes\Installer\Dependencies\Microsoft.VS.VC_RuntimeMinimumVSU_amd64,v14"
-        value_name = "DisplayName"
-
-        display_name = check_registry_value(base_key_path, value_name)
-        if display_name is not None:
-            return True
-        else:
-            logger.info("No vc_redist found. Installing")
-            install_vc_redist(global_variables.conf_data.vc_redist_win_url)
-
-
-    def check_registry_value(key_path, value_name):
-        try:
-            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
-                value, _ = winreg.QueryValueEx(key, value_name)
-                return value
-        except FileNotFoundError:
-            return None
-        except Exception as e:
-            logger.error(f"Error: {e}")
-            return None
+def check_registry_value(key_path, value_name):
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+            value, _ = winreg.QueryValueEx(key, value_name)
+            return value
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return None
 
 
-    def install_vc_redist(url):
-        try:
-            installer_name = os.path.basename(url)
+def install_vc_redist(url):
+    try:
+        installer_name = os.path.basename(url)
 
-            with open(installer_name, 'wb') as file:
-                response = requests.get(url)
-                file.write(response.content)
+        with open(installer_name, 'wb') as file:
+            response = requests.get(url)
+            file.write(response.content)
 
-            command = f"{installer_name} /install /quiet /norestart"
+        command = f"{installer_name} /install /quiet /norestart"
 
-            subprocess.run(command, shell=True, check=True)
-            logger.info("Visual C++ Redistributable installed successfully.")
+        subprocess.run(command, shell=True, check=True)
+        logger.info("Visual C++ Redistributable installed successfully.")
 
-            os.remove(installer_name)
+        os.remove(installer_name)
 
-        except Exception as e:
-            logger.error(f"Error: {e}")
+    except Exception as e:
+        logger.error(f"Error: {e}")
 
 
 class XliteHandler(BaseBinUtil):
-    def __init__(self):
-        super().__init__("Xlite")
-        if global_variables.system == "Darwin":
-            self.executable_path = os.path.join(global_variables.aio_folder,
-                                                os.path.basename(global_variables.xlite_url))
-            self.dmg_mount_path = f"/Volumes/{global_variables.xlite_volume_name}"
+    def __init__(self, container: Optional[AppContainer] = None):
+        super().__init__("Xlite", container)
+        if self.container.system == "Darwin":
+            xlite_release_url = self.container.xlite_release_url
+            if xlite_release_url and self.container.aio_folder:
+                self.executable_path = os.path.join(self.container.aio_folder,
+                                                    os.path.basename(xlite_release_url))
+            else:
+                self.executable_path = None
+            xlite_volume_name = self.container.xlite_volume_name
+            if xlite_volume_name:
+                self.dmg_mount_path = f"/Volumes/{xlite_volume_name}"
+            else:
+                self.dmg_mount_path = None
         else:
-            self.executable_path = os.path.join(global_variables.aio_folder,
-                                                global_variables.conf_data.xlite_bin_path[global_variables.system],
-                                                global_variables.conf_data.xlite_bin_name[global_variables.system])
+            aio_folder = self.container.aio_folder
+            curpath = self.container.xlite_curpath
+            bin_name = self.container.xlite_bin
+            if aio_folder and curpath and bin_name:
+                self.executable_path = os.path.join(aio_folder, curpath, bin_name)
+            else:
+                self.executable_path = None
         self.valid_daemons_rpc_servers = None
         self.xlite_daemon_confs_local = {}
         self.coins_rpc = {}
@@ -129,8 +141,12 @@ class XliteHandler(BaseBinUtil):
         thread.start()
 
     def parse_xlite_conf(self):
-        data_folder = os.path.expandvars(
-            os.path.expanduser(global_variables.conf_data.xlite_default_paths.get(global_variables.system, None)))
+        data_folder = self.container.conf_data.xlite_default_paths.get(self.container.system, None)
+        if data_folder is None:
+            self.xlite_conf_local = {}
+            return
+        
+        data_folder = os.path.expandvars(os.path.expanduser(data_folder))
         file = "app-settings.json"
         file_path = os.path.join(data_folder, file)
         meta_data = {}
@@ -145,9 +161,12 @@ class XliteHandler(BaseBinUtil):
         self.xlite_conf_local = meta_data
 
     def parse_xlite_daemon_conf(self, silent=False):
-        daemon_data_path = os.path.expandvars(
-            os.path.expanduser(
-                global_variables.conf_data.xlite_daemon_default_paths.get(global_variables.system, None)))
+        daemon_data_path = self.container.conf_data.xlite_daemon_default_paths.get(self.container.system, None)
+        if daemon_data_path is None:
+            self.xlite_daemon_confs_local = {}
+            return
+        
+        daemon_data_path = os.path.expandvars(os.path.expanduser(daemon_data_path))
         confs_folder = os.path.join(daemon_data_path, "settings")
 
         if not os.path.exists(confs_folder):
@@ -173,28 +192,29 @@ class XliteHandler(BaseBinUtil):
                 f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(self.xlite_daemon_confs_local.keys())}")
 
     def start_xlite(self, env_vars=[]):
-        if global_variables.system == "Windows":
-            check_vc_redist_installed()
+        if self.container.system == "Windows":
+            check_vc_redist_installed(self.container)
 
-        if not os.path.exists(self.executable_path):
+        if self.executable_path and not os.path.exists(self.executable_path):
             logger.info(f"Xlite executable not found at {self.executable_path}. Downloading...")
             self.download_xlite_bin()
 
         # Get launch options for current OS
-        launch_options = global_variables.conf_data.xlite_launch_options.get(global_variables.system, None)
+        launch_options = self.container.conf_data.xlite_launch_options.get(self.container.system, None)
 
         try:
-            if global_variables.system == "Darwin":
+            if self.container.system == "Darwin":
                 self.handle_dmg("mount")
-                full_path = os.path.join(self.dmg_mount_path,
-                                         *global_variables.conf_data.xlite_bin_name[global_variables.system])
+                full_path = os.path.join(self.dmg_mount_path or "",
+                                         *self.container.conf_data.xlite_bin_name[self.container.system])
+                xlite_volume_name = self.container.xlite_volume_name
                 logger.info(
-                    f"volume_name: {global_variables.xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
+                    f"volume_name: {xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 command = [full_path] + launch_options
                 cwd = os.path.dirname(full_path)
             else:
                 command = [self.executable_path] + launch_options
-                cwd = os.path.dirname(self.executable_path)
+                cwd = os.path.dirname(self.executable_path or "")
 
             parsed_env_vars = {}
             for env_var_str in env_vars:
@@ -223,20 +243,27 @@ class XliteHandler(BaseBinUtil):
         self.terminate_processes(self.xlite_daemon_pids, "Xlite-daemon")
 
     def download_xlite_bin(self):
-        url = global_variables.conf_data.xlite_releases_urls.get((global_variables.system, global_variables.machine))
+        url = self.container.conf_data.xlite_releases_urls.get((self.container.system, self.container.machine))
         if url is None:
-            raise ValueError(f"Unsupported OS or architecture {global_variables.system} {global_variables.machine}")
+            raise ValueError(f"Unsupported OS or architecture {self.container.system} {self.container.machine}")
 
         tmp_filename = "tmp_xl_bin"
+        aio_folder = self.container.aio_folder
+        if not aio_folder:
+            raise ValueError("AIO folder not configured")
+            
+        if not self.executable_path:
+            raise ValueError("Executable path not configured")
+            
         self.download_binary(
             url,
             tmp_filename,
             self.executable_path,
-            global_variables.aio_folder
+            aio_folder
         )
 
     def unmount_dmg(self):
-        if global_variables.system != "Darwin":
-            logger.warning(f"Call unmount_dmg with wrong OS, {global_variables.system} ?")
+        if self.container.system != "Darwin":
+            logger.warning(f"Call unmount_dmg with wrong OS, {self.container.system} ?")
             return
         self.handle_dmg("unmount")

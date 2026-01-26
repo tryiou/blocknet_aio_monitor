@@ -12,7 +12,8 @@ from watchdog.observers import Observer
 
 import widgets_strings
 from gui.binary_frame_manager import BinaryFrameManager
-from utilities import utils, global_variables
+from utilities.app_container import get_container
+from utilities import utils
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ class BinaryManager:
     def __init__(self, root_gui):
         self.root_gui = root_gui
         self.frame_manager = None
+        self.container = get_container()
 
         self.disable_start_blocknet_button = False
         self.disable_start_xlite_button = False
@@ -79,10 +81,15 @@ class BinaryManager:
         self.download_blockdx_thread = None
         self.download_xlite_thread = None
 
-        self.observer = Observer()
-        self.handler = BinaryFileHandler(self)
-        self.observer.schedule(self.handler, global_variables.aio_folder, recursive=False)
-        self.observer.start()
+        aio_folder = self.container.aio_folder
+        if aio_folder:
+            self.observer = Observer()
+            self.handler = BinaryFileHandler(self)
+            self.observer.schedule(self.handler, aio_folder, recursive=False)
+            self.observer.start()
+        else:
+            self.observer = None
+            self.handler = None
 
         self.tooltip_manager = self.root_gui.tooltip_manager
         self.file_change_queue = queue.Queue()
@@ -172,8 +179,11 @@ class BinaryManager:
 
     def delete_blocknet_command(self):
         blocknet_pruned_version = self.root_gui.blocknet_manager.version[0].replace('v', '')
-        for item in os.listdir(global_variables.aio_folder):
-            item_path = os.path.join(global_variables.aio_folder, item)
+        aio_folder = self.container.aio_folder
+        if not aio_folder:
+            return
+        for item in os.listdir(aio_folder):
+            item_path = os.path.join(aio_folder, item)
             if os.path.isdir(item_path):
                 # if a wrong version is found, delete it.
                 if 'blocknet-' in item:
@@ -196,10 +206,13 @@ class BinaryManager:
 
     def delete_blockdx_command(self):
         blockdx_pruned_version = self.root_gui.blockdx_manager.version[0].replace('v', '')
-        for item in os.listdir(global_variables.aio_folder):
-            item_path = os.path.join(global_variables.aio_folder, item)
-            if global_variables.system == 'Darwin':
-                blockdx_filename = os.path.basename(global_variables.blockdx_release_url)
+        aio_folder = self.container.aio_folder
+        if not aio_folder:
+            return
+        for item in os.listdir(aio_folder):
+            item_path = os.path.join(aio_folder, item)
+            if self.container.system == 'Darwin':
+                blockdx_filename = os.path.basename(self.container.blockdx_release_url or "")
                 if os.path.isfile(item_path):
                     if blockdx_filename in item_path:
                         self.root_gui.blockdx_manager.unmount_dmg()
@@ -225,10 +238,13 @@ class BinaryManager:
 
     def delete_xlite_command(self):
         xlite_pruned_version = self.root_gui.xlite_manager.version[0].replace('v', '')
-        for item in os.listdir(global_variables.aio_folder):
-            item_path = os.path.join(global_variables.aio_folder, item)
-            if global_variables.system == 'Darwin':
-                xlite_filename = os.path.basename(global_variables.xlite_release_url)
+        aio_folder = self.container.aio_folder
+        if not aio_folder:
+            return
+        for item in os.listdir(aio_folder):
+            item_path = os.path.join(aio_folder, item)
+            if self.container.system == 'Darwin':
+                xlite_filename = os.path.basename(self.container.xlite_release_url or "")
                 if os.path.isfile(item_path):
                     if xlite_filename in item_path:
                         self.root_gui.xlite_manager.utility.unmount_dmg()
@@ -248,8 +264,11 @@ class BinaryManager:
         Returns:
             int: Directory modification time in nanoseconds
         """
+        aio_folder = self.container.aio_folder
+        if not aio_folder:
+            return 0
         try:
-            stat_info = os.stat(global_variables.aio_folder)
+            stat_info = os.stat(aio_folder)
             try:
                 return stat_info.st_mtime_ns
             except AttributeError:
@@ -265,7 +284,9 @@ class BinaryManager:
         Args:
             apps_info: Dictionary containing app information structures
         """
-        aio_folder = global_variables.aio_folder
+        aio_folder = self.container.aio_folder
+        if not aio_folder:
+            return
         for base_name in os.listdir(aio_folder):
             full_path = os.path.join(aio_folder, base_name)
             for app_info in apps_info.values():
@@ -302,7 +323,7 @@ class BinaryManager:
             return
             
         self.last_directory_mtime = current_mtime
-        is_darwin = global_variables.system == "Darwin"
+        is_darwin = self.container.system == "Darwin"
         
         apps_info = {
             "blocknet": {
@@ -317,7 +338,7 @@ class BinaryManager:
                 "version": self._prune_version(self.root_gui.blockdx_manager.version),
                 "dir_prefix": "BLOCK-DX-",
                 "is_dir": not is_darwin,
-                "darwin_file": os.path.basename(global_variables.blockdx_release_url) if is_darwin else None,
+                "darwin_file": os.path.basename(self.container.blockdx_release_url or "") if is_darwin else None,
                 "boolvar": self.frame_manager.blockdx_installed_boolvar,
                 "found": False
             },
@@ -325,7 +346,7 @@ class BinaryManager:
                 "version": self._prune_version(self.root_gui.xlite_manager.version),
                 "dir_prefix": "XLite-",
                 "is_dir": not is_darwin,
-                "darwin_file": os.path.basename(global_variables.xlite_release_url) if is_darwin else None,
+                "darwin_file": os.path.basename(self.container.xlite_release_url or "") if is_darwin else None,
                 "boolvar": self.frame_manager.xlite_installed_boolvar,
                 "found": False
             }
@@ -396,27 +417,27 @@ class BinaryManager:
         """
         if binary_name == "blocknet":
             self.update_blocknet_start_close_button()
-            folder_path = os.path.join(global_variables.aio_folder, global_variables.conf_data.blocknet_bin_path[0])
+            folder_path = os.path.join(self.container.aio_folder or "", self.container.conf_data.blocknet_bin_path[0])
             self._update_install_delete_button(binary_name, self.frame_manager.blocknet_installed_boolvar,
                                                self.frame_manager.install_delete_blocknet_button,
                                                self.frame_manager.install_delete_blocknet_string_var,
-                                               self.root_gui.blocknet_manager, global_variables.blocknet_release_url,
+                                               self.root_gui.blocknet_manager, self.container.blocknet_release_url,
                                                folder_path, "blocknet_process_running")
         elif binary_name == "blockdx":
             self.update_blockdx_start_close_button()
-            folder_path = os.path.join(global_variables.aio_folder, global_variables.blockdx_curpath)
+            folder_path = os.path.join(self.container.aio_folder or "", self.container.blockdx_curpath or "")
             self._update_install_delete_button(binary_name, self.frame_manager.blockdx_installed_boolvar,
                                                self.frame_manager.install_delete_blockdx_button,
                                                self.frame_manager.install_delete_blockdx_string_var,
-                                               self.root_gui.blockdx_manager, global_variables.blockdx_release_url,
+                                               self.root_gui.blockdx_manager, self.container.blockdx_release_url,
                                                folder_path, "process_running")
         elif binary_name == "xlite":
             self.update_xlite_start_close_button()
-            folder_path = os.path.join(global_variables.aio_folder, global_variables.xlite_curpath)
+            folder_path = os.path.join(self.container.aio_folder or "", self.container.xlite_curpath or "")
             self._update_install_delete_button(binary_name, self.frame_manager.xlite_installed_boolvar,
                                                self.frame_manager.install_delete_xlite_button,
                                                self.frame_manager.install_delete_xlite_string_var,
-                                               self.root_gui.xlite_manager, global_variables.xlite_release_url,
+                                               self.root_gui.xlite_manager, self.container.xlite_release_url,
                                                folder_path, "process_running")
 
     def process_file_changes(self) -> None:

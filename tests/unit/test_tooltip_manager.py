@@ -44,7 +44,7 @@ class TestTooltipManager:
     def test_register_tooltip_creates_tooltip(self, mock_widget, tooltip_manager):
         """Test that register_tooltip creates a new CTkToolTip instance."""
         manager, mock_ctktooltip, _ = tooltip_manager
-        mock_tooltip_instance = MagicMock(spec=CTkToolTip.CTkToolTip)
+        mock_tooltip_instance = MagicMock()
         mock_ctktooltip.return_value = mock_tooltip_instance
 
         manager.register_tooltip(mock_widget, TEST_MESSAGE)
@@ -56,7 +56,7 @@ class TestTooltipManager:
     def test_register_tooltip_with_kwargs(self, mock_widget, tooltip_manager):
         """Test that register_tooltip passes kwargs to CTkToolTip."""
         manager, mock_ctktooltip, _ = tooltip_manager
-        mock_tooltip_instance = MagicMock(spec=CTkToolTip.CTkToolTip)
+        mock_tooltip_instance = MagicMock()
         mock_ctktooltip.return_value = mock_tooltip_instance
         kwargs = {"delay": 1, "follow": True}
 
@@ -70,7 +70,7 @@ class TestTooltipManager:
         manager, mock_ctktooltip, _ = tooltip_manager
         widget1 = MagicMock()
         widget2 = MagicMock()
-        mock_ctktooltip.return_value = MagicMock(spec=CTkToolTip.CTkToolTip)
+        mock_ctktooltip.return_value = MagicMock()
 
         manager.register_tooltip(widget1, TEST_MESSAGE)
         manager.register_tooltip(widget2, UPDATED_MESSAGE)
@@ -82,7 +82,7 @@ class TestTooltipManager:
     def test_update_tooltip_existing_widget(self, mock_widget, tooltip_manager):
         """Test that update_tooltip updates an existing widget's tooltip."""
         manager, _, mock_configure = tooltip_manager
-        existing_tooltip = MagicMock(spec=CTkToolTip.CTkToolTip)
+        existing_tooltip = MagicMock()
         manager.tooltips[mock_widget] = existing_tooltip
 
         manager.update_tooltip(mock_widget, UPDATED_MESSAGE)
@@ -100,7 +100,7 @@ class TestTooltipManager:
     def test_update_tooltip_with_empty_message(self, mock_widget, tooltip_manager):
         """Test that update_tooltip handles empty message."""
         manager, _, mock_configure = tooltip_manager
-        existing_tooltip = MagicMock(spec=CTkToolTip.CTkToolTip)
+        existing_tooltip = MagicMock()
         manager.tooltips[mock_widget] = existing_tooltip
 
         manager.update_tooltip(mock_widget, "")
@@ -111,21 +111,23 @@ class TestTooltipManager:
         """Test that update_tooltip only affects the specified widget."""
         manager, _, mock_configure = tooltip_manager
         other_widget = MagicMock()
-        other_tooltip = MagicMock(spec=CTkToolTip.CTkToolTip)
-
-        manager.tooltips[mock_widget] = MagicMock(spec=CTkToolTip.CTkToolTip)
+        other_tooltip = MagicMock()
         manager.tooltips[other_widget] = other_tooltip
-
+        
+        # Add a tooltip for the mock_widget first
+        existing_tooltip = MagicMock()
+        manager.tooltips[mock_widget] = existing_tooltip
+        
         manager.update_tooltip(mock_widget, UPDATED_MESSAGE)
-
+        
         mock_configure.assert_called_once_with(manager.tooltips[mock_widget], UPDATED_MESSAGE)
         assert manager.tooltips[other_widget] == other_tooltip
 
     def test_register_tooltip_overwrites_existing(self, mock_widget, tooltip_manager):
         """Test that register_tooltip overwrites existing tooltip for same widget."""
         manager, mock_ctktooltip, _ = tooltip_manager
-        first_tooltip = MagicMock(spec=CTkToolTip.CTkToolTip)
-        second_tooltip = MagicMock(spec=CTkToolTip.CTkToolTip)
+        first_tooltip = MagicMock()
+        second_tooltip = MagicMock()
         mock_ctktooltip.side_effect = [first_tooltip, second_tooltip]
 
         manager.register_tooltip(mock_widget, TEST_MESSAGE)

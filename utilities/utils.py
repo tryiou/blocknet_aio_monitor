@@ -7,7 +7,7 @@ import customtkinter as ctk
 import psutil
 from cryptography.fernet import Fernet
 
-from utilities import global_variables
+from utilities.app_container import get_container
 from utilities.keyring_manager import KeyringManager, KeyringMigration
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,8 @@ def load_cfg_json():
     local_filename = "aio_settings.json"
     old_local_filename = "cfg.json"
 
-    local_conf_path = global_variables.aio_folder  # define this early
+    container = get_container()
+    local_conf_path = container.aio_folder  # define this early
     full_old_path = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), old_local_filename)
     full_new_path = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
 
@@ -69,8 +70,9 @@ def terminate_all_threads():
 
 
 def remove_cfg_json_key(key):
+    container = get_container()
     local_filename = "aio_settings.json"
-    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
+    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
     filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
 
     # Try loading the existing JSON file
@@ -97,8 +99,9 @@ def remove_cfg_json_key(key):
 
 
 def save_cfg_json(key, data):
+    container = get_container()
     local_filename = "aio_settings.json"
-    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
+    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
     filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
 
     # Try loading the existing JSON file
@@ -119,7 +122,8 @@ def save_cfg_json(key, data):
 
 def save_encryption_key(key):
     """Save encryption key to keyring (or fallback storage)."""
-    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
+    container = get_container()
+    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
     keyring_manager = KeyringManager(local_conf_path)
     success, message = keyring_manager.store_key(key)
     if success:
@@ -131,7 +135,8 @@ def save_encryption_key(key):
 
 def load_encryption_key():
     """Load encryption key from keyring (or fallback storage)."""
-    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
+    container = get_container()
+    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
     keyring_manager = KeyringManager(local_conf_path)
     key, message = keyring_manager.retrieve_key()
     if key:
@@ -144,7 +149,8 @@ def load_encryption_key():
 
 def delete_encryption_key():
     """Delete encryption key from keyring and fallback storage."""
-    local_conf_path = global_variables.conf_data.aio_blocknet_data_path.get(global_variables.system)
+    container = get_container()
+    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
     keyring_manager = KeyringManager(local_conf_path)
     success, message = keyring_manager.delete_key()
     if success:
@@ -207,13 +213,13 @@ def disable_button(button, img=None):
 
 def processes_check():
     """Check for running processes related to Blocknet, BlockDX, and Xlite."""
-
-    blocknet_bin = global_variables.blocknet_bin
-    blockdx_bin = global_variables.blockdx_bin[-1] if global_variables.system == "Darwin" \
-        else global_variables.blockdx_bin
-    xlite_bin = global_variables.xlite_bin[-1] if global_variables.system == "Darwin" \
-        else global_variables.xlite_bin
-    xlite_daemon_bin = global_variables.xlite_daemon_bin
+    container = get_container()
+    blocknet_bin = container.blocknet_bin
+    blockdx_bin = container.blockdx_bin[-1] if container.system == "Darwin" \
+        else container.blockdx_bin
+    xlite_bin = container.xlite_bin[-1] if container.system == "Darwin" \
+        else container.xlite_bin
+    xlite_daemon_bin = container.xlite_daemon_bin
     # Initialize process lists
     process_lists: dict = {
         blocknet_bin: [],

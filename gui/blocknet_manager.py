@@ -1,5 +1,5 @@
 from gui.blocknet_frame_manager import BlocknetCoreFrameManager
-from utilities import global_variables
+from utilities.app_container import get_container
 from utilities.bin_handlers.blocknet_handler import BlocknetHandler
 
 
@@ -7,7 +7,11 @@ class BlocknetManager:
     def __init__(self, root_gui):
         self.frame_manager = None
         self.root_gui = root_gui
-        self.version = [global_variables.blocknet_release_url.split('/')[7]]
+        container = get_container()
+        if container.blocknet_release_url:
+            self.version = [container.blocknet_release_url.split('/')[7]]
+        else:
+            self.version = ["unknown"]
         self.blocknet_process_running = False
 
         self.bootstrap_thread = None

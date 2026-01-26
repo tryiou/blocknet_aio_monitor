@@ -5,7 +5,8 @@ import tempfile
 from unittest.mock import Mock, patch, MagicMock
 import pytest
 import customtkinter as ctk
-from utilities import utils, global_variables
+from utilities import utils
+from utilities.app_container import AppContainer
 
 
 # ============================================================================
@@ -27,12 +28,19 @@ def mock_tooltip():
 
 
 @pytest.fixture
-def mock_global_variables():
-    """Mock global_variables with common config setup"""
-    with patch('utilities.utils.global_variables') as mock_global:
-        mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_global.system = "Linux"
-        yield mock_global
+def mock_container():
+    """Mock AppContainer with common config setup"""
+    container = MagicMock()
+    container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+    container.system = "Linux"
+    return container
+
+
+@pytest.fixture
+def patched_container(mock_container):
+    """Patch get_container to return mock_container"""
+    with patch('utilities.utils.get_container', return_value=mock_container):
+        yield mock_container
 
 
 @pytest.fixture
@@ -138,13 +146,13 @@ class TestTerminateAllThreads:
 class TestLoadCfgJson:
     """Test load_cfg_json function"""
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.exists')
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_load_cfg_json_new_file_exists(self, mock_expanduser, mock_expandvars, mock_exists, mock_global):
+    def test_load_cfg_json_new_file_exists(self, mock_expanduser, mock_expandvars, mock_exists, mock_container):
         """Test loading new config file when it exists"""
-        mock_global.aio_folder = "/test/aio"
+        mock_container.aio_folder = "/test/aio"
         mock_expanduser.return_value = "/test/aio"
         mock_expandvars.return_value = "/test/aio"
         mock_exists.side_effect = [False, True]  # old doesn't exist, new exists
@@ -162,13 +170,13 @@ class TestLoadCfgJson:
 
             assert result == {"test_key": "test_value"}
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.exists')
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_load_cfg_json_old_file_migration(self, mock_expanduser, mock_expandvars, mock_exists, mock_global):
+    def test_load_cfg_json_old_file_migration(self, mock_expanduser, mock_expandvars, mock_exists, mock_container):
         """Test migration from old config file to new"""
-        mock_global.aio_folder = "/test/aio"
+        mock_container.aio_folder = "/test/aio"
         mock_expanduser.return_value = "/test/aio"
         mock_expandvars.return_value = "/test/aio"
         mock_exists.side_effect = [True, True]
@@ -188,13 +196,13 @@ class TestLoadCfgJson:
             assert result == {"old_key": "old_value"}
             mock_rename.assert_called_once()
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.exists')
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_load_cfg_json_file_not_found(self, mock_expanduser, mock_expandvars, mock_exists, mock_global):
+    def test_load_cfg_json_file_not_found(self, mock_expanduser, mock_expandvars, mock_exists, mock_container):
         """Test when config file doesn't exist"""
-        mock_global.aio_folder = "/test/aio"
+        mock_container.aio_folder = "/test/aio"
         mock_expanduser.return_value = "/test/aio"
         mock_expandvars.return_value = "/test/aio"
         mock_exists.side_effect = [False, False]
@@ -207,14 +215,14 @@ class TestLoadCfgJson:
 class TestRemoveCfgJsonKey:
     """Test remove_cfg_json_key function"""
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.exists')
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_remove_cfg_json_key_success(self, mock_expanduser, mock_expandvars, mock_exists, mock_global):
+    def test_remove_cfg_json_key_success(self, mock_expanduser, mock_expandvars, mock_exists, mock_container):
         """Test successful key removal"""
-        mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_global.system = "Linux"
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
@@ -237,26 +245,26 @@ class TestRemoveCfgJsonKey:
         finally:
             os.unlink(temp_file)
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_remove_cfg_json_key_file_not_found(self, mock_expanduser, mock_expandvars, mock_global):
+    def test_remove_cfg_json_key_file_not_found(self, mock_expanduser, mock_expandvars, mock_container):
         """Test when config file doesn't exist"""
-        mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_global.system = "Linux"
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
         with patch('builtins.open', side_effect=FileNotFoundError):
             utils.remove_cfg_json_key("key1")
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_remove_cfg_json_key_key_not_found(self, mock_expanduser, mock_expandvars, mock_global):
+    def test_remove_cfg_json_key_key_not_found(self, mock_expanduser, mock_expandvars, mock_container):
         """Test when key doesn't exist in config"""
-        mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_global.system = "Linux"
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
@@ -269,13 +277,13 @@ class TestRemoveCfgJsonKey:
 
             mock_dump.assert_not_called()
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_remove_cfg_json_key_invalid_json(self, mock_expanduser, mock_expandvars, mock_global):
+    def test_remove_cfg_json_key_invalid_json(self, mock_expanduser, mock_expandvars, mock_container):
         """Test removing key from file with invalid JSON"""
-        mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_global.system = "Linux"
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
@@ -295,13 +303,13 @@ class TestRemoveCfgJsonKey:
 class TestSaveCfgJson:
     """Test save_cfg_json function"""
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_save_cfg_json_new_file(self, mock_expanduser, mock_expandvars, mock_global):
+    def test_save_cfg_json_new_file(self, mock_expanduser, mock_expandvars, mock_container):
         """Test saving to new config file"""
-        mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_global.system = "Linux"
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
@@ -319,13 +327,13 @@ class TestSaveCfgJson:
             saved_data = mock_dump.call_args[0][0]
             assert saved_data == {"test_key": "test_value"}
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_save_cfg_json_existing_file(self, mock_expanduser, mock_expandvars, mock_global):
+    def test_save_cfg_json_existing_file(self, mock_expanduser, mock_expandvars, mock_container):
         """Test saving to existing config file"""
-        mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_global.system = "Linux"
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
@@ -340,13 +348,13 @@ class TestSaveCfgJson:
             saved_data = mock_dump.call_args[0][0]
             assert saved_data == {"old_key": "old_value", "new_key": "new_value"}
 
-    @patch('utilities.utils.global_variables')
+    @patch('utilities.utils.get_container', return_value=MagicMock())
     @patch('os.path.expandvars')
     @patch('os.path.expanduser')
-    def test_save_cfg_json_invalid_json(self, mock_expanduser, mock_expandvars, mock_global):
+    def test_save_cfg_json_invalid_json(self, mock_expanduser, mock_expandvars, mock_container):
         """Test saving when existing file has invalid JSON"""
-        mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_global.system = "Linux"
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
@@ -486,46 +494,52 @@ class TestProcessesCheck:
     """Test processes_check and handle_process functions"""
 
     @patch('utilities.utils.psutil')
-    @patch('utilities.utils.global_variables')
-    def test_processes_check_all_processes_found(self, mock_global, mock_psutil):
+    @patch('utilities.utils.get_container')
+    def test_processes_check_all_processes_found(self, mock_get_container, mock_psutil):
         """Test when all target processes are found"""
-        mock_global.blocknet_bin = "blocknet"
-        mock_global.blockdx_bin = "blockdx"
-        mock_global.xlite_bin = "xlite"
-        mock_global.xlite_daemon_bin = "xlite_daemon"
-        mock_global.system = "Linux"
-
+        # Create mock container
+        mock_container = MagicMock()
+        mock_container.blocknet_bin = "blocknet"
+        mock_container.blockdx_bin = "blockdx"
+        mock_container.xlite_bin = "xlite"
+        mock_container.xlite_daemon_bin = "xlite_daemon"
+        mock_container.system = "Linux"
+        mock_get_container.return_value = mock_container
+    
         # Mock process iteration
         mock_proc1 = Mock()
         mock_proc1.info = {"pid": 100, "name": "blocknet", "status": "running"}
-
+    
         mock_proc2 = Mock()
         mock_proc2.info = {"pid": 200, "name": "blockdx", "status": "running"}
-
+    
         mock_proc3 = Mock()
         mock_proc3.info = {"pid": 300, "name": "xlite", "status": "running"}
-
+    
         mock_proc4 = Mock()
         mock_proc4.info = {"pid": 400, "name": "xlite_daemon", "status": "running"}
-
+    
         mock_psutil.process_iter.return_value = [mock_proc1, mock_proc2, mock_proc3, mock_proc4]
-
+    
         blocknet_pids, blockdx_pids, xlite_pids, xlite_daemon_pids = utils.processes_check()
-
+    
         assert blocknet_pids == [100]
         assert blockdx_pids == [200]
         assert xlite_pids == [300]
         assert xlite_daemon_pids == [400]
 
     @patch('utilities.utils.psutil')
-    @patch('utilities.utils.global_variables')
-    def test_processes_check_zombie_process(self, mock_global, mock_psutil):
+    @patch('utilities.utils.get_container')
+    def test_processes_check_zombie_process(self, mock_get_container, mock_psutil):
         """Test handling of zombie processes"""
-        mock_global.blocknet_bin = "blocknet"
-        mock_global.blockdx_bin = "blockdx"
-        mock_global.xlite_bin = "xlite"
-        mock_global.xlite_daemon_bin = "xlite_daemon"
-        mock_global.system = "Linux"
+        # Create mock container
+        mock_container = MagicMock()
+        mock_container.blocknet_bin = "blocknet"
+        mock_container.blockdx_bin = "blockdx"
+        mock_container.xlite_bin = "xlite"
+        mock_container.xlite_daemon_bin = "xlite_daemon"
+        mock_container.system = "Linux"
+        mock_get_container.return_value = mock_container
 
         # Mock zombie process
         mock_proc = Mock()
@@ -541,14 +555,17 @@ class TestProcessesCheck:
         mock_proc.wait.assert_called_once()
 
     @patch('utilities.utils.psutil')
-    @patch('utilities.utils.global_variables')
-    def test_processes_check_no_processes_found(self, mock_global, mock_psutil):
+    @patch('utilities.utils.get_container')
+    def test_processes_check_no_processes_found(self, mock_get_container, mock_psutil):
         """Test when no target processes are found"""
-        mock_global.blocknet_bin = "blocknet"
-        mock_global.blockdx_bin = "blockdx"
-        mock_global.xlite_bin = "xlite"
-        mock_global.xlite_daemon_bin = "xlite_daemon"
-        mock_global.system = "Linux"
+        # Create mock container
+        mock_container = MagicMock()
+        mock_container.blocknet_bin = "blocknet"
+        mock_container.blockdx_bin = "blockdx"
+        mock_container.xlite_bin = "xlite"
+        mock_container.xlite_daemon_bin = "xlite_daemon"
+        mock_container.system = "Linux"
+        mock_get_container.return_value = mock_container
 
         # Mock process iteration with different process names
         mock_proc1 = Mock()
@@ -598,10 +615,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager.store_key.return_value = (True, "Key stored in OS keyring")
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
 
+        with patch('utilities.utils.get_container', return_value=mock_container):
             result = utils.save_encryption_key("test_key")
 
             assert result is True
@@ -614,10 +632,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager.store_key.return_value = (False, "Failed to store key")
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
 
+        with patch('utilities.utils.get_container', return_value=mock_container):
             result = utils.save_encryption_key("test_key")
 
             assert result is False
@@ -630,10 +649,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager.retrieve_key.return_value = ("test_key", "Key retrieved from OS keyring")
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
 
+        with patch('utilities.utils.get_container', return_value=mock_container):
             result = utils.load_encryption_key()
 
             assert result == b"test_key"
@@ -646,10 +666,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager.retrieve_key.return_value = (None, "No encryption key found")
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
 
+        with patch('utilities.utils.get_container', return_value=mock_container):
             result = utils.load_encryption_key()
 
             assert result is None
@@ -662,10 +683,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager.delete_key.return_value = (True, "Deleted from OS keyring")
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
 
+        with patch('utilities.utils.get_container', return_value=mock_container):
             result = utils.delete_encryption_key()
 
             assert result is True
@@ -678,10 +700,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager.store_key.return_value = (True, "Key stored in OS keyring")
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
 
+        with patch('utilities.utils.get_container', return_value=mock_container):
             with patch('utilities.utils.Fernet.generate_key') as mock_generate:
                 mock_generate.return_value = b"test_key_123"
                 result = utils.generate_key()
@@ -696,10 +719,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager.store_key.return_value = (False, "Failed to store key")
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
 
+        with patch('utilities.utils.get_container', return_value=mock_container):
             with patch('utilities.utils.Fernet.generate_key') as mock_generate:
                 mock_generate.return_value = b"test_key_123"
                 result = utils.generate_key()
@@ -807,9 +831,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager = Mock()
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
+
+        with patch('utilities.utils.get_container', return_value=mock_container):
 
             config_data = {"xl_pass": "encrypted_password", "theme": "Dark"}
 
@@ -835,9 +861,11 @@ class TestKeyringBasedFunctions:
         mock_keyring_manager = Mock()
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-            mock_global.system = "Linux"
+        mock_container = MagicMock()
+        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
+        mock_container.system = "Linux"
+
+        with patch('utilities.utils.get_container', return_value=mock_container):
 
             config_data = {"theme": "Dark", "custom_path": "/path"}
 
@@ -876,8 +904,10 @@ class TestKeyringBasedFunctions:
         mock_migration.migrate_from_old_format.return_value = (True, new_config, "Migration successful", "old_key")
         mock_migration_class.return_value = mock_migration
 
-        with patch('utilities.utils.global_variables') as mock_global:
-            mock_global.aio_folder = "/test/aio"
+        mock_container = MagicMock()
+        mock_container.aio_folder = "/test/aio"
+
+        with patch('utilities.utils.get_container', return_value=mock_container):
 
             with patch('os.path.exists') as mock_exists, \
                  patch('os.path.expandvars') as mock_expandvars, \

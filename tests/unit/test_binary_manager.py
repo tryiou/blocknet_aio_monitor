@@ -22,16 +22,16 @@ class TestBinaryManager(unittest.TestCase):
 
     def setUp(self):
         """Set up common mocks and BinaryManager instance for each test."""
-        # Setup global variables mock
-        self.mock_global_variables = MagicMock()
-        self.mock_global_variables.aio_folder = "/mock/aio_folder"
-        self.mock_global_variables.blocknet_release_url = "http://mock.com/blocknet"
-        self.mock_global_variables.blockdx_release_url = "http://mock.com/blockdx"
-        self.mock_global_variables.xlite_release_url = "http://mock.com/xlite"
-        self.mock_global_variables.system = "Linux"
-        self.mock_global_variables.blockdx_curpath = "BLOCK-DX-1.0.0"
-        self.mock_global_variables.xlite_curpath = "XLite-1.0.0"
-        self.mock_global_variables.conf_data.blocknet_bin_path = ["blocknet-4.4.1"]
+        # Setup container mock
+        self.mock_container = MagicMock()
+        self.mock_container.aio_folder = "/mock/aio_folder"
+        self.mock_container.blocknet_release_url = "http://mock.com/blocknet"
+        self.mock_container.blockdx_release_url = "http://mock.com/blockdx"
+        self.mock_container.xlite_release_url = "http://mock.com/xlite"
+        self.mock_container.system = "Linux"
+        self.mock_container.blockdx_curpath = "BLOCK-DX-1.0.0"
+        self.mock_container.xlite_curpath = "XLite-1.0.0"
+        self.mock_container.conf_data.blocknet_bin_path = ["blocknet-4.4.1"]
 
         # Setup root_gui mock
         self.mock_root_gui = MagicMock(spec=ctk.CTk)
@@ -66,8 +66,8 @@ class TestBinaryManager(unittest.TestCase):
             setattr(self.mock_root_gui, img_attr, MagicMock())
 
         # Setup patchers
-        self.patcher_global_variables = patch('gui.binary_manager.global_variables',
-                                              new=self.mock_global_variables)
+        self.patcher_get_container = patch('gui.binary_manager.get_container',
+                                           return_value=self.mock_container)
         self.patcher_utils = patch('gui.binary_manager.utils', new=MagicMock(spec=utils))
         self.patcher_os_listdir = patch('os.listdir', return_value=[])
         self.patcher_os_path_isdir = patch('os.path.isdir', return_value=True)
@@ -82,7 +82,7 @@ class TestBinaryManager(unittest.TestCase):
         self.patcher_os_stat = patch('gui.binary_manager.os.stat')
 
         # Start all patchers
-        self.mock_global_variables = self.patcher_global_variables.start()
+        self.mock_get_container = self.patcher_get_container.start()
         self.mock_utils = self.patcher_utils.start()
         self.mock_os_listdir = self.patcher_os_listdir.start()
         self.mock_os_path_isdir = self.patcher_os_path_isdir.start()
@@ -125,7 +125,7 @@ class TestBinaryManager(unittest.TestCase):
     def tearDown(self):
         """Clean up patchers and queue after each test."""
         patchers = [
-            self.patcher_global_variables, self.patcher_utils, self.patcher_os_listdir,
+            self.patcher_get_container, self.patcher_utils, self.patcher_os_listdir,
             self.patcher_os_path_isdir, self.patcher_os_path_isfile, self.patcher_os_path_exists,
             self.patcher_os_makedirs, self.patcher_shutil_rmtree, self.patcher_os_remove,
             self.patcher_thread, self.patcher_observer, self.patcher_binary_file_handler,
@@ -239,7 +239,7 @@ class TestBinaryManager(unittest.TestCase):
         self.assertFalse(self.binary_manager.disable_start_xlite_button)
         self.assertFalse(self.binary_manager.disable_start_blockdx_button)
         self.mock_observer.return_value.schedule.assert_called_once_with(
-            self.binary_manager.handler, self.mock_global_variables.aio_folder, recursive=False
+            self.binary_manager.handler, self.mock_container.aio_folder, recursive=False
         )
         self.mock_observer.return_value.start.assert_called_once()
 
@@ -383,7 +383,7 @@ class TestBinaryManager(unittest.TestCase):
 
         self.binary_manager.delete_blocknet_command()
         self.mock_shutil_rmtree.assert_called_once_with(
-            os.path.join(self.mock_global_variables.aio_folder, "blocknet-4.4.1")
+            os.path.join(self.mock_container.aio_folder, "blocknet-4.4.1")
         )
 
     def test_install_delete_blockdx_command_install(self):
@@ -415,27 +415,27 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_delete_blockdx_command_linux(self):
         """Test delete_blockdx_command on Linux."""
-        self.mock_global_variables.system = "Linux"
+        self.mock_container.system = "Linux"
         self.mock_root_gui.blockdx_manager.version = ["v1.0.0"]
         self.mock_os_listdir.return_value = ["BLOCK-DX-1.0.0", "other_folder"]
         self.mock_os_path_isdir.side_effect = lambda x: "BLOCK-DX-" in x or "other_folder" in x
 
         self.binary_manager.delete_blockdx_command()
         self.mock_shutil_rmtree.assert_called_once_with(
-            os.path.join(self.mock_global_variables.aio_folder, "BLOCK-DX-1.0.0")
+            os.path.join(self.mock_container.aio_folder, "BLOCK-DX-1.0.0")
         )
 
     def test_delete_blockdx_command_darwin(self):
         """Test delete_blockdx_command on Darwin (macOS)."""
-        self.mock_global_variables.system = "Darwin"
-        self.mock_global_variables.blockdx_release_url = "http://mock.com/blockdx/blockdx.dmg"
+        self.mock_container.system = "Darwin"
+        self.mock_container.blockdx_release_url = "http://mock.com/blockdx/blockdx.dmg"
         self.mock_os_listdir.return_value = ["blockdx.dmg", "other_file"]
         self.mock_os_path_isfile.side_effect = lambda x: "blockdx.dmg" in x or "other_file" in x
 
         self.binary_manager.delete_blockdx_command()
         self.mock_root_gui.blockdx_manager.unmount_dmg.assert_called_once()
         self.mock_os_remove.assert_called_once_with(
-            os.path.join(self.mock_global_variables.aio_folder, "blockdx.dmg")
+            os.path.join(self.mock_container.aio_folder, "blockdx.dmg")
         )
 
     def test_install_delete_xlite_command_install(self):
@@ -467,27 +467,27 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_delete_xlite_command_linux(self):
         """Test delete_xlite_command on Linux."""
-        self.mock_global_variables.system = "Linux"
+        self.mock_container.system = "Linux"
         self.mock_root_gui.xlite_manager.version = ["v1.0.0"]
         self.mock_os_listdir.return_value = ["XLite-1.0.0", "other_folder"]
         self.mock_os_path_isdir.side_effect = lambda x: "XLite-" in x or "other_folder" in x
 
         self.binary_manager.delete_xlite_command()
         self.mock_shutil_rmtree.assert_called_once_with(
-            os.path.join(self.mock_global_variables.aio_folder, "XLite-1.0.0")
+            os.path.join(self.mock_container.aio_folder, "XLite-1.0.0")
         )
 
     def test_delete_xlite_command_darwin(self):
         """Test delete_xlite_command on Darwin (macOS)."""
-        self.mock_global_variables.system = "Darwin"
-        self.mock_global_variables.xlite_release_url = "http://mock.com/xlite/xlite.dmg"
+        self.mock_container.system = "Darwin"
+        self.mock_container.xlite_release_url = "http://mock.com/xlite/xlite.dmg"
         self.mock_os_listdir.return_value = ["xlite.dmg", "other_file"]
         self.mock_os_path_isfile.side_effect = lambda x: "xlite.dmg" in x or "other_file" in x
 
         self.binary_manager.delete_xlite_command()
         self.mock_root_gui.xlite_manager.utility.unmount_dmg.assert_called_once()
         self.mock_os_remove.assert_called_once_with(
-            os.path.join(self.mock_global_variables.aio_folder, "xlite.dmg")
+            os.path.join(self.mock_container.aio_folder, "xlite.dmg")
         )
 
     # ==================== Folder Scanning Tests ====================
@@ -505,7 +505,7 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_check_and_update_aio_folder_blockdx_found_linux(self):
         """Test check_and_update_aio_folder when blockdx is found on Linux."""
-        self.mock_global_variables.system = "Linux"
+        self.mock_container.system = "Linux"
         self.mock_os_listdir.return_value = ["BLOCK-DX-1.0.0"]
         self.mock_os_path_isdir.return_value = True
         self.mock_root_gui.blockdx_manager.version = ["v1.0.0"]
@@ -517,8 +517,8 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_check_and_update_aio_folder_xlite_found_darwin(self):
         """Test check_and_update_aio_folder when xlite is found on Darwin."""
-        self.mock_global_variables.system = "Darwin"
-        self.mock_global_variables.xlite_release_url = "http://mock.com/xlite/xlite.dmg"
+        self.mock_container.system = "Darwin"
+        self.mock_container.xlite_release_url = "http://mock.com/xlite/xlite.dmg"
         self.mock_os_listdir.return_value = ["xlite.dmg"]
         self.mock_os_path_isdir.return_value = False
         self.mock_os_path_isfile.side_effect = lambda p: "xlite.dmg" in p
@@ -563,7 +563,7 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_get_directory_mtime_oserror(self):
         """Test get_directory_mtime handles OSError."""
-        with patch('os.stat', side_effect=OSError("Permission denied")):
+        with patch('gui.binary_manager.os.stat', side_effect=OSError("Permission denied")):
             result = self.binary_manager.get_directory_mtime()
             self.assertEqual(result, 0)
 

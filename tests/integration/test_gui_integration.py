@@ -36,16 +36,21 @@ class TestGUIIntegrationWorkflow:
         """Test GUI initialization with all components."""
         # Mock GUI components
         with patch('customtkinter.CTk') as mock_ctk, \
-                patch('PIL.Image.open') as mock_image, \
-                patch('utilities.global_variables.themepath', '/mock/theme.json'), \
-                patch('utilities.global_variables.DIRPATH', '/mock/dirpath'):
-            # Create mock root
-            mock_root = MagicMock()
-            mock_ctk.return_value = mock_root
+                patch('PIL.Image.open') as mock_image:
+            # Create mock container
+            mock_container = MagicMock()
+            mock_container.theme_path = '/mock/theme.json'
+            mock_container.dirpath = '/mock/dirpath'
+            
+            # Patch get_container to return mock
+            with patch('utilities.app_container.get_container', return_value=mock_container):
+                # Create mock root
+                mock_root = MagicMock()
+                mock_ctk.return_value = mock_root
 
-            # Verify mock was created
-            assert mock_ctk is not None
-            assert mock_root is not None
+                # Verify mock was created
+                assert mock_ctk is not None
+                assert mock_root is not None
 
     def test_frame_manager_integration_workflow(self):
         """Test frame manager integration with managers."""

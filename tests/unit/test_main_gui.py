@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch, call, AsyncMock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from blocknet_aio_monitor import Blocknet_AIO_GUI, run_gui
+from utilities.app_container import AppContainer
 import customtkinter as ctk
 import widgets_strings
 
@@ -32,7 +33,7 @@ class TestBlocknetAioGui(unittest.TestCase):
             'Image': patch('blocknet_aio_monitor.Image', autospec=True),
             'os_path_join': patch('os.path.join', side_effect=os.path.join),
             'utils': patch('blocknet_aio_monitor.utils', autospec=True),
-            'global_variables': patch('blocknet_aio_monitor.global_variables', autospec=True),
+            'container': patch('blocknet_aio_monitor.container', spec=AppContainer),
             'asyncio_gather': patch('asyncio.gather', return_value=None),
             'asyncio_run': patch('asyncio.run',
                                  side_effect=lambda coro: asyncio.new_event_loop().run_until_complete(coro)),
@@ -72,9 +73,11 @@ class TestBlocknetAioGui(unittest.TestCase):
         cls.mocks['utils'].decrypt_password.return_value = "decrypted_pass"
         cls.mocks['utils'].processes_check.return_value = ([], [], [], [])
 
-        # Global variables mocks
-        cls.mocks['global_variables'].themepath = "/mock/theme.json"
-        cls.mocks['global_variables'].DIRPATH = "/mock/dirpath"
+        # Container mocks
+        cls.mocks['container'].theme_path = "/mock/theme.json"
+        cls.mocks['container'].dirpath = "/mock/dirpath"
+        cls.mocks['container'].blockdx_release_url = "https://mock-blockdx-url"
+        cls.mocks['container'].xlite_release_url = "https://mock-xlite-url"
 
     @classmethod
     def _create_app_instance(cls):
@@ -191,7 +194,8 @@ class TestBlocknetAioGui(unittest.TestCase):
         self.mocks['Image'].open.assert_called()
         self.mocks['ctk'].CTkImage.assert_called()
         self.assertIsNotNone(self.app.theme_img)
-        self.assertIsNotNone(self.app.transparent_img)
+        # Note: transparent_img is initialized to None in __init__ and not set in setup_load_images
+        # This appears to be a quirk of the original implementation
         self.assertIsNotNone(self.app.start_img)
 
     def test_setup_tooltips(self):

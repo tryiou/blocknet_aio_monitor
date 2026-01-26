@@ -106,67 +106,67 @@ Tests RPC and network communication:
 
 ```bash
 # Run all integration tests
-.venv/bin/python -m pytest tests/integration/ -v
+venv/bin/python -m pytest tests/integration/ -v
 
 # Run with compact output
-.venv/bin/python -m pytest tests/integration/ -q
+venv/bin/python -m pytest tests/integration/ -q
 
 # Run with coverage
-.venv/bin/python -m pytest tests/integration/ --cov=. --cov-report=term-missing
+venv/bin/python -m pytest tests/integration/ --cov=. --cov-report=term-missing
 ```
 
 ### Run Specific Test Categories
 
 ```bash
 # Run binary workflow tests
-.venv/bin/python -m pytest tests/integration/test_binary_workflow.py -v
+venv/bin/python -m pytest tests/integration/test_binary_workflow.py -v
 
 # Run configuration workflow tests
-.venv/bin/python -m pytest tests/integration/test_config_workflow.py -v
+venv/bin/python -m pytest tests/integration/test_config_workflow.py -v
 
 # Run process management tests
-.venv/bin/python -m pytest tests/integration/test_process_management.py -v
+venv/bin/python -m pytest tests/integration/test_process_management.py -v
 
 # Run GUI integration tests
-.venv/bin/python -m pytest tests/integration/test_gui_integration.py -v
+venv/bin/python -m pytest tests/integration/test_gui_integration.py -v
 
 # Run RPC network tests
-.venv/bin/python -m pytest tests/integration/test_rpc_network.py -v
+venv/bin/python -m pytest tests/integration/test_rpc_network.py -v
 ```
 
 ### Run Tests with Markers
 
 ```bash
 # Run only integration tests (marked with @pytest.mark.integration)
-.venv/bin/python -m pytest tests/integration/ -m integration -v
+venv/bin/python -m pytest tests/integration/ -m integration -v
 
 # Run tests that require network access
-.venv/bin/python -m pytest tests/integration/ -m network -v
+venv/bin/python -m pytest tests/integration/ -m network -v
 
 # Run GUI tests
-.venv/bin/python -m pytest tests/integration/ -m gui -v
+venv/bin/python -m pytest tests/integration/ -m gui -v
 
 # Run filesystem tests
-.venv/bin/python -m pytest tests/integration/ -m filesystem -v
+venv/bin/python -m pytest tests/integration/ -m filesystem -v
 ```
 
 ### Run Tests with Specific Options
 
 ```bash
 # Run with verbose output
-.venv/bin/python -m pytest tests/integration/ -v
+venv/bin/python -m pytest tests/integration/ -v
 
 # Run with detailed traceback
-.venv/bin/python -m pytest tests/integration/ --tb=long
+venv/bin/python -m pytest tests/integration/ --tb=long
 
 # Run with coverage report
-.venv/bin/python -m pytest tests/integration/ --cov=. --cov-report=html
+venv/bin/python -m pytest tests/integration/ --cov=. --cov-report=html
 
 # Run with test durations
-.venv/bin/python -m pytest tests/integration/ --durations=10
+venv/bin/python -m pytest tests/integration/ --durations=10
 
 # Run with xdist (parallel execution)
-.venv/bin/python -m pytest tests/integration/ -n auto
+venv/bin/python -m pytest tests/integration/ -n auto
 ```
 
 ## Test Markers

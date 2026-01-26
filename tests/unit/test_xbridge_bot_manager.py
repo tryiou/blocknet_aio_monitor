@@ -21,10 +21,10 @@ class TestXBridgeBotManager(unittest.TestCase):
         self.bot_manager = XBridgeBotManager()
         # Mock repo_management to prevent actual Git operations
         self.bot_manager.repo_management = MagicMock()
-        # Mock target_dir to simulate existing repo
-        self.bot_manager.target_dir = MagicMock()
-        self.bot_manager.target_dir.exists.return_value = True
-        self.bot_manager.target_dir.__truediv__.return_value.is_dir.return_value = True
+        # Mock target_dir_path to simulate existing repo
+        self.bot_manager.target_dir_path = MagicMock()
+        self.bot_manager.target_dir_path.exists.return_value = True
+        self.bot_manager.target_dir_path.__truediv__.return_value.is_dir.return_value = True
 
     def tearDown(self):
         """Clean up after tests."""
@@ -59,13 +59,13 @@ class TestXBridgeBotManager(unittest.TestCase):
 
     def test_repo_exists_true(self):
         """Test repo_exists returns True when directory exists."""
-        self.bot_manager.target_dir.exists.return_value = True
-        self.bot_manager.target_dir.__truediv__.return_value.is_dir.return_value = True
+        self.bot_manager.target_dir_path.exists.return_value = True
+        self.bot_manager.target_dir_path.__truediv__.return_value.is_dir.return_value = True
         self.assertTrue(self.bot_manager.repo_exists())
 
     def test_repo_exists_false(self):
         """Test repo_exists returns False when directory doesn't exist."""
-        self.bot_manager.target_dir.exists.return_value = False
+        self.bot_manager.target_dir_path.exists.return_value = False
         self.assertFalse(self.bot_manager.repo_exists())
 
     # =========================================================================
@@ -131,8 +131,8 @@ class TestXBridgeBotManager(unittest.TestCase):
         """Test successful install/update execution."""
         with patch('gui.xbridge_bot_manager.GitRepoManagement') as mock_git_repo, \
                 patch('gui.xbridge_bot_manager.logger.info') as mock_log_info:
-            # Mock target_dir to not exist initially
-            self.bot_manager.target_dir.exists.return_value = False
+            # Mock target_dir_path to not exist initially
+            self.bot_manager.target_dir_path.exists.return_value = False
 
             # Mock GitRepoManagement constructor
             mock_repo_instance = MagicMock()
@@ -141,8 +141,8 @@ class TestXBridgeBotManager(unittest.TestCase):
             # Call the actual method
             self.bot_manager._do_install_update("develop")
 
-            # Verify target_dir.mkdir was called
-            self.bot_manager.target_dir.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+            # Verify target_dir_path.mkdir was called
+            self.bot_manager.target_dir_path.mkdir.assert_called_once_with(parents=True, exist_ok=True)
             # Verify repo_management.setup was called
             mock_repo_instance.setup.assert_called_once()
             # Verify current_branch was updated
@@ -152,8 +152,8 @@ class TestXBridgeBotManager(unittest.TestCase):
         """Test install/update when target directory already exists."""
         with patch('gui.xbridge_bot_manager.GitRepoManagement') as mock_git_repo, \
                 patch('gui.xbridge_bot_manager.logger.info') as mock_log_info:
-            # Mock target_dir to exist
-            self.bot_manager.target_dir.exists.return_value = True
+            # Mock target_dir_path to exist
+            self.bot_manager.target_dir_path.exists.return_value = True
 
             # Mock GitRepoManagement constructor
             mock_repo_instance = MagicMock()
@@ -163,7 +163,7 @@ class TestXBridgeBotManager(unittest.TestCase):
             self.bot_manager._do_install_update("main")
 
             # Verify directory creation was NOT attempted
-            self.bot_manager.target_dir.mkdir.assert_not_called()
+            self.bot_manager.target_dir_path.mkdir.assert_not_called()
             # Verify repo_management.setup was called
             mock_repo_instance.setup.assert_called_once()
 
@@ -248,7 +248,7 @@ class TestXBridgeBotManager(unittest.TestCase):
         """Test handling config folder rename."""
         mock_config_path = MagicMock()
         mock_config_path.exists.return_value = True
-        self.bot_manager.target_dir.__truediv__.return_value = mock_config_path
+        self.bot_manager.target_dir_path.__truediv__.return_value = mock_config_path
 
         with patch('os.rename') as mock_rename, \
                 patch.object(self.bot_manager.repo_management, 'setup') as mock_setup, \
@@ -263,7 +263,7 @@ class TestXBridgeBotManager(unittest.TestCase):
         """Test handling config folder rename when no config exists."""
         mock_config_path = MagicMock()
         mock_config_path.exists.return_value = False
-        self.bot_manager.target_dir.__truediv__.return_value = mock_config_path
+        self.bot_manager.target_dir_path.__truediv__.return_value = mock_config_path
 
         with patch('gui.xbridge_bot_manager.logger.warning') as mock_log_warning:
             self.bot_manager.handle_config_folder_rename()

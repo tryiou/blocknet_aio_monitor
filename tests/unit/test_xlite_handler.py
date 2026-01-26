@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch, mock_open
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utilities.bin_handlers.xlite_handler import XliteHandler
+from utilities.app_container import AppContainer
 
 
 class TestXliteHandler(unittest.TestCase):
@@ -16,19 +17,19 @@ class TestXliteHandler(unittest.TestCase):
     def setUp(self):
         """Set up common mocks and patches for all tests."""
         self.patches = []
-        self._setup_global_variables()
+        self._setup_app_container()
         self._setup_conf_data()
         self._apply_common_patches()
-        self.handler = XliteHandler()
+        self.handler = XliteHandler(self.mock_container)
 
-    def _setup_global_variables(self):
-        """Set up global_variables mock."""
-        self.mock_global_variables = MagicMock()
-        self.mock_global_variables.system = 'Linux'
-        self.mock_global_variables.machine = 'x86_64'
-        self.mock_global_variables.aio_folder = '/mock/aio_folder'
-        self.mock_global_variables.xlite_volume_name = 'XliteVolume'
-        self.mock_global_variables.xlite_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg'
+    def _setup_app_container(self):
+        """Set up AppContainer mock."""
+        self.mock_container = MagicMock()
+        self.mock_container.system = 'Linux'
+        self.mock_container.machine = 'x86_64'
+        self.mock_container.aio_folder = '/mock/aio_folder'
+        self.mock_container.xlite_volume_name = 'XliteVolume'
+        self.mock_container.xlite_release_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg'
 
     def _setup_conf_data(self):
         """Set up conf_data mock."""
@@ -66,11 +67,14 @@ class TestXliteHandler(unittest.TestCase):
             ('Darwin', 'x86_64'): 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg'
         }
         self.mock_conf_data.vc_redist_win_url = 'http://mock.com/vcredist.exe'
-        self.mock_global_variables.conf_data = self.mock_conf_data
+        self.mock_container.conf_data = self.mock_conf_data
+        # Set xlite_curpath and xlite_bin for the container
+        self.mock_container.xlite_curpath = 'XLite-1.0.7-linux'
+        self.mock_container.xlite_bin = 'xlite'
 
     def _apply_common_patches(self):
         """Apply common patches needed for handler initialization."""
-        self.patches.append(patch('utilities.bin_handlers.xlite_handler.global_variables', self.mock_global_variables))
+        self.patches.append(patch('utilities.app_container.get_container', return_value=self.mock_container))
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.os.path.exists', return_value=True))
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.os.makedirs'))
         self.patches.append(patch('utilities.bin_handlers.xlite_handler.os.chmod'))
@@ -91,10 +95,25 @@ class TestXliteHandler(unittest.TestCase):
 
     def _create_handler_with_os(self, system, machine=None):
         """Helper to create handler with specific OS configuration."""
-        self.mock_global_variables.system = system
+        self.mock_container.system = system
         if machine:
-            self.mock_global_variables.machine = machine
-        return XliteHandler()
+            self.mock_container.machine = machine
+        
+        # Update the xlite_release_url based on the system
+        if system == "Linux":
+            self.mock_container.xlite_release_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz'
+            self.mock_container.xlite_curpath = 'XLite-1.0.7-linux'
+            self.mock_container.xlite_bin = 'xlite'
+        elif system == "Windows":
+            self.mock_container.xlite_release_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip'
+            self.mock_container.xlite_curpath = 'XLite-1.0.7-win-x64'
+            self.mock_container.xlite_bin = 'XLite.exe'
+        elif system == "Darwin":
+            self.mock_container.xlite_release_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg'
+            self.mock_container.xlite_curpath = 'XLite-1.0.7-mac.dmg'
+            self.mock_container.xlite_bin = ['XLite.app', 'Contents', 'MacOS', 'XLite']
+        
+        return XliteHandler(self.mock_container)
 
     # ============================================================================
     # Initialization Tests
@@ -156,20 +175,17 @@ class TestXliteHandler(unittest.TestCase):
 
     def test_download_xlite_bin_unsupported_os(self):
         """Test download raises ValueError for unsupported OS."""
-        with patch('utilities.bin_handlers.xlite_handler.global_variables.system', 'UnsupportedOS'), \
-                patch('utilities.bin_handlers.xlite_handler.global_variables.machine', 'x86_64'):
-            mock_conf_data = self.mock_global_variables.conf_data
-            mock_conf_data.xlite_bin_path['UnsupportedOS'] = 'XLite-1.0.7-unsupported'
-            mock_conf_data.xlite_bin_name['UnsupportedOS'] = 'xlite'
-            mock_conf_data.xlite_default_paths['UnsupportedOS'] = '/home/user/.xlite-unsupported'
-            mock_conf_data.xlite_daemon_default_paths['UnsupportedOS'] = '/home/user/.xlite-daemon-unsupported'
+        self.mock_container.system = 'UnsupportedOS'
+        self.mock_container.machine = 'x86_64'
+        # Ensure no release URL is configured for this unsupported OS
+        self.mock_conf_data.xlite_releases_urls.pop(('UnsupportedOS', 'x86_64'), None)
 
-            handler = self._create_handler_with_os("UnsupportedOS")
+        handler = XliteHandler(self.mock_container)
 
-            with self.assertRaises(ValueError) as context:
-                handler.download_xlite_bin()
+        with self.assertRaises(ValueError) as context:
+            handler.download_xlite_bin()
 
-            self.assertIn("Unsupported OS or architecture", str(context.exception))
+        self.assertIn("Unsupported OS or architecture", str(context.exception))
 
     # ============================================================================
     # Configuration Parsing Tests
@@ -409,7 +425,7 @@ class TestXliteHandler(unittest.TestCase):
 
     def test_start_xlite_linux(self):
         """Test starting XLite on Linux."""
-        self.mock_global_variables.system = "Linux"
+        self.mock_container.system = "Linux"
         with patch('os.path.exists', return_value=True), \
                 patch.object(self.handler, 'start_process') as mock_start:
             mock_process = MagicMock()
@@ -425,35 +441,38 @@ class TestXliteHandler(unittest.TestCase):
 
     def test_start_xlite_windows(self):
         """Test starting XLite on Windows."""
-        with patch('utilities.bin_handlers.xlite_handler.global_variables.system', 'Windows'), \
-                patch('os.path.exists', return_value=True), \
-                patch.object(self.handler.__class__, 'start_process') as mock_start:
+        self.mock_container.system = 'Windows'
+        with patch('os.path.exists', return_value=True), \
+                patch('utilities.bin_handlers.xlite_handler.winreg', create=True), \
+                patch('utilities.bin_handlers.xlite_handler.check_vc_redist_installed') as mock_check_vc, \
+                patch.object(XliteHandler, 'start_process') as mock_start:
             mock_process = MagicMock()
             mock_process.pid = 12345
             mock_start.return_value = mock_process
 
-            with patch('utilities.bin_handlers.xlite_handler.check_vc_redist_installed', create=True,
-                       return_value=True):
-                handler = self._create_handler_with_os("Windows")
-                handler.start_xlite()
+            handler = self._create_handler_with_os("Windows")
+            handler.start_xlite()
 
-                expected_cmd = ['/mock/aio_folder/XLite-1.0.7-win-x64/XLite.exe', '--in-process-gpu']
-                mock_start.assert_called_once()
-                args, kwargs = mock_start.call_args
-                self.assertEqual(args[0], expected_cmd)
+            expected_cmd = ['/mock/aio_folder/XLite-1.0.7-win-x64/XLite.exe', '--in-process-gpu']
+            mock_start.assert_called_once()
+            args, kwargs = mock_start.call_args
+            self.assertEqual(args[0], expected_cmd)
 
     def test_start_xlite_darwin(self):
         """Test starting XLite on Darwin."""
-        with patch('utilities.bin_handlers.xlite_handler.global_variables.system', 'Darwin'), \
-                patch('os.path.exists', return_value=True), \
-                patch('utilities.bin_handlers.xlite_handler.XliteHandler.handle_dmg') as mock_handle_dmg, \
-                patch('utilities.bin_handlers.xlite_handler.XliteHandler.start_process') as mock_start:
+        self.mock_container.system = 'Darwin'
+        with patch('os.path.exists', return_value=True), \
+                patch.object(XliteHandler, 'handle_dmg') as mock_handle_dmg, \
+                patch.object(XliteHandler, 'start_process') as mock_start:
             mock_process = MagicMock()
             mock_process.pid = 12345
             mock_start.return_value = mock_process
 
             handler = self._create_handler_with_os("Darwin")
             handler.dmg_mount_path = '/Volumes/XliteVolume'
+            
+            # Set executable_path for Darwin (it's set differently than other OS)
+            handler.executable_path = '/mock/aio_folder/XLite-1.0.7-mac.dmg'
 
             handler.start_xlite()
 
@@ -462,12 +481,24 @@ class TestXliteHandler(unittest.TestCase):
 
     def test_start_xlite_download_fallback(self):
         """Test starting XLite triggers download when executable not found."""
-        with patch('os.path.exists', return_value=False), \
+        # Get the original executable_path before patching
+        original_executable_path = self.handler.executable_path
+        
+        with patch('utilities.bin_handlers.xlite_handler.os.path.exists') as mock_exists, \
                 patch.object(self.handler, 'download_xlite_bin') as mock_download, \
                 patch.object(self.handler, 'start_process') as mock_start:
+            # First call returns False (executable not found)
+            # After download, subsequent calls return True
+            mock_exists.side_effect = lambda path: path != original_executable_path or mock_exists.call_count > 1
+            
             mock_process = MagicMock()
             mock_process.pid = 12345
             mock_start.return_value = mock_process
+            
+            # Set executable_path after download to simulate successful download
+            def set_executable_path():
+                self.handler.executable_path = original_executable_path
+            mock_download.side_effect = set_executable_path
 
             self.handler.start_xlite()
 
@@ -523,14 +554,14 @@ class TestXliteHandler(unittest.TestCase):
 
     def test_unmount_dmg(self):
         """Test unmounting DMG on Darwin."""
-        self.mock_global_variables.system = "Darwin"
+        self.mock_container.system = "Darwin"
         with patch.object(self.handler, 'handle_dmg') as mock_handle_dmg:
             self.handler.unmount_dmg()
             mock_handle_dmg.assert_called_once_with("unmount")
 
     def test_unmount_dmg_not_darwin(self):
         """Test unmounting DMG on non-Darwin systems."""
-        self.mock_global_variables.system = "Linux"
+        self.mock_container.system = "Linux"
         with patch.object(self.handler, 'handle_dmg') as mock_handle_dmg:
             self.handler.unmount_dmg()
             mock_handle_dmg.assert_not_called()

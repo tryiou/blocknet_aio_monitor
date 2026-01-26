@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from gui.blockdx_frame_manager import BlockDxFrameManager
 import widgets_strings
-from utilities import global_variables
+from utilities.app_container import AppContainer
 
 
 class TestBlockDxFrameManager(unittest.TestCase):
@@ -17,6 +17,10 @@ class TestBlockDxFrameManager(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures for BlockDxFrameManager tests."""
+        # Create mock AppContainer
+        self.mock_container = MagicMock()
+        self.mock_container.conf_data.blockdx_selectedWallets_blocknet = "BLOCK"
+
         # Create mock parent with all required attributes
         self.mock_parent = MagicMock()
         self.mock_parent.process_running = False
@@ -46,7 +50,7 @@ class TestBlockDxFrameManager(unittest.TestCase):
         self.mock_ctk_string_var = MagicMock()
         self.mock_ctk_checkbox = MagicMock()
 
-        # Patch tkinter components
+        # Patch tkinter components and get_container
         self.patches = [
             patch('gui.blockdx_frame_manager.ctk', self.mock_ctk),
             patch('gui.blockdx_frame_manager.ctk.CTkFrame', self.mock_ctk_frame),
@@ -54,6 +58,7 @@ class TestBlockDxFrameManager(unittest.TestCase):
             patch('gui.blockdx_frame_manager.ctk.BooleanVar', self.mock_ctk_boolean_var),
             patch('gui.blockdx_frame_manager.ctk.StringVar', self.mock_ctk_string_var),
             patch('gui.blockdx_frame_manager.ctkCheckBoxMod.CTkCheckBox', self.mock_ctk_checkbox),
+            patch('gui.blockdx_frame_manager.get_container', return_value=self.mock_container),
         ]
 
         for p in self.patches:
@@ -115,6 +120,10 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures for config validation tests."""
+        # Create mock AppContainer
+        self.mock_container = MagicMock()
+        self.mock_container.conf_data.blockdx_selectedWallets_blocknet = "BLOCK"
+
         # Create mock parent with all required attributes
         self.mock_parent = MagicMock()
         self.mock_parent.process_running = False
@@ -144,7 +153,7 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
         self.mock_ctk_string_var = MagicMock()
         self.mock_ctk_checkbox = MagicMock()
 
-        # Patch tkinter components
+        # Patch tkinter components and get_container
         self.patches = [
             patch('gui.blockdx_frame_manager.ctk', self.mock_ctk),
             patch('gui.blockdx_frame_manager.ctk.CTkFrame', self.mock_ctk_frame),
@@ -152,6 +161,7 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
             patch('gui.blockdx_frame_manager.ctk.BooleanVar', self.mock_ctk_boolean_var),
             patch('gui.blockdx_frame_manager.ctk.StringVar', self.mock_ctk_string_var),
             patch('gui.blockdx_frame_manager.ctkCheckBoxMod.CTkCheckBox', self.mock_ctk_checkbox),
+            patch('gui.blockdx_frame_manager.get_container', return_value=self.mock_container),
         ]
 
         for p in self.patches:
@@ -183,7 +193,7 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
             "user": "user",
             "password": "pass",
             "xbridgeConfPath": "/mock/data/xbridge.conf",
-            "selectedWallets": [global_variables.conf_data.blockdx_selectedWallets_blocknet]
+            "selectedWallets": [self.mock_container.conf_data.blockdx_selectedWallets_blocknet]
         }
 
     def test_valid_core_setup_valid_rpc_config_sync(self):
@@ -206,7 +216,7 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
             "user": "different_user",
             "password": "different_pass",
             "xbridgeConfPath": "/mock/data/xbridge.conf",
-            "selectedWallets": [global_variables.conf_data.blockdx_selectedWallets_blocknet]
+            "selectedWallets": [self.mock_container.conf_data.blockdx_selectedWallets_blocknet]
         }
         self.mock_parent.is_config_sync = False
 
@@ -295,7 +305,7 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
             "user": "user",
             "password": "pass",
             "xbridgeConfPath": "/wrong/path/xbridge.conf",
-            "selectedWallets": [global_variables.conf_data.blockdx_selectedWallets_blocknet]
+            "selectedWallets": [self.mock_container.conf_data.blockdx_selectedWallets_blocknet]
         }
 
         self.manager.update_blockdx_config_button_checkbox()

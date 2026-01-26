@@ -5,11 +5,11 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, cast
 from subprocess import TimeoutExpired
 
 from utilities.git_repo_management import GitRepoManagement
-from utilities.global_variables import aio_folder
+from utilities.app_container import get_container
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,13 @@ class XBridgeBotManager:
         self.author = "tryiou"
         self.repo_name = "xbridge_trading_bots"
         self.repo_url = f"https://github.com/{self.author}/{self.repo_name}"
-        self.target_dir = Path(aio_folder) / "xbridge_trading_bots"
+        container = get_container()
+        aio_folder = container.aio_folder
+        if not aio_folder:
+            raise ValueError("AIO folder not configured")
+        self.aio_folder = cast(str, aio_folder)  # Type assertion - __post_init__ ensures it's set
+        self.target_dir_path = Path(self.aio_folder) / "xbridge_trading_bots"
+        self.target_dir = str(self.target_dir_path)  # For GitRepoManagement (expects str)
         self.started = False
         self.current_branch = current_branch
         self.repo_management: Optional[GitRepoManagement] = None
@@ -31,7 +37,7 @@ class XBridgeBotManager:
 
     def repo_exists(self) -> bool:
         """Check if bot repository exists locally."""
-        return self.target_dir.exists() and (self.target_dir / ".git").is_dir()
+        return self.target_dir_path.exists() and (self.target_dir_path / ".git").is_dir()
 
     def get_available_branches(self) -> List[str]:
         """Get list of available branches from remote."""
@@ -41,7 +47,7 @@ class XBridgeBotManager:
                     self.repo_url, 
                     self.target_dir,
                     branch=self.current_branch,
-                    workdir=aio_folder
+                    workdir=self.aio_folder
                 )
             return self.repo_management.get_remote_branches() or ["main"]
         except Exception as e:
@@ -75,12 +81,12 @@ class XBridgeBotManager:
                 self.repo_url, 
                 self.target_dir,
                 branch=branch,
-                workdir=aio_folder
+                workdir=self.aio_folder
             )
             
-            if not self.target_dir.exists():
+            if not self.target_dir_path.exists():
                 logger.info(f"Creating repo directory: {self.target_dir}")
-                self.target_dir.mkdir(parents=True, exist_ok=True)
+                self.target_dir_path.mkdir(parents=True, exist_ok=True)
 
             logger.info(f"Setting up repository...")
             self.repo_management.setup()
@@ -107,13 +113,13 @@ class XBridgeBotManager:
 
     def handle_config_folder_rename(self) -> None:
         """Resolve config conflicts by renaming folder."""
-        config_path = self.target_dir / "config"
+        config_path = self.target_dir_path / "config"
         if not config_path.exists():
             logger.warning("Config directory not found, cannot resolve conflict")
             return
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        config_bak_path = self.target_dir / f"config_bak_{timestamp}"
+        config_bak_path = self.target_dir_path / f"config_bak_{timestamp}"
 
         try:
             os.rename(str(config_path), str(config_bak_path))

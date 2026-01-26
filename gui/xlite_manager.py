@@ -1,7 +1,7 @@
 import logging
 
 from gui.xlite_frame_manager import XliteFrameManager
-from utilities import global_variables
+from utilities.app_container import get_container
 from utilities.bin_handlers.xlite_handler import XliteHandler
 from utilities.bin_handlers.xlite_reverse_proxy_handler import XliteReverseProxyHandler
 
@@ -14,8 +14,12 @@ class XliteManager:
 
         self.frame_manager = None
         self.utility = XliteHandler()
-
-        self.version = [global_variables.xlite_release_url.split('/')[7]]
+        
+        container = get_container()
+        if container.xlite_release_url:
+            self.version = [container.xlite_release_url.split('/')[7]]
+        else:
+            self.version = ["unknown"]
         self.process_running = False
         self.daemon_process_running = False
 

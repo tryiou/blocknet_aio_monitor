@@ -307,7 +307,7 @@ class TestBlocknetCoreFrameManager:
 
     @patch('gui.blocknet_frame_manager.utils.save_cfg_json')
     @patch('gui.blocknet_frame_manager.ctk.filedialog.askdirectory')
-    @patch('gui.blocknet_frame_manager.global_variables')
+    @patch('gui.blocknet_frame_manager.get_container')
     @patch('gui.blocknet_frame_manager.os.path.exists')
     @patch('gui.blocknet_frame_manager.os.path.expandvars')
     @patch('gui.blocknet_frame_manager.os.path.expanduser')
@@ -325,16 +325,18 @@ class TestBlocknetCoreFrameManager:
             ("/existing/custom/path", None, None, None, None, None, "/existing/custom/path"),
         ])
     def test_open_custom_path_dialog(
-            self, mock_expanduser, mock_expandvars, mock_exists, mock_global, mock_askdirectory, mock_save_cfg_json,
+            self, mock_expanduser, mock_expandvars, mock_exists, mock_get_container, mock_askdirectory, mock_save_cfg_json,
             manager, mock_parent, custom_path, blocknet_default_paths, system, expanduser_return, expandvars_return,
             exists_side_effect, expected_initialdir
     ):
         """Test open_custom_path_dialog for all path scenarios"""
+        # Set up mock container
+        mock_container = MagicMock()
+        mock_container.conf_data.blocknet_default_paths = blocknet_default_paths if blocknet_default_paths is not None else {}
+        mock_container.system = system if system is not None else "Linux"
+        mock_get_container.return_value = mock_container
+        
         mock_parent.root_gui.custom_path = custom_path
-        if blocknet_default_paths is not None:
-            mock_global.conf_data.blocknet_default_paths = blocknet_default_paths
-        if system is not None:
-            mock_global.system = system
         if expanduser_return is not None:
             mock_expanduser.return_value = expanduser_return
         if expandvars_return is not None:

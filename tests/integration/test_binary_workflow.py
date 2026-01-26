@@ -45,8 +45,8 @@ class TestBinaryDownloadWorkflow:
         aio_folder = self.workspace / "AIO_Blocknet"
         aio_folder.mkdir(parents=True, exist_ok=True)
 
-        # Mock global variables
-        patches = self.helper.patch_global_variables(
+        # Mock AppContainer
+        patches = self.helper.patch_app_container(
             self.workspace,
             aio_folder=str(aio_folder),
             system="Linux",
@@ -85,8 +85,8 @@ class TestBinaryDownloadWorkflow:
         aio_folder = self.workspace / "AIO_Blocknet"
         aio_folder.mkdir(parents=True, exist_ok=True)
 
-        # Mock global variables
-        patches = self.helper.patch_global_variables(
+        # Mock AppContainer
+        patches = self.helper.patch_app_container(
             self.workspace,
             aio_folder=str(aio_folder),
             system="Linux",
@@ -125,8 +125,8 @@ class TestBinaryDownloadWorkflow:
         aio_folder = self.workspace / "AIO_Blocknet"
         aio_folder.mkdir(parents=True, exist_ok=True)
 
-        # Mock global variables
-        patches = self.helper.patch_global_variables(
+        # Mock AppContainer
+        patches = self.helper.patch_app_container(
             self.workspace,
             aio_folder=str(aio_folder),
             system="Linux",

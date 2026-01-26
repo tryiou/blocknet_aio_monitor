@@ -45,16 +45,7 @@ try:
 except ImportError:
     pass
 
-# Patch global_variables module
-try:
-    import utilities.global_variables as gv
 
-    gv.aio_folder = _temp_test_dir
-    gv.DIRPATH = _temp_test_dir
-    gv.themepath = os.path.join(_temp_test_dir, 'theme.json')
-except ImportError:
-    # If import fails, the patches will be applied when the module is imported
-    pass
 
 # Patch conf_data module
 try:
@@ -81,8 +72,8 @@ except ImportError:
 @pytest.fixture(scope="session", autouse=True)
 def isolate_test_environment():
     """
-    Isolate tests from production environment by patching global variables
-    and ConfigManager before any modules are imported.
+    Isolate tests from production environment by patching ConfigManager
+    before any modules are imported.
     
     This fixture runs automatically for all tests and ensures
     that the ~/.AIO_Blocknet production folder is never accessed.
@@ -296,10 +287,13 @@ FullLog=true
 @pytest.fixture
 def mock_gui_environment():
     """Mock GUI environment for tests."""
+    mock_container = MagicMock()
+    mock_container.theme_path = '/mock/theme.json'
+    mock_container.dirpath = '/mock/dirpath'
+    
     with patch('customtkinter.CTk') as mock_ctk, \
             patch('PIL.Image.open') as mock_image, \
-            patch('utilities.global_variables.themepath', '/mock/theme.json'), \
-            patch('utilities.global_variables.DIRPATH', '/mock/dirpath'):
+            patch('utilities.app_container.get_container', return_value=mock_container):
         mock_root = MagicMock()
         mock_ctk.return_value = mock_root
 

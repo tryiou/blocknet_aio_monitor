@@ -19,11 +19,13 @@ from unittest.mock import patch, MagicMock, mock_open, call
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import pytest
 import requests
 import psutil
 import subprocess
 
 from utilities.bin_handlers.base_binutil import BaseBinUtil
+from utilities.app_container import AppContainer, get_container
 
 
 # =============================================================================
@@ -35,8 +37,14 @@ class BaseBinUtilTestCase(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.base_binutil = BaseBinUtil("test_app")
         self.temp_dir = tempfile.mkdtemp()
+        # Create a default mock container
+        mock_container = MagicMock()
+        mock_container.system = "Linux"
+        mock_container.machine = "x86_64"
+        mock_container.aio_folder = "/test/aio_folder"
+        mock_container.conf_data = MagicMock()
+        self.base_binutil = BaseBinUtil("test_app", mock_container)
 
     def tearDown(self):
         """Clean up test fixtures."""
@@ -61,6 +69,96 @@ class BaseBinUtilTestCase(unittest.TestCase):
         mock_process = MagicMock()
         mock_process.wait.return_value = None
         return mock_process
+
+
+@pytest.fixture
+def mock_container():
+    """Create a mock AppContainer for testing."""
+    container = MagicMock()
+    
+    # Set up common properties
+    container.system = "Linux"
+    container.machine = "x86_64"
+    container.aio_folder = "/test/aio_folder"
+    container.theme_path = "/test/theme.json"
+    container.dirpath = "/test/app_dir"
+    
+    # Binary configurations
+    container.blocknet_bin = "blocknetd"
+    container.blockdx_bin = "blockdx"
+    container.xlite_bin = "xlite"
+    container.xlite_daemon_bin = "xlited"
+    container.xlite_reverse_proxy_bin = "xlite-reverse-proxy"
+    
+    # Release URLs
+    container.blocknet_release_url = "http://test.com/blocknet.tar.gz"
+    container.blockdx_release_url = "http://test.com/blockdx.tar.gz"
+    container.xlite_release_url = "http://test.com/xlite.tar.gz"
+    container.xlite_reverse_proxy_release_url = "http://test.com/xlite-reverse-proxy.tar.gz"
+    
+    # Current paths
+    container.blockdx_curpath = "BLOCK-DX-1.0.0"
+    container.xlite_curpath = "XLite-1.0.0"
+    
+    # Volume names (macOS specific)
+    container.blockdx_volume_name = None
+    container.xlite_volume_name = None
+    
+    # Mock conf_data access
+    container.conf_data = MagicMock()
+    
+    return container
+
+
+@pytest.fixture
+def mock_container_darwin():
+    """Create a mock AppContainer for Darwin."""
+    container = MagicMock()
+    
+    # macOS-specific configuration
+    container.system = "Darwin"
+    container.machine = "arm64"
+    container.aio_folder = "/test/aio_folder"
+    container.theme_path = "/test/theme.json"
+    container.dirpath = "/test/app_dir"
+    
+    # Binary configurations
+    container.blocknet_bin = "Blocknet"
+    container.blockdx_bin = "Block DX"
+    container.xlite_bin = "XLite"
+    container.xlite_daemon_bin = "XLite Daemon"
+    container.xlite_reverse_proxy_bin = "xlite-reverse-proxy"
+    
+    # Release URLs
+    container.blocknet_release_url = "http://test.com/Blocknet.dmg"
+    container.blockdx_release_url = "http://test.com/Block-DX-1.0.0.dmg"
+    container.xlite_release_url = "http://test.com/XLite-1.0.0.dmg"
+    container.xlite_reverse_proxy_release_url = "http://test.com/xlite-reverse-proxy.dmg"
+    
+    # Current paths
+    container.blockdx_curpath = "BLOCK-DX-1.0.0"
+    container.xlite_curpath = "XLite-1.0.0"
+    
+    # Volume names
+    container.blockdx_volume_name = "Block DX 1.0.0"
+    container.xlite_volume_name = "XLite 1.0.0"
+    
+    # Mock conf_data access
+    container.conf_data = MagicMock()
+    
+    return container
+
+
+@pytest.fixture
+def base_binutil_with_container(mock_container):
+    """Create a BaseBinUtil instance with mocked container."""
+    return BaseBinUtil("test_app", mock_container)
+
+
+@pytest.fixture
+def base_binutil_with_darwin_container(mock_container_darwin):
+    """Create a BaseBinUtil instance with Darwin mocked container."""
+    return BaseBinUtil("test_app", mock_container_darwin)
 
 
 # =============================================================================
@@ -138,23 +236,32 @@ class TestDownload(BaseBinUtilTestCase):
         mock_tar.extractall.assert_called_once_with(self.temp_dir)
         mock_remove.assert_called_once()
 
-    @patch('utilities.global_variables.system', 'Darwin')
     @patch('os.rename')
     @patch('os.path.getsize')
     @patch('requests.get')
     def test_download_file_dmg_darwin(self, mock_get, mock_getsize, mock_rename):
         """Test downloading DMG files on Darwin."""
+        # Set up mock container for Darwin
+        mock_container = MagicMock()
+        mock_container.system = "Darwin"
+        mock_container.machine = "arm64"
+        mock_container.aio_folder = "/test/aio_folder"
+        mock_container.conf_data = MagicMock()
+        
+        # Create a base_binutil with Darwin container
+        darwin_binutil = BaseBinUtil("test_app", mock_container)
+        
         mock_get.return_value = self.create_mock_response()
         mock_getsize.return_value = 1000
 
-        self.base_binutil.download_file(
+        darwin_binutil.download_file(
             "http://example.com/test.dmg",
             os.path.join(self.temp_dir, "test.dmg"),
             os.path.join(self.temp_dir, "final.dmg"),
             self.temp_dir,
             "posix",
             "progress_attr",
-            self.base_binutil
+            darwin_binutil
         )
 
         mock_rename.assert_called_once()
@@ -648,63 +755,79 @@ class TestProcessManagement(BaseBinUtilTestCase):
 class TestDmgHandling(BaseBinUtilTestCase):
     """Test DMG handling functionality."""
 
-    @patch('utilities.global_variables.system', 'Linux')
-    @patch('utilities.bin_handlers.base_binutil.logger.warning')
-    def test_handle_dmg_wrong_os(self, mock_log_warning):
+    def test_handle_dmg_wrong_os(self):
         """Test handle_dmg with wrong OS."""
-        self.base_binutil.handle_dmg("mount")
-        mock_log_warning.assert_called_once_with("Call handle_dmg with wrong OS, Linux ?")
+        # base_binutil already has Linux container
+        with patch('utilities.bin_handlers.base_binutil.logger.warning') as mock_log_warning:
+            self.base_binutil.handle_dmg("mount")
+            mock_log_warning.assert_called_once_with("Call handle_dmg with wrong OS, Linux ?")
 
-    @patch('utilities.global_variables.system', 'Darwin')
     @patch('os.path.ismount')
     @patch('utilities.bin_handlers.base_binutil.logger.warning')
     def test_handle_dmg_already_mounted(self, mock_log_warning, mock_ismount):
         """Test handle_dmg when already mounted."""
+        # Set up mock container for Darwin
+        mock_container = MagicMock()
+        mock_container.system = "Darwin"
+        darwin_binutil = BaseBinUtil("test_app", mock_container)
+        
         mock_ismount.return_value = True
-        self.base_binutil.dmg_mount_path = "/Volumes/test"
-        self.base_binutil.handle_dmg("mount")
+        darwin_binutil.dmg_mount_path = "/Volumes/test"
+        darwin_binutil.handle_dmg("mount")
         mock_log_warning.assert_called_once_with("/Volumes/test is already mounted")
 
-    @patch('utilities.global_variables.system', 'Darwin')
     @patch('os.path.ismount')
     @patch('subprocess.run')
     @patch('utilities.bin_handlers.base_binutil.logger.info')
     def test_handle_dmg_mount_success(self, mock_log_info, mock_run, mock_ismount):
         """Test successful DMG mount on Darwin."""
+        # Set up mock container for Darwin
+        mock_container = MagicMock()
+        mock_container.system = "Darwin"
+        darwin_binutil = BaseBinUtil("test_app", mock_container)
+        
         mock_ismount.return_value = False
-        self.base_binutil.dmg_mount_path = "/Volumes/test"
-        self.base_binutil.executable_path = "/path/to/app.dmg"
+        darwin_binutil.dmg_mount_path = "/Volumes/test"
+        darwin_binutil.executable_path = "/path/to/app.dmg"
 
-        self.base_binutil.handle_dmg("mount")
+        darwin_binutil.handle_dmg("mount")
 
-        mock_run.assert_called_once_with(["hdiutil", "attach", self.base_binutil.executable_path], check=True)
+        mock_run.assert_called_once_with(["hdiutil", "attach", darwin_binutil.executable_path], check=True)
         mock_log_info.assert_called_once_with(
-            f"Mounted DMG {self.base_binutil.executable_path} to {self.base_binutil.dmg_mount_path}")
+            f"Mounted DMG {darwin_binutil.executable_path} to {darwin_binutil.dmg_mount_path}")
 
-    @patch('utilities.global_variables.system', 'Darwin')
     @patch('os.path.ismount')
     @patch('subprocess.run')
     @patch('utilities.bin_handlers.base_binutil.logger.info')
     def test_handle_dmg_unmount_success(self, mock_log_info, mock_run, mock_ismount):
         """Test successful DMG unmount on Darwin."""
+        # Set up mock container for Darwin
+        mock_container = MagicMock()
+        mock_container.system = "Darwin"
+        darwin_binutil = BaseBinUtil("test_app", mock_container)
+        
         mock_ismount.return_value = True
-        self.base_binutil.dmg_mount_path = "/Volumes/test"
+        darwin_binutil.dmg_mount_path = "/Volumes/test"
 
-        self.base_binutil.handle_dmg("unmount")
+        darwin_binutil.handle_dmg("unmount")
 
-        mock_run.assert_called_once_with(["hdiutil", "detach", self.base_binutil.dmg_mount_path], check=True)
-        mock_log_info.assert_called_once_with(f"Unmounted DMG from {self.base_binutil.dmg_mount_path}")
+        mock_run.assert_called_once_with(["hdiutil", "detach", darwin_binutil.dmg_mount_path], check=True)
+        mock_log_info.assert_called_once_with(f"Unmounted DMG from {darwin_binutil.dmg_mount_path}")
 
-    @patch('utilities.global_variables.system', 'Darwin')
     @patch('os.path.ismount')
     @patch('subprocess.run')
     @patch('utilities.bin_handlers.base_binutil.logger.warning')
     def test_handle_dmg_unmount_not_mounted(self, mock_log_warning, mock_run, mock_ismount):
         """Test unmount when DMG is not mounted."""
+        # Set up mock container for Darwin
+        mock_container = MagicMock()
+        mock_container.system = "Darwin"
+        darwin_binutil = BaseBinUtil("test_app", mock_container)
+        
         mock_ismount.return_value = False
-        self.base_binutil.dmg_mount_path = "/Volumes/test"
+        darwin_binutil.dmg_mount_path = "/Volumes/test"
 
-        self.base_binutil.handle_dmg("unmount")
+        darwin_binutil.handle_dmg("unmount")
 
         mock_run.assert_not_called()
         mock_log_warning.assert_called_once_with("/Volumes/test is not mounted")
@@ -729,17 +852,7 @@ class TestPotentialBugs(BaseBinUtilTestCase):
         # The core code should catch both exception types or the test should be fixed
         pass
 
-    def test_potential_bug_global_variables_check(self):
-        """
-        POTENTIAL BUG: Core code checks global_variables.system (line 94)
-        but should check the 'system' parameter passed to download_file.
-        
-        This could cause incorrect behavior when system parameter differs
-        from global_variables.system.
-        """
-        # This test documents the potential bug
-        # The core code should use the 'system' parameter instead
-        pass
+
 
     def test_potential_bug_handler_class_name_check(self):
         """

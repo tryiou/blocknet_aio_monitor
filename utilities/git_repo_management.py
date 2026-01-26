@@ -9,8 +9,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import requests
-
-from utilities import global_variables
+from utilities.app_container import get_container
 
 try:
     import utilities.miniforge_portable as miniforge_portable
@@ -419,8 +418,9 @@ class GitRepoManagement:
 
             # Set the Python path
             if self.portable_python_dir:
+                container = get_container()
                 self.portable_python_path = self.portable_python_dir / "miniforge" / (
-                    "python.exe" if global_variables.system == "Windows" else "bin/python")
+                        "python.exe" if container.system == "Windows" else "bin/python")
 
             # Clone or update the repository
             self.git_repo.clone_or_update()
@@ -526,8 +526,9 @@ if __name__ == "__main__":
     git_repo_url = "https://github.com/tryiou/xbridge_trading_bots"
     local_target_dir = "xbridge_trading_bots"
     branch = "main"
-    logger.info(f"aio_folder: {global_variables.aio_folder}")
-    manager = GitRepoManagement(git_repo_url, local_target_dir, branch, global_variables.aio_folder)
+    container = get_container()
+    logger.info(f"aio_folder: {container.aio_folder}")
+    manager = GitRepoManagement(git_repo_url, local_target_dir, branch, container.aio_folder)
     manager.setup()
 
     # Example of running a script after setup

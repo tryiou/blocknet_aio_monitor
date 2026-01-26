@@ -8,6 +8,7 @@ import asyncio
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from gui.blocknet_manager import BlocknetManager
+from utilities.app_container import AppContainer
 
 
 class TestBlocknetManager(unittest.TestCase):
@@ -20,15 +21,15 @@ class TestBlocknetManager(unittest.TestCase):
         self.mock_root_gui.custom_path = "/mock/custom/path"
         self.mock_root_gui.xlite_manager = MagicMock()
 
-        # Mock global variables
-        self.mock_global_variables = MagicMock()
-        self.mock_global_variables.blocknet_release_url = (
+        # Mock AppContainer
+        self.mock_container = MagicMock()
+        self.mock_container.blocknet_release_url = (
             "https://github.com/BlocknetDX/blocknet-core/releases/download/4.4.1/blocknet-4.4.1-linux64.tar.gz"
         )
 
         # Patch dependencies
         self.patches = {
-            'global_variables': patch('gui.blocknet_manager.global_variables', new=self.mock_global_variables),
+            'get_container': patch('gui.blocknet_manager.get_container', return_value=self.mock_container),
             'BlocknetHandler': patch('gui.blocknet_manager.BlocknetHandler'),
         }
 

@@ -6,7 +6,7 @@ import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
 from gui.constants import PANEL_CHECKBOXES_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, CHECK_BOXES_STICKY, \
     BLOCKDX_FRAME_WIDTH
-from utilities import global_variables
+from utilities.app_container import get_container
 
 
 class BlockDxFrameManager:
@@ -79,8 +79,7 @@ class BlockDxFrameManager:
                     blockdx_conf.get('password') == rpc_password and
                     blockdx_conf.get('xbridgeConfPath') == xbridgeconfpath and
                     isinstance(blockdx_conf.get('selectedWallets'), list) and
-                    global_variables.conf_data.blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets',
-                                                                                                    [])
+                    get_container().conf_data.blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets', [])
             )
             self.valid_config_checkbox_state.set(
                 (self.parent.is_config_sync and self.root_gui.blocknet_manager.utility.valid_rpc))

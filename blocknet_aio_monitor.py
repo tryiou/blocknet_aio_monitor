@@ -12,7 +12,7 @@ from gui.blockdx_manager import BlockDXManager
 from gui.blocknet_manager import BlocknetManager
 from gui.tooltip_manager import TooltipManager
 from gui.xlite_manager import XliteManager
-from utilities import global_variables
+from utilities.app_container import get_container
 from utilities import utils
 
 # Create or get the root logger
@@ -42,7 +42,12 @@ urllib3_logger.setLevel(logging.WARNING)
 
 from gui.constants import tooltip_bg_color, MAIN_FRAMES_STICKY, TITLE_FRAMES_STICKY
 
-ctk.set_default_color_theme(global_variables.themepath)
+container = get_container()
+theme_path = container.theme_path
+if theme_path:
+    ctk.set_default_color_theme(theme_path)
+else:
+    logger.error("Theme path not configured")
 
 
 class Blocknet_AIO_GUI(ctk.CTk):
@@ -115,48 +120,48 @@ class Blocknet_AIO_GUI(ctk.CTk):
         """Load and set up images for use in the GUI."""
         resize = (65, 30)
         self.theme_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "light.png")).resize(resize,
-                                                                                                      Image.LANCZOS),
-            dark_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "dark.png")).resize(resize,
-                                                                                                    Image.LANCZOS),
+            light_image=Image.open(os.path.join(container.dirpath, "img", "light.png")).resize(resize,
+                                                                                                      Image.Resampling.LANCZOS),
+            dark_image=Image.open(os.path.join(container.dirpath, "img", "dark.png")).resize(resize,
+                                                                                                    Image.Resampling.LANCZOS),
             size=resize
         )
         resize = (50, 50)
         self.transparent_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "transparent.png")).resize(resize,
-                                                                                                            Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "transparent.png")).resize(resize,
+                                                                                                      Image.Resampling.LANCZOS)
         )
         self.start_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "start-50.png")).resize(resize,
-                                                                                                         Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "start-50.png")).resize(resize,
+                                                                                                    Image.Resampling.LANCZOS)
         )
         self.start_greyed_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "start-50_greyed.png")).resize(resize,
-                                                                                                                Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "start-50_greyed.png")).resize(resize,
+                                                                                                                 Image.Resampling.LANCZOS)
         )
         self.stop_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "stop-50.png")).resize(resize,
-                                                                                                        Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "stop-50.png")).resize(resize,
+                                                                                                         Image.Resampling.LANCZOS)
         )
         self.stop_greyed_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "stop-50_greyed.png")).resize(resize,
-                                                                                                               Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "stop-50_greyed.png")).resize(resize,
+                                                                                                                Image.Resampling.LANCZOS)
         )
         self.delete_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "delete-50.png")).resize(resize,
-                                                                                                          Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "delete-50.png")).resize(resize,
+                                                                                                           Image.Resampling.LANCZOS)
         )
         self.delete_greyed_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "delete-50_greyed.png")).resize(resize,
-                                                                                                                 Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "delete-50_greyed.png")).resize(resize,
+                                                                                                                  Image.Resampling.LANCZOS)
         )
         self.install_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "installer-50.png")).resize(resize,
-                                                                                                             Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "installer-50.png")).resize(resize,
+                                                                                                              Image.Resampling.LANCZOS)
         )
         self.install_greyed_img = ctk.CTkImage(
-            light_image=Image.open(os.path.join(global_variables.DIRPATH, "img", "installer-50_greyed.png")).resize(
-                resize, Image.LANCZOS)
+            light_image=Image.open(os.path.join(container.dirpath, "img", "installer-50_greyed.png")).resize(
+                resize, Image.Resampling.LANCZOS)
         )
 
     def setup_tooltips(self) -> None:
@@ -196,10 +201,10 @@ class Blocknet_AIO_GUI(ctk.CTk):
                                               delay=1, width=1, follow=True, bg_color=tooltip_bg_color, border_width=2,
                                               justify="left")
         self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_blockdx_button,
-                                              msg=global_variables.blockdx_release_url, delay=1, width=1, follow=True,
+                                              msg=container.blockdx_release_url, delay=1, width=1, follow=True,
                                               bg_color=tooltip_bg_color, border_width=2, justify="left")
         self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.install_delete_xlite_button,
-                                              msg=global_variables.xlite_release_url, delay=1, follow=True,
+                                              msg=container.xlite_release_url, delay=1, follow=True,
                                               bg_color=tooltip_bg_color, border_width=2, justify="left")
         self.tooltip_manager.register_tooltip(self.binary_manager.frame_manager.blocknet_start_close_button, msg='',
                                               delay=1, follow=True, bg_color=tooltip_bg_color, border_width=2,

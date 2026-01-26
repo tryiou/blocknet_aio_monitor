@@ -7,7 +7,8 @@ import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
 from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, \
     CHECK_BOXES_STICKY, BLOCKNET_DATADIR_INPUT_WIDTH
-from utilities import utils, global_variables
+from utilities import utils
+from utilities.app_container import get_container
 
 
 class BlocknetCoreFrameManager:
@@ -168,7 +169,8 @@ class BlocknetCoreFrameManager:
 
         if self.root_gui.custom_path is None:
             # Get the default path based on the system
-            path = global_variables.conf_data.blocknet_default_paths.get(global_variables.system)
+            container = get_container()
+            path = container.conf_data.blocknet_default_paths.get(container.system)
             if path:
                 expanded_path = os.path.expandvars(os.path.expanduser(path))
             # Check if the expanded path exists

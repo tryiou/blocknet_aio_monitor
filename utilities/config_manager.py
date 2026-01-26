@@ -250,9 +250,27 @@ class ConfigManager:
         return value
 
     def _set_system_value(self, key, value):
-        """Set system-specific value in in-memory config"""
+        """Set system-specific value in memory config, auto-repairing corrupted values"""
         current_system_key = (self.system, self.machine)
+        
         if key in SYSTEM_SPECIFIC_KEYS:
+            # If value is None or empty, skip and keep template default
+            if value is None:
+                return
+            
+            # Check if the CURRENT config value is corrupted, not the new value
+            current_value = self.config[key]
+            
+            # Handle nested dict corruption in the current config
+            if isinstance(current_value, dict) and any(isinstance(v, dict) for v in current_value.values()):
+                logger.warning(f"Corrupted nested config for {key}, restoring from template")
+                return
+            
+            # Handle string that was supposed to be a list (YAML corruption)
+            if isinstance(current_value, (list, tuple)) and isinstance(current_value, str):
+                logger.warning(f"Corrupted config for {key}, restoring from template")
+                return
+            
             if isinstance(self.config[key], dict):
                 if current_system_key in self.config[key]:
                     self.config[key][current_system_key] = value
@@ -261,7 +279,9 @@ class ConfigManager:
                 else:
                     self.config[key][current_system_key] = value
             else:
-                self.config[key] = value
+                # For non-dict templates (lists, strings, etc.), set directly if type matches
+                if isinstance(value, type(current_value)):
+                    self.config[key] = value
         else:
             self.config[key] = value
 

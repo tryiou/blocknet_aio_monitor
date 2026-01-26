@@ -1,7 +1,7 @@
 import os
 
 from gui.blockdx_frame_manager import BlockDxFrameManager
-from utilities import global_variables
+from utilities.app_container import get_container
 from utilities.bin_handlers.blockdx_handler import BlockDXHandler
 
 
@@ -10,7 +10,11 @@ class BlockDXManager:
         self.frame_manager = None
         self.root_gui = root_gui
         self.utility = BlockDXHandler()
-        self.version = [global_variables.blockdx_release_url.split('/')[7]]
+        container = get_container()
+        if container.blockdx_release_url:
+            self.version = [container.blockdx_release_url.split('/')[7]]
+        else:
+            self.version = ["unknown"]
         self.process_running = False
         self.is_config_sync = None
 
