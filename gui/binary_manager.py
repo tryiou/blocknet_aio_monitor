@@ -598,5 +598,6 @@ class BinaryManager:
             utils.disable_button(self.frame_manager.bots_toggle_execution_button, img=img)
 
     def update_xbridge_bots_version_optionmenu(self):
-        self.frame_manager.bots_version_optionmenu.configure(
-            values=self.frame_manager.xbridge_bot_manager.get_available_branches())
+        branches = self.frame_manager.xbridge_bot_manager.get_available_branches()
+        if branches is not None:
+            self.frame_manager.bots_version_optionmenu.configure(values=branches)

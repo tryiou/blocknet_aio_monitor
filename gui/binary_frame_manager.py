@@ -50,10 +50,20 @@ class BinaryFrameManager:
                                                           values=self.root_gui.xlite_manager.version,
                                                           state='disabled',
                                                           width=option_menu_width)
+        # Branch persistence: validate saved choice against remote list
+        _remote_branches = self.xbridge_bot_manager.get_available_branches()
+        if _remote_branches is None:
+            _values = [self.xbridge_bot_manager.get_saved_branch()]
+            _initial = self.xbridge_bot_manager.get_saved_branch()
+        else:
+            _values = _remote_branches
+            _initial = self.xbridge_bot_manager.resolve_startup_branch(_remote_branches)
         self.bots_version_optionmenu = ctk.CTkOptionMenu(self.master_frame,
-                                                         values=self.xbridge_bot_manager.get_available_branches(),
+                                                         values=_values,
                                                          state='normal',
-                                                         width=option_menu_width)
+                                                         width=option_menu_width,
+                                                         command=self.on_bots_branch_selected)
+        self.bots_version_optionmenu.set(_initial)
         # Checkboxes BoolVars
         self.blocknet_installed_boolvar = ctk.BooleanVar(value=False)
         self.blockdx_installed_boolvar = ctk.BooleanVar(value=False)
@@ -150,6 +160,13 @@ class BinaryFrameManager:
                                                           corner_radius=CORNER_RADIUS)
 
         # Bots buttons
+
+    def on_bots_branch_selected(self, choice: str) -> None:
+        """Persist user branch choice immediately."""
+        try:
+            self.xbridge_bot_manager.save_branch(choice)
+        except Exception:
+            pass
 
     def install_update_bots_command(self):
         """Handle install/update button click - left click installs/updates, right click deletes"""

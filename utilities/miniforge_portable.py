@@ -75,6 +75,13 @@ class PortablePythonInstaller:
         python_bin = install_path / ("Scripts/python.exe" if self.system == "Windows" else "bin/python")
         logger.info(f"✅ Installed portable Python to: {install_path}")
         logger.info(f"🔹 Python executable: {python_bin}")
+        # Clean up large installer archive
+        try:
+            if installer_path.exists() and installer_path.stat().st_size > 1024 * 1024:
+                installer_path.unlink()
+                logger.info(f"Removed installer archive {installer_path.name}")
+        except Exception as e:
+            logger.warning(f"Could not remove installer {installer_path}: {e}")
         # logger.info(f"🔹 pip: {python_bin} -m pip")
         # logger.info(f"🔹 venv: {python_bin} -m venv {self.venv}")
         # After successful installation

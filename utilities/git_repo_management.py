@@ -5,6 +5,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -26,7 +27,15 @@ class ExecutionError(Exception):
     pass
 
 
-def run_command(cmd_list: List[str], 
+class BranchSwitchBlockedError(Exception):
+    """Raised when branch switch is blocked by local conflicts."""
+
+    def __init__(self, message: str, blocked_paths: Optional[List[str]] = None):
+        super().__init__(message)
+        self.blocked_paths = blocked_paths or []
+
+
+def run_command(cmd_list: List[str],
                cwd: Optional[Path] = None,
                timeout: int = 300) -> Tuple[int, str, str]:
     """
@@ -65,16 +74,20 @@ def run_command(cmd_list: List[str],
 class VirtualEnvironment:
     """Manages Python virtual environments with portable support."""
 
-    def __init__(self, target_dir: Path, portable_python_path: str = None):
+    def __init__(self, target_dir: Path, portable_python_path: str = None, venv_dir: Optional[Path] = None):
         """
         Initialize virtual environment manager.
         
         Args:
             target_dir: Base directory for environment
             portable_python_path: Path to portable Python binary
+            venv_dir: Explicit venv directory (if None, uses target_dir/venv for legacy compat)
         """
         self.target_dir = target_dir
-        self.venv_dir = target_dir / "venv"
+        if venv_dir is not None:
+            self.venv_dir = Path(venv_dir)
+        else:
+            self.venv_dir = target_dir / "venv"
         self.portable_python_path = portable_python_path
         self.is_windows = sys.platform == "win32"
         self.is_darwin = sys.platform == "darwin"
@@ -96,7 +109,6 @@ class VirtualEnvironment:
         if self.is_darwin and self.portable_python_path:
             python_path = Path(self.portable_python_path)
             if not python_path.exists():
-                # logger.warning(f"Portable Python path invalid: {python_path}")
                 raise FileNotFoundError(f"Python not found: {python_path}")
             real_python_path = python_path.resolve()
         else:
@@ -180,13 +192,100 @@ class VirtualEnvironment:
 class GitRepository:
     """Manages Git operations using pygit2."""
 
-    def __init__(self, repo_url: str, target_dir: Path, remote_branch: str = "main"):
+    def __init__(self, repo_url: str, target_dir: Path, remote_branch: str = "main",
+                 backup_base: Optional[Path] = None):
         self.repo_url = repo_url
         self.target_dir = target_dir
         self.remote_branch = remote_branch
         self.repo = None
-        # Default timeout for Git operations (in seconds)
         self.git_timeout = 300
+        self.backup_base = Path(backup_base) if backup_base else None
+
+    def _get_backup_base(self) -> Path:
+        if self.backup_base:
+            return self.backup_base
+        # Default: parent of target_dir / backups
+        return self.target_dir.parent / "backups"
+
+    def _get_changed_paths(self, target_oid) -> set:
+        """Get set of paths changed between HEAD and target."""
+        try:
+            head_commit = self.repo.head.peel(pygit2.Commit)
+            target_commit = self.repo.get(target_oid).peel(pygit2.Commit)
+            diff = self.repo.diff(head_commit.tree, target_commit.tree)
+            changed = set()
+            for delta in diff.deltas:
+                if delta.old_file.path:
+                    changed.add(delta.old_file.path)
+                if delta.new_file.path:
+                    changed.add(delta.new_file.path)
+            return changed
+        except Exception as e:
+            logger.warning(f"Could not compute changed paths: {e}")
+            return set()
+
+    def _collect_blockers(self, target_oid) -> List[str]:
+        """Collect dirty/untracked paths that would block checkout to target."""
+        try:
+            status = self.repo.status()
+        except Exception as e:
+            logger.warning(f"Could not get repo status: {e}")
+            return []
+        if not status:
+            return []
+        changed = self._get_changed_paths(target_oid)
+        # If diff failed or empty, be conservative: any dirty file could block
+        # but we already filtered to changed-intersection for surgical backup
+        blockers: List[str] = []
+        for path, flags in status.items():
+            if changed and path not in changed:
+                # File not on the changed path set -> not blocking
+                # Exception: untracked colliding with new file should be in changed
+                continue
+            # Any non-zero status that overlaps changed paths is a blocker
+            blockers.append(path)
+        if blockers:
+            logger.warning(f"Checkout blockers detected ({len(blockers)}): {blockers[:10]}")
+        return blockers
+
+    def _backup_blockers(self, blockers: List[str]) -> Optional[Path]:
+        """Move blocking paths to timestamped backup dir. Returns backup dir."""
+        if not blockers:
+            return None
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_dir = self._get_backup_base() / f"{self.target_dir.name}_{timestamp}_checkout"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Backing up {len(blockers)} blocking paths to {backup_dir}")
+        for rel_path in blockers:
+            src = self.target_dir / rel_path
+            dst = backup_dir / rel_path
+            try:
+                if not src.exists() and not src.is_symlink():
+                    # Deleted file: record but nothing to move
+                    continue
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src), str(dst))
+                logger.info(f"Backed up {rel_path} -> {dst}")
+            except Exception as e:
+                logger.error(f"Failed to backup {rel_path}: {e}")
+        # Clean up empty parent dirs left behind (not critical)
+        return backup_dir
+
+    def _prepare_checkout(self, target_oid) -> None:
+        """Backup blockers then checkout target tree."""
+        blockers = self._collect_blockers(target_oid)
+        if blockers:
+            self._backup_blockers(blockers)
+        target_commit = self.repo.get(target_oid)
+        strategy = pygit2.GIT_CHECKOUT_SAFE | pygit2.GIT_CHECKOUT_RECREATE_MISSING
+        try:
+            self.repo.checkout_tree(target_commit, strategy=strategy)
+        except pygit2.GitError as e:
+            # After backup, retry once with precise diagnostics
+            remaining = self.repo.status()
+            detail = ", ".join(list(remaining.keys())[:10]) if remaining else str(e)
+            logger.error(f"Checkout still blocked after backup: {detail}")
+            raise BranchSwitchBlockedError(f"Checkout blocked: {e}", blocked_paths=list(remaining.keys()) if remaining else []) from e
 
     def clone_or_update(self) -> None:
         """Clone a new repository or update an existing one."""
@@ -200,6 +299,8 @@ class GitRepository:
                 return
 
             self._update_repo()
+        except BranchSwitchBlockedError:
+            raise
         except Exception as e:
             logger.error(f"Repository operation failed: {e}")
             raise
@@ -210,83 +311,89 @@ class GitRepository:
         self.target_dir.mkdir(exist_ok=True, parents=True)
         try:
             callbacks = pygit2.RemoteCallbacks()
-
-            # Set a timeout for the clone operation
             start_time = time.time()
-
             self.repo = pygit2.clone_repository(
                 self.repo_url,
                 str(self.target_dir),
                 callbacks=callbacks
             )
-
             elapsed_time = time.time() - start_time
             logger.info(f"Clone completed in {elapsed_time:.2f} seconds")
-
             self._checkout_branch()
             logger.info(f"Repository cloned successfully")
         except pygit2.GitError as e:
             logger.error(f"Failed to clone repository: {e}")
-            # Clean up partial clone if it exists
             if self.target_dir.exists():
                 shutil.rmtree(self.target_dir)
             raise
 
     def _checkout_branch(self) -> None:
-        """Checkout the specified branch."""
+        """Checkout the specified branch. Raises on failure."""
         try:
             branch_ref = f"refs/heads/{self.remote_branch}"
             if branch_ref in self.repo.references:
+                # Heal stale local branch: reset to remote tip if exists
+                remote_ref = f"refs/remotes/origin/{self.remote_branch}"
+                if remote_ref in self.repo.references:
+                    remote_oid = self.repo.references[remote_ref].target
+                    try:
+                        self._prepare_checkout(remote_oid)
+                        self.repo.references[branch_ref].set_target(remote_oid)
+                        self.repo.set_head(branch_ref)
+                        logger.info(f"Reset and checked out existing branch: {self.remote_branch}")
+                        return
+                    except BranchSwitchBlockedError:
+                        raise
+                    except pygit2.GitError as e:
+                        raise BranchSwitchBlockedError(f"Could not checkout branch {self.remote_branch}: {e}") from e
+                # No remote yet (fresh clone race)
                 self.repo.checkout(branch_ref)
                 logger.info(f"Checked out existing branch: {self.remote_branch}")
                 return
 
-            # Try to create and checkout the branch from origin
             remote_ref = f"refs/remotes/origin/{self.remote_branch}"
             if remote_ref in self.repo.references:
-                remote_branch = self.repo.references[remote_ref]
-                self.repo.create_branch(self.remote_branch, self.repo.get(remote_branch.target))
-                self.repo.checkout(branch_ref)
+                remote_branch_ref = self.repo.references[remote_ref]
+                target_oid = remote_branch_ref.target
+                target_commit = self.repo.get(target_oid)
+                # Prepare worktree before creating branch
+                self._prepare_checkout(target_oid)
+                self.repo.create_branch(self.remote_branch, target_commit)
+                branch_ref_created = f"refs/heads/{self.remote_branch}"
+                self.repo.set_head(branch_ref_created)
                 logger.info(f"Created and checked out branch from remote: {self.remote_branch}")
                 return
 
-            # If we get here, the branch doesn't exist locally or remotely
             logger.warning(f"Branch '{self.remote_branch}' not found locally or remotely. Staying on current branch.")
+        except BranchSwitchBlockedError:
+            raise
         except pygit2.GitError as e:
-            logger.warning(f"Could not checkout branch {self.remote_branch}: {e}")
+            raise BranchSwitchBlockedError(f"Could not checkout branch {self.remote_branch}: {e}") from e
 
     def _recreate_repo(self) -> None:
         """Remove and recreate the repository directory."""
-        logger.info(f"Recreating repository at {self.target_dir}")
-
+        logger.warning(f"Recreating repository at {self.target_dir} - this will preserve backups")
         if self.target_dir.exists():
             shutil.rmtree(self.target_dir)
-
         self.target_dir.mkdir(exist_ok=True, parents=True)
         self._clone_repo()
 
     def _update_repo(self):
-        """Update an existing repository using fetch + merge logic (like git pull).
-        mimics the pull method logic from MichaelBoselowitz's pygit2 "pull" example.
-        """
+        """Update an existing repository using fetch + merge logic."""
         self.repo = pygit2.Repository(str(self.target_dir))
         logger.info("Opened existing repository")
 
         remote_name = "origin"
         branch = self.remote_branch
 
-        # Find the remote
         for remote in self.repo.remotes:
             if remote.name == remote_name:
-                # Fetch from remote
                 logger.info(f"Fetching updates from remote '{remote_name}'")
                 start_time = time.time()
                 remote.fetch()
                 elapsed_time = time.time() - start_time
                 logger.info(f"Fetch completed in {elapsed_time:.2f} seconds")
 
-                # Get remote master id
-                remote_master_id = None
                 try:
                     remote_master_id = self.repo.lookup_reference(
                         f"refs/remotes/{remote_name}/{branch}"
@@ -300,53 +407,78 @@ class GitRepository:
                 if current_branch != self.remote_branch:
                     self._checkout_branch()
 
-                # Ensure local branch exists
                 try:
-                    repo_branch = self.repo.lookup_reference(f"refs/heads/{branch}")
+                    repo_branch_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
                 except KeyError:
                     logger.info(f"Local branch '{branch}' not found. Creating it.")
-                    self.repo.create_branch(branch, self.repo.get(remote_master_id))
-                    repo_branch = self.repo.lookup_reference(f"refs/heads/{branch}")
+                    target_commit = self.repo.get(remote_master_id)
+                    self._prepare_checkout(remote_master_id)
+                    self.repo.create_branch(branch, target_commit)
+                    repo_branch_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
+                    self.repo.set_head(f"refs/heads/{branch}")
 
-                # Get merge analysis results
                 merge_result, _ = self.repo.merge_analysis(remote_master_id)
 
-                # Up to date, do nothing
                 if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
                     logger.info("Repository is already up to date")
+                    # Ensure HEAD is symbolic to correct branch
+                    try:
+                        if self.repo.head.shorthand != branch:
+                            self.repo.set_head(f"refs/heads/{branch}")
+                    except Exception:
+                        pass
                     return
 
-                # We can just fastforward
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
                     logger.info("Performing fast-forward merge")
-                    self.repo.checkout_tree(self.repo.get(remote_master_id))
-                    master_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
-                    master_ref.set_target(remote_master_id)
-                    self.repo.head.set_target(remote_master_id)
+                    # Hygiene: backup any dirty files that overlap the FF diff
+                    blockers = self._collect_blockers(remote_master_id)
+                    if blockers:
+                        self._backup_blockers(blockers)
+                    target_commit = self.repo.get(remote_master_id)
+                    strategy = pygit2.GIT_CHECKOUT_SAFE | pygit2.GIT_CHECKOUT_RECREATE_MISSING
+                    try:
+                        self.repo.checkout_tree(target_commit, strategy=strategy)
+                    except pygit2.GitError as e:
+                        remaining = self.repo.status()
+                        raise BranchSwitchBlockedError(
+                            f"Fast-forward checkout blocked: {e}",
+                            blocked_paths=list(remaining.keys()) if remaining else []
+                        ) from e
+                    # Update branch ref and ensure HEAD symbolic
+                    branch_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
+                    branch_ref.set_target(remote_master_id)
+                    try:
+                        self.repo.set_head(f"refs/heads/{branch}")
+                    except Exception as e:
+                        logger.warning(f"Could not set HEAD to {branch}: {e}")
+                    # Verify not detached
+                    try:
+                        head = self.repo.head
+                        if head.shorthand != branch:
+                            logger.warning(f"HEAD not on {branch} after FF (head={head.name})")
+                    except Exception:
+                        pass
                     logger.info("Fast-forward merge completed")
                     return
 
-                # Normal merge would create conflicts
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
                     logger.error("Pulling remote changes leads to a conflict")
-                    raise Exception("Git conflicts detected during pull operation")
+                    raise BranchSwitchBlockedError("Git conflicts detected during pull operation - branches have diverged")
 
-                # Unknown result
                 else:
                     logger.error(f"Unexpected merge result: {merge_result}")
                     raise AssertionError("Unknown merge analysis result")
 
-        # If we got here, the remote wasn't found
         logger.error(f"Remote '{remote_name}' not found")
-        raise Exception(f"Remote '{remote_name}' not found")
+        raise ExecutionError(f"Remote '{remote_name}' not found")
 
-    def get_remote_branches(self) -> List[str]:
+    def get_remote_branches(self) -> Optional[List[str]]:
         """
         Return list of available branches from remote repo using GitHub API.
-        Falls back to default branch if API request fails.
+        Returns None if API request fails (caller should not invalidate saved branch).
         """
         try:
-            # Extract owner and repo name from URL
             url_parts = self.repo_url.rstrip('/').split('/')
             if self.repo_url.startswith('http'):
                 owner = url_parts[-2]
@@ -354,16 +486,12 @@ class GitRepository:
                 if repo_name.endswith('.git'):
                     repo_name = repo_name[:-4]
             else:
-                # Handle SSH URLs (git@github.com:owner/repo.git)
-                # For git@github.com:test/repo.git, url_parts = ['git@github.com:test', 'repo.git']
-                # owner is in first part after ':', repo_name is last part
                 first_part = url_parts[0]
                 owner = first_part.split(':')[-1]
                 repo_name = url_parts[-1]
                 if repo_name.endswith('.git'):
                     repo_name = repo_name[:-4]
 
-            # API request with timeout
             response = requests.get(
                 f"https://api.github.com/repos/{owner}/{repo_name}/branches",
                 timeout=10
@@ -374,7 +502,7 @@ class GitRepository:
             return branches
         except Exception as e:
             logger.warning(f"Error fetching branches via API: {e}")
-            return ["main", "master"]  # Fallback to common default branches
+            return None
 
 
 class GitRepoManagement:
@@ -397,8 +525,27 @@ class GitRepoManagement:
         self.workdir = Path(workdir) if workdir else None
         self.portable_python_dir = self.workdir / "portable_python" if self.workdir else None
         self.portable_python_path = None
-        self.git_repo = GitRepository(repo_url, self.target_dir, branch)
+        # Venv relocated outside worktree when workdir is available
+        if self.workdir:
+            self.venv_dir = self.workdir / f"{self.target_dir.name}_venv"
+        else:
+            self.venv_dir = None  # use legacy in-tree venv
+        backup_base = self.workdir / "backups" if self.workdir else None
+        self.git_repo = GitRepository(repo_url, self.target_dir, branch, backup_base=backup_base)
         self.venv = None
+
+    def _migrate_legacy_venv(self) -> None:
+        """Move legacy in-tree venv to relocated location if needed."""
+        if self.venv_dir is None:
+            return
+        legacy = self.target_dir / "venv"
+        if legacy.exists() and legacy.is_dir() and not self.venv_dir.exists():
+            try:
+                logger.info(f"Migrating legacy venv {legacy} -> {self.venv_dir}")
+                shutil.move(str(legacy), str(self.venv_dir))
+                logger.info("Legacy venv migrated successfully")
+            except Exception as e:
+                logger.warning(f"Could not migrate legacy venv (will create fresh): {e}")
 
     def setup(self) -> None:
         """
@@ -410,28 +557,41 @@ class GitRepoManagement:
         try:
             logger.info(f"Setting up repository in {self.target_dir}")
 
-            # Check if portable Python exists, install if not
             if self.portable_python_dir and not (self.portable_python_dir / "miniforge").exists():
                 logger.info("Portable Python not found. Installing...")
                 installer = miniforge_portable.PortablePythonInstaller(self.portable_python_dir)
                 installer.install()
+                # Clean up installer archive
+                try:
+                    for pattern in ["*.sh", "*.exe"]:
+                        for f in self.portable_python_dir.glob(pattern):
+                            if f.is_file() and f.stat().st_size > 1024 * 1024:
+                                f.unlink()
+                                logger.info(f"Removed installer archive {f.name}")
+                except Exception as e:
+                    logger.warning(f"Could not clean installer archive: {e}")
 
-            # Set the Python path
             if self.portable_python_dir:
                 container = get_container()
                 self.portable_python_path = self.portable_python_dir / "miniforge" / (
                         "python.exe" if container.system == "Windows" else "bin/python")
 
-            # Clone or update the repository
+            self._migrate_legacy_venv()
+
             self.git_repo.clone_or_update()
 
-            # Setup the virtual environment
-            self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path))
+            # Setup the virtual environment (relocated if available)
+            if self.venv_dir:
+                self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path), venv_dir=self.venv_dir)
+            else:
+                self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path))
             self.venv.create()
             self.venv.install_requirements(self.target_dir / "requirements.txt")
 
             logger.info(f"Repository setup complete")
 
+        except BranchSwitchBlockedError:
+            raise
         except Exception as e:
             raise Exception(f"Repository setup failed: {e}")
 
@@ -456,7 +616,6 @@ class GitRepoManagement:
             logger.error(f"Script not found: {abs_script_path}")
             return None
 
-        # Use the Python from the virtual environment
         python_path = self.venv.get_python_path()
         cmd = [str(python_path), str(abs_script_path)] + script_args
 
@@ -469,17 +628,15 @@ class GitRepoManagement:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1  # Line buffered
+                bufsize=1
             )
 
-            # Create daemon threads to read stdout/stderr
             def stream_reader(stream, prefix):
                 try:
                     for line in iter(stream.readline, ''):
-                        if line:  # Skip empty lines
+                        if line:
                             print(f"{prefix}: {line.strip()}")
                 except (ValueError, IOError) as e:
-                    # Handle pipe closed or other IO errors
                     logger.debug(f"Stream reader stopped: {e}")
 
             stdout_thread = threading.Thread(target=stream_reader,
@@ -492,7 +649,6 @@ class GitRepoManagement:
             stdout_thread.start()
             stderr_thread.start()
 
-            # If timeout is specified, start a watcher thread
             if timeout:
                 def timeout_watcher():
                     start_time = time.time()
@@ -514,15 +670,12 @@ class GitRepoManagement:
             logger.error(f"Failed to run script: {e}")
             return None
 
-    def get_remote_branches(self) -> List[str]:
-        """Fetch list of remote branch names."""
+    def get_remote_branches(self) -> Optional[List[str]]:
+        """Fetch list of remote branch names. Returns None on failure."""
         return self.git_repo.get_remote_branches()
 
 
 if __name__ == "__main__":
-    # Configure logging
-
-    # Example usage
     git_repo_url = "https://github.com/tryiou/xbridge_trading_bots"
     local_target_dir = "xbridge_trading_bots"
     branch = "main"
@@ -530,6 +683,4 @@ if __name__ == "__main__":
     logger.info(f"aio_folder: {container.aio_folder}")
     manager = GitRepoManagement(git_repo_url, local_target_dir, branch, container.aio_folder)
     manager.setup()
-
-    # Example of running a script after setup
     manager.run_script("main_gui.py")
