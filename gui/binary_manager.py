@@ -1,14 +1,22 @@
+import errno
 import logging
 import os
 import shutil
 import queue
 import threading
+from pathlib import Path
 from threading import Thread
 import time
+from typing import Optional
 import customtkinter as ctk
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
+
+try:
+    from watchdog.observers.polling import PollingObserver
+except ImportError:
+    PollingObserver = None  # type: ignore
 
 import widgets_strings
 from gui.binary_frame_manager import BinaryFrameManager
@@ -81,21 +89,157 @@ class BinaryManager:
         self.download_blockdx_thread = None
         self.download_xlite_thread = None
 
-        aio_folder = self.container.aio_folder
-        if aio_folder:
-            self.observer = Observer()
-            self.handler = BinaryFileHandler(self)
-            self.observer.schedule(self.handler, aio_folder, recursive=False)
-            self.observer.start()
-        else:
-            self.observer = None
-            self.handler = None
-
         self.tooltip_manager = self.root_gui.tooltip_manager
         self.file_change_queue = queue.Queue()
-        self.process_file_changes()
         self.last_directory_mtime = 0  # Added tracker
         self._reported_failures: set = set()
+        self._inotify_fallback_active = False
+        self._poll_after_id = None
+
+        aio_folder = self.container.aio_folder
+        self.handler = BinaryFileHandler(self) if aio_folder else None
+        self.observer = self._create_observer(aio_folder)
+
+        self.process_file_changes()
+        # If observer unavailable, ensure periodic mtime poll still updates UI
+        if self.observer is None and aio_folder:
+            # start periodic poll (2000ms) as fallback — mirrors update_all_binary_buttons cadence
+            try:
+                self._poll_after_id = self.root_gui.after(2000, self._poll_aio_folder)
+            except Exception:
+                pass
+
+    def _create_observer(self, aio_folder) -> Optional[object]:
+        """Create file watcher with ENOSPC fallback to PollingObserver (2.0s)."""
+        if not aio_folder or not self.handler:
+            return None
+        # Try inotify first, then polling
+        for cls, name, kwargs in [
+            (Observer, "inotify", {}),
+            (PollingObserver, "polling", {"timeout": 2.0} if PollingObserver else {}),
+        ]:
+            if cls is None:
+                continue
+            obs = None
+            try:
+                obs = cls(**kwargs) if kwargs else cls()
+                obs.schedule(self.handler, aio_folder, recursive=False)
+                obs.start()
+                if name == "polling":
+                    self._inotify_fallback_active = True
+                    logger.warning("Inotify watch limit reached — using PollingObserver (2.0s) fallback")
+                    self._show_enospc_hint()
+                else:
+                    logger.info(f"File watcher started with {name} for {aio_folder}")
+                return obs
+            except OSError as e:
+                # Handle ENOSPC even when wrapped in WatchDogError
+                err_no = getattr(e, "errno", None)
+                cause_no = getattr(getattr(e, "__cause__", None), "errno", None)
+                if err_no == errno.ENOSPC or cause_no == errno.ENOSPC:
+                    logger.warning(f"{name} observer failed: inotify watch limit reached ({e}), trying fallback", exc_info=True)
+                    if obs is not None:
+                        try:
+                            obs.stop()
+                            obs.join(0.5)
+                        except Exception:
+                            pass
+                    continue
+                logger.error(f"Observer {name} failed: {e}", exc_info=True)
+                raise
+            except Exception as e:
+                # Also check for WatchDogError wrapping ENOSPC
+                cause = getattr(e, "__cause__", None)
+                if getattr(e, "errno", None) == errno.ENOSPC or getattr(cause, "errno", None) == errno.ENOSPC:
+                    logger.warning(f"{name} observer failed: inotify watch limit reached ({e}), trying fallback", exc_info=True)
+                    if obs is not None:
+                        try:
+                            obs.stop()
+                            obs.join(0.5)
+                        except Exception:
+                            pass
+                    continue
+                logger.error(f"Observer {name} failed: {e}", exc_info=True)
+                raise
+        # Both failed — will use periodic mtime poll only
+        logger.warning("File watcher unavailable (ENOSPC even for polling) — falling back to periodic mtime polling (2000ms)")
+        self._inotify_fallback_active = True
+        self._show_enospc_hint()
+        return None
+
+    def _poll_aio_folder(self) -> None:
+        """Periodic mtime poll when observer is unavailable (2000ms)."""
+        try:
+            if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                return
+        except Exception:
+            return
+        try:
+            self.check_and_update_aio_folder()
+        except Exception as e:
+            logger.debug(f"Periodic poll failed: {e}")
+        try:
+            self._poll_after_id = self.root_gui.after(2000, self._poll_aio_folder)
+        except Exception:
+            pass
+
+    def stop(self) -> None:
+        """Stop observer cleanly (call from on_close)."""
+        # Cancel periodic poll
+        poll_id = getattr(self, "_poll_after_id", None)
+        if poll_id is not None:
+            try:
+                self.root_gui.after_cancel(poll_id)
+            except Exception:
+                pass
+            self._poll_after_id = None
+        if self.observer:
+            try:
+                self.observer.stop()
+                self.observer.join(1)
+                logger.info("File watcher stopped")
+            except Exception as e:
+                logger.debug(f"Error stopping observer: {e}")
+            self.observer = None
+
+    def _show_enospc_hint(self):
+        """Show one-time copyable hint for ENOSPC with current limit (for #14 dialog)."""
+        try:
+            # Read current limit dynamically
+            cur = "unknown"
+            try:
+                cur = Path("/proc/sys/fs/inotify/max_user_watches").read_text().strip()
+            except Exception:
+                pass
+            cmd = f"echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p  # current {cur}"
+            # Log with copyable command; GUI will also show via error_report if needed
+            logger.warning(f"Inotify limit hit (current {cur}). Fix (click to copy): {cmd}")
+            # Schedule a one-time popup via error_report dialog if GUI ready
+            try:
+                from gui.error_report_dialog import show_error_report
+
+                # Use after to ensure main thread
+                def _show():
+                    try:
+                        show_error_report(
+                            self.root_gui,
+                            app_name="File Watcher",
+                            returncode=28,
+                            command=["inotify", "watch", "limit"],
+                            cwd=self.container.aio_folder,
+                            stderr_text=f"inotify watch limit reached (current {cur})",
+                            executable_path=None,
+                            extra_info=f"Fix (click to copy): {cmd}",
+                        )
+                    except Exception as ex:
+                        logger.debug(f"ENOSPC hint dialog failed: {ex}")
+
+                # Defer slightly to let GUI init
+                self.root_gui.after(1500, _show)
+            except Exception:
+                pass
+        except Exception as e:
+            logger.debug(f"Failed to show ENOSPC hint: {e}")
 
     async def setup(self):
         self.frame_manager = BinaryFrameManager(self)
