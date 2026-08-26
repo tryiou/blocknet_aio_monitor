@@ -585,6 +585,12 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
         # Set up mock container
         self.mock_container = MagicMock()
         self.mock_container.aio_folder = '/aio/path'
+        self.mock_container.conf_data.extra_option_blocknet_core_conf = [
+            {"addnode": "node1.example.com:41412"},
+            {"addnode": "node2.example.com:41412"},
+            {"rpcallowip": "192.168.1.1"},
+            {"addnode": "node3.example.com:41412"}
+        ]
         
         # Mock all external dependencies
         with patch('utilities.bin_handlers.blocknet_handler.retrieve_xb_manifest'), \
@@ -773,10 +779,11 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
 
     def test_check_blocknet_conf_rpcallowip_special_handling(self):
         """Test check_blocknet_conf handles rpcallowip specially."""
-        self.handler.blocknet_conf_local = {'global': {}}
+        self.handler.blocknet_conf_local = {"global": {}}
         self.handler.blocknet_conf_remote = {'global': {'rpcallowip': '192.168.1.1'}}
 
         with patch.object(self.handler, 'parse_blocknet_conf'), \
+                patch.object(self.handler, 'save_blocknet_conf'), \
                 patch('utilities.bin_handlers.blocknet_handler.generate_random_string', return_value='random123'):
             self.handler.check_blocknet_conf()
 
