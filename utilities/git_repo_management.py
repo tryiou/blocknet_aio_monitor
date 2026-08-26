@@ -97,23 +97,89 @@ class VirtualEnvironment:
         self.venv_bin_path = self.venv_dir / self.bin_dir
         logger.info(f"Virtual environment path: {self.venv_bin_path}")
 
-    def create(self) -> None:
-        """Create virtual environment using specified Python interpreter."""
-        if self.venv_bin_path.exists():
-            logger.info("Virtual environment already exists - skipping creation")
-            return
+    def _is_broken(self) -> tuple[bool, str]:
+        """Check if venv is broken (missing files or stale shebang)."""
+        if not self.venv_bin_path.is_dir():
+            if self.venv_dir.exists():
+                return True, "missing bin dir"
+            return False, ""  # not broken — simply doesn't exist yet, create will handle
+        venv_python = self.venv_bin_path / self.python_exe
+        if not venv_python.exists():
+            return True, "missing python"
+        pip_path = self.venv_bin_path / self.pip_exe
+        if not pip_path.exists():
+            return True, "missing pip"
+        # Check pip shebang points to existing interpreter (covers relocated venv)
+        # Windows pip.exe has no shebang — skip
+        if not self.is_windows:
+            try:
+                if pip_path.is_file():
+                    data = pip_path.read_bytes().split(b"\n", 1)[0] if pip_path.stat().st_size < 8192 else b""
+                    if data.startswith(b"#!"):
+                        interp = data[2:].strip().split(b" ")[0].decode(errors="ignore")
+                        if interp and not Path(interp).exists():
+                            return True, f"stale pip shebang -> {interp}"
+                        # Also detect legacy in-tree path after relocation
+                        if b"xbridge_trading_bots/venv" in data and str(self.venv_dir).encode() not in data:
+                            return True, "stale pip shebang (legacy path)"
+            except Exception as e:
+                logger.debug(f"pip shebang check skipped: {e}")
+        # Verify pip is actually runnable via venv python (cheap)
+        try:
+            rc, _, _ = run_command(
+                [str(venv_python), "-m", "pip", "--version"],
+                timeout=10
+            )
+            if rc != 0:
+                return True, "pip not runnable"
+        except Exception as e:
+            return True, f"pip check failed: {e}"
+        return False, ""
 
+    def ensure_healthy(self) -> bool:
+        """Auto-repair broken venv by recreating it. Returns True if recreated."""
+        broken, reason = self._is_broken()
+        if not broken:
+            return False
+        logger.warning(f"Venv broken ({reason}) at {self.venv_dir} — recreating")
+        try:
+            if self.venv_dir.exists():
+                shutil.rmtree(str(self.venv_dir), ignore_errors=True)
+                if self.venv_dir.exists():
+                    logger.error(f"Failed to remove broken venv {self.venv_dir} — still exists")
+                    # don't return, try to recreate anyway (venv --clear may handle)
+        except Exception as e:
+            logger.warning(f"Failed to remove broken venv: {e}")
+        self._create_venv_force()
+        # verify after recreate
+        broken2, reason2 = self._is_broken()
+        if broken2:
+            logger.error(f"Venv still broken after recreate: {reason2}")
+            raise ExecutionError(f"Venv still broken after recreate: {reason2}")
+        return True
+
+    def _resolve_python(self) -> str:
+        """Resolve interpreter for venv creation, fallback to sys.executable."""
+        raw = self.portable_python_path
+        if raw is None or str(raw) == "None" or str(raw).strip() == "":
+            return sys.executable
+        if self.is_darwin and raw:
+            p = Path(str(raw))
+            if not p.exists():
+                raise FileNotFoundError(f"Python not found: {p}")
+            return str(p.resolve())
+        # Linux/Windows: use portable if exists, else fallback
+        p = Path(str(raw))
+        if p.exists():
+            return str(p)
+        logger.warning(f"Python {raw} not found, using {sys.executable}")
+        return sys.executable
+
+    def _create_venv_force(self) -> None:
+        """Force-create venv (no existence check)."""
         logger.info(f"Creating virtual environment at {self.venv_dir}")
         self.venv_dir.parent.mkdir(exist_ok=True, parents=True)
-
-        if self.is_darwin and self.portable_python_path:
-            python_path = Path(self.portable_python_path)
-            if not python_path.exists():
-                raise FileNotFoundError(f"Python not found: {python_path}")
-            real_python_path = python_path.resolve()
-        else:
-            real_python_path = self.portable_python_path
-
+        real_python_path = self._resolve_python()
         try:
             returncode, stdout, stderr = run_command(
                 [str(real_python_path), "-m", "venv", str(self.venv_dir)],
@@ -122,14 +188,38 @@ class VirtualEnvironment:
             if returncode != 0:
                 logger.error(f"venv creation failed: {stderr}")
                 raise ExecutionError(f"Virtual environment creation failed: {stderr}")
-                
             if not self.venv_bin_path.exists():
                 raise ExecutionError("Virtual environment bin directory not created")
-                
             logger.info("Virtual environment created successfully")
         except Exception as e:
             logger.error(f"Failed to create virtual environment: {str(e)}")
             raise
+
+    def create(self) -> None:
+        """Create virtual environment using specified Python interpreter."""
+        # Auto-heal if existing venv is broken (e.g. stale shebang after move)
+        broken, reason = self._is_broken()
+        if self.venv_bin_path.exists():
+            if not broken:
+                logger.info("Virtual environment already exists - skipping creation")
+                return
+            logger.warning(f"Venv exists but broken ({reason}) — recreating")
+            try:
+                shutil.rmtree(str(self.venv_dir), ignore_errors=True)
+                if self.venv_dir.exists():
+                    logger.error(f"Failed to remove broken venv {self.venv_dir} — still exists")
+            except Exception as e:
+                logger.warning(f"Failed to remove broken venv dir: {e}")
+        elif broken:
+            # venv dir exists but bin missing (or other broken) — recreate
+            logger.warning(f"Venv broken ({reason}) at {self.venv_dir} — recreating")
+            try:
+                shutil.rmtree(str(self.venv_dir), ignore_errors=True)
+                if self.venv_dir.exists():
+                    logger.error(f"Failed to remove broken venv {self.venv_dir} — still exists")
+            except Exception as e:
+                logger.warning(f"Failed to remove broken venv dir: {e}")
+        self._create_venv_force()
 
     def install_requirements(self, requirements_path: Path) -> None:
         """
@@ -143,18 +233,41 @@ class VirtualEnvironment:
             return
 
         logger.info("Installing requirements from requirements.txt")
-        pip_path = self.get_pip_path()
-        python_path = self.get_python_path()
-
+        # Prefer python -m pip (shebang-independent) — fixes relocated venv
         try:
-            cmd = [str(pip_path), "install", "-r", str(requirements_path)]
-            returncode, stdout, stderr = run_command(cmd, self.target_dir, timeout=300)
-            if returncode != 0:
-                raise ExecutionError(f"Requirements installation failed: {stderr}")
-            logger.info("Requirements installed successfully")
-        except Exception as e:
-            logger.error(f"Failed to install requirements: {str(e)}")
-            raise
+            python_path = self.get_python_path()
+        except FileNotFoundError as e:
+            # venv broken — try auto-heal once
+            logger.warning(f"Python missing for pip install: {e} — attempting venv repair")
+            if self.ensure_healthy():
+                python_path = self.get_python_path()
+            else:
+                raise
+
+        for attempt in range(2):
+            try:
+                cmd = [str(python_path), "-m", "pip", "install", "-r", str(requirements_path)]
+                returncode, stdout, stderr = run_command(cmd, self.target_dir, timeout=300)
+                if returncode != 0:
+                    raise ExecutionError(f"Requirements installation failed: {stderr}")
+                logger.info("Requirements installed successfully")
+                return
+            except Exception as e:
+                if attempt == 0:
+                    try:
+                        broken, _ = self._is_broken()
+                    except Exception:
+                        broken = False
+                    if broken or isinstance(e, ExecutionError):
+                        logger.warning(f"pip install failed ({e}) — attempting venv repair and retry")
+                        try:
+                            if self.ensure_healthy():
+                                python_path = self.get_python_path()
+                                continue
+                        except Exception as heal_e:
+                            logger.error(f"Venv heal failed: {heal_e}")
+                logger.error(f"Failed to install requirements: {str(e)}")
+                raise
 
     def get_python_path(self) -> str:
         """
@@ -544,6 +657,13 @@ class GitRepoManagement:
                 logger.info(f"Migrating legacy venv {legacy} -> {self.venv_dir}")
                 shutil.move(str(legacy), str(self.venv_dir))
                 logger.info("Legacy venv migrated successfully")
+                # venv is not relocatable due to absolute pip shebangs — heal inline
+                try:
+                    tmp_venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path) if self.portable_python_path else None, venv_dir=self.venv_dir)
+                    if tmp_venv.ensure_healthy():
+                        logger.info("Migrated venv healed after relocation")
+                except Exception as heal_e:
+                    logger.warning(f"Post-migration heal failed (will retry on setup): {heal_e}")
             except Exception as e:
                 logger.warning(f"Could not migrate legacy venv (will create fresh): {e}")
 
@@ -582,9 +702,9 @@ class GitRepoManagement:
 
             # Setup the virtual environment (relocated if available)
             if self.venv_dir:
-                self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path), venv_dir=self.venv_dir)
+                self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path) if self.portable_python_path else None, venv_dir=self.venv_dir)
             else:
-                self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path))
+                self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path) if self.portable_python_path else None)
             self.venv.create()
             self.venv.install_requirements(self.target_dir / "requirements.txt")
 
