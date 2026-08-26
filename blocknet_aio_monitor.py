@@ -323,6 +323,12 @@ class Blocknet_AIO_GUI(ctk.CTk):
     def on_close(self) -> None:
         """Handle application close event."""
         logger.info("Closing application...")
+        # Stop file watcher
+        try:
+            if hasattr(self, 'binary_manager') and hasattr(self.binary_manager, 'stop'):
+                self.binary_manager.stop()
+        except Exception as e:
+            logger.debug(f"Watcher stop error: {e}")
         # Stop proxy if running
         try:
             if hasattr(self, 'xlite_manager') and hasattr(self.xlite_manager, 'reverse_proxy'):
