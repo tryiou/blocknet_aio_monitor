@@ -342,20 +342,27 @@ class TestGitRepository(unittest.TestCase):
         self.assertFalse(Path(self.temp_dir).exists())
 
     def test_checkout_branch_exists(self):
-        """Test checking out existing branch."""
+        """Test checking out existing branch (now resets to remote tip)."""
         mock_repo = MagicMock()
-        mock_repo.references = {"refs/heads/main": True}
+        mock_remote = MagicMock()
+        mock_remote.target = "mock_oid"
+        mock_repo.references = {"refs/heads/main": MagicMock(), "refs/remotes/origin/main": mock_remote}
+        mock_repo.get.return_value = MagicMock()
+        mock_repo.status.return_value = {}
+        # Mock diff to avoid computing changed paths
+        mock_repo.head.peel.return_value.tree = MagicMock()
+        mock_repo.get.return_value.peel.return_value.tree = MagicMock()
+        mock_repo.diff.return_value.deltas = []
         self.repo.repo = mock_repo
 
-        self.repo._checkout_branch()
+        with patch.object(self.repo, '_prepare_checkout'):
+            self.repo._checkout_branch()
 
-        mock_repo.checkout.assert_called_once_with("refs/heads/main")
+        mock_repo.set_head.assert_called()
 
     def test_checkout_branch_from_remote(self):
         """Test checking out branch from remote."""
         mock_repo = MagicMock()
-
-        # Mock the remote reference
         mock_remote_ref_obj = MagicMock()
         mock_remote_ref_obj.target = "mock_target_oid"
         mock_repo.references = {"refs/remotes/origin/main": mock_remote_ref_obj}
@@ -363,12 +370,16 @@ class TestGitRepository(unittest.TestCase):
         mock_repo.get = MagicMock()
         mock_commit_obj = MagicMock()
         mock_repo.get.return_value = mock_commit_obj
+        mock_repo.status.return_value = {}
+        mock_repo.head.peel.return_value.tree = MagicMock()
+        mock_commit_obj.peel.return_value.tree = MagicMock()
+        mock_repo.diff.return_value.deltas = []
 
         self.repo.repo = mock_repo
-        self.repo._checkout_branch()
+        with patch.object(self.repo, '_prepare_checkout'):
+            self.repo._checkout_branch()
 
         mock_repo.create_branch.assert_called_once_with("main", mock_commit_obj)
-        mock_repo.checkout.assert_called_once_with("refs/heads/main")
 
     def test_checkout_branch_not_found(self):
         """Test checking out branch when branch doesn't exist locally or remotely."""
@@ -382,19 +393,22 @@ class TestGitRepository(unittest.TestCase):
         # Verify checkout was not called
         mock_repo.checkout.assert_not_called()
 
-    @patch('pygit2.GitError')
-    def test_checkout_branch_git_error(self, mock_git_error):
-        """Test checking out branch with GitError."""
+    def test_checkout_branch_git_error(self):
+        """Test checking out branch with GitError now raises."""
+        from utilities.git_repo_management import BranchSwitchBlockedError
         mock_repo = MagicMock()
-        mock_repo.references = {"refs/heads/main": True}
-        mock_repo.checkout.side_effect = pygit2.GitError("Checkout failed")
+        mock_repo.references = {"refs/heads/main": MagicMock(), "refs/remotes/origin/main": MagicMock()}
+        mock_repo.references["refs/remotes/origin/main"].target = "oid"
+        mock_repo.get.return_value = MagicMock()
+        mock_repo.status.return_value = {}
+        mock_repo.head.peel.return_value.tree = MagicMock()
+        mock_repo.get.return_value.peel.return_value.tree = MagicMock()
+        mock_repo.diff.return_value.deltas = []
         self.repo.repo = mock_repo
 
-        # Should not raise an exception, just log a warning
-        self.repo._checkout_branch()
-
-        # Verify checkout was called
-        mock_repo.checkout.assert_called_once()
+        with patch.object(self.repo, '_prepare_checkout', side_effect=BranchSwitchBlockedError("blocked")):
+            with self.assertRaises(BranchSwitchBlockedError):
+                self.repo._checkout_branch()
 
     @patch('requests.get')
     def test_get_remote_branches_api_success(self, mock_get):
@@ -414,12 +428,12 @@ class TestGitRepository(unittest.TestCase):
 
     @patch('requests.get')
     def test_get_remote_branches_api_failure(self, mock_get):
-        """Test getting remote branches when API fails."""
+        """Test getting remote branches when API fails returns None."""
         mock_get.side_effect = Exception("API error")
 
         branches = self.repo.get_remote_branches()
 
-        self.assertEqual(branches, ["main", "master"])
+        self.assertIsNone(branches)
 
     @patch('requests.get')
     def test_get_remote_branches_ssh_url(self, mock_get):

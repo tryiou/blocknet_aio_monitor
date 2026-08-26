@@ -47,11 +47,12 @@ class TestXBridgeBotManager(unittest.TestCase):
         self.assertIsNone(self.bot_manager.process)
 
     def test_init_custom_branch(self):
-        """Test initialization with custom branch."""
-        bot_manager = XBridgeBotManager("develop")
-        self.assertEqual(bot_manager.current_branch, "develop")
-        self.assertIsNone(bot_manager.installer_thread)
-        self.assertIsNone(bot_manager.process)
+        """Test initialization with custom branch (no persisted value)."""
+        with patch.object(XBridgeBotManager, '_load_saved_branch', return_value=None):
+            bot_manager = XBridgeBotManager("develop")
+            self.assertEqual(bot_manager.current_branch, "develop")
+            self.assertIsNone(bot_manager.installer_thread)
+            self.assertIsNone(bot_manager.process)
 
     # =========================================================================
     # REPOSITORY EXISTENCE TESTS
@@ -80,11 +81,11 @@ class TestXBridgeBotManager(unittest.TestCase):
             self.assertEqual(branches, ["main", "develop", "feature/test"])
 
     def test_get_available_branches_with_error(self):
-        """Test branch retrieval with error falls back to default."""
+        """Test branch retrieval with error returns None."""
         with patch.object(self.bot_manager.repo_management, 'get_remote_branches') as mock_get_branches:
             mock_get_branches.side_effect = Exception("Network error")
             branches = self.bot_manager.get_available_branches()
-            self.assertEqual(branches, ["main"])
+            self.assertIsNone(branches)
 
     # =========================================================================
     # INSTALL/UPDATE TESTS
@@ -168,22 +169,15 @@ class TestXBridgeBotManager(unittest.TestCase):
             mock_repo_instance.setup.assert_called_once()
 
     def test_do_install_update_with_config_conflict(self):
-        """Test install/update handles config conflict by renaming folder."""
+        """Test install/update handles BranchSwitchBlockedError."""
+        from utilities.git_repo_management import BranchSwitchBlockedError
         with patch('gui.xbridge_bot_manager.GitRepoManagement') as mock_git_repo, \
-                patch('gui.xbridge_bot_manager.logger.warning') as mock_log_warning, \
-                patch.object(self.bot_manager, 'handle_config_folder_rename') as mock_handle:
-            # Mock GitRepoManagement constructor
+                patch('gui.xbridge_bot_manager.logger.error') as mock_log_error:
             mock_repo_instance = MagicMock()
             mock_git_repo.return_value = mock_repo_instance
-            # Simulate config conflict error
-            mock_repo_instance.setup.side_effect = Exception("conflict prevents checkout")
-
-            # Call the actual method
+            mock_repo_instance.setup.side_effect = BranchSwitchBlockedError("blocked")
             self.bot_manager._do_install_update("main")
-
-            # Verify config conflict was detected and handled
-            mock_log_warning.assert_called_with("Detected config conflict during update")
-            mock_handle.assert_called_once()
+            mock_log_error.assert_called()
 
     def test_do_install_update_with_other_error(self):
         """Test install/update handles non-config errors."""
@@ -241,44 +235,18 @@ class TestXBridgeBotManager(unittest.TestCase):
             self.assertFalse(self.bot_manager.deferred_start)
 
     # =========================================================================
-    # CONFIG FOLDER RENAME TESTS
+    # CONFIG FOLDER RENAME REMOVED - replaced by BranchSwitchBlockedError handling
     # =========================================================================
 
     def test_handle_config_folder_rename(self):
-        """Test handling config folder rename."""
-        mock_config_path = MagicMock()
-        mock_config_path.exists.return_value = True
-        self.bot_manager.target_dir_path.__truediv__.return_value = mock_config_path
-
-        with patch('os.rename') as mock_rename, \
-                patch.object(self.bot_manager.repo_management, 'setup') as mock_setup, \
-                patch('gui.xbridge_bot_manager.logger.info') as mock_log_info:
-            self.bot_manager.handle_config_folder_rename()
-
-            mock_config_path.exists.assert_called_once()
-            mock_rename.assert_called_once()
-            mock_setup.assert_called_once()
+        """handle_config_folder_rename was removed."""
+        self.assertFalse(hasattr(self.bot_manager, 'handle_config_folder_rename'))
 
     def test_handle_config_folder_rename_no_config(self):
-        """Test handling config folder rename when no config exists."""
-        mock_config_path = MagicMock()
-        mock_config_path.exists.return_value = False
-        self.bot_manager.target_dir_path.__truediv__.return_value = mock_config_path
-
-        with patch('gui.xbridge_bot_manager.logger.warning') as mock_log_warning:
-            self.bot_manager.handle_config_folder_rename()
-            mock_log_warning.assert_called_once_with("Config directory not found, cannot resolve conflict")
+        self.assertFalse(hasattr(self.bot_manager, 'handle_config_folder_rename'))
 
     def test_handle_config_folder_rename_with_error(self):
-        """Test handling config folder rename with error."""
-        with patch('os.path.exists') as mock_exists, \
-                patch('os.rename') as mock_rename, \
-                patch('gui.xbridge_bot_manager.logger.error') as mock_log_error:
-            mock_exists.return_value = True
-            mock_rename.side_effect = Exception("Permission denied")
-            self.bot_manager.handle_config_folder_rename()
-
-            mock_log_error.assert_called_once()
+        self.assertFalse(hasattr(self.bot_manager, 'handle_config_folder_rename'))
 
     # =========================================================================
     # DELETE LOCAL REPO TESTS

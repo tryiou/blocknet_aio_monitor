@@ -1,23 +1,25 @@
+import json
 import logging
 import os
 import subprocess
 import threading
-import time
-from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, cast
 from subprocess import TimeoutExpired
 
-from utilities.git_repo_management import GitRepoManagement
+from utilities.git_repo_management import BranchSwitchBlockedError, GitRepoManagement
 from utilities.app_container import get_container
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_BOTS_BRANCH = "main"
+SETTINGS_KEY = "xbridge_bots_branch"
 
 
 class XBridgeBotManager:
     """Manages installation and execution of XBridge trading bots."""
     
-    def __init__(self, current_branch: str = "main") -> None:
+    def __init__(self, current_branch: Optional[str] = None) -> None:
         self.author = "tryiou"
         self.repo_name = "xbridge_trading_bots"
         self.repo_url = f"https://github.com/{self.author}/{self.repo_name}"
@@ -25,22 +27,78 @@ class XBridgeBotManager:
         aio_folder = container.aio_folder
         if not aio_folder:
             raise ValueError("AIO folder not configured")
-        self.aio_folder = cast(str, aio_folder)  # Type assertion - __post_init__ ensures it's set
+        self.aio_folder = cast(str, aio_folder)
         self.target_dir_path = Path(self.aio_folder) / "xbridge_trading_bots"
-        self.target_dir = str(self.target_dir_path)  # For GitRepoManagement (expects str)
+        self.target_dir = str(self.target_dir_path)
         self.started = False
-        self.current_branch = current_branch
+        # Resolve startup branch from persisted settings
+        persisted = self._load_saved_branch()
+        self.current_branch = persisted if persisted else (current_branch or DEFAULT_BOTS_BRANCH)
         self.repo_management: Optional[GitRepoManagement] = None
         self.installer_thread: Optional[threading.Thread] = None
         self.process: Optional[subprocess.Popen] = None
-        self.deferred_start = False  # New flag for deferred execution
+        self.deferred_start = False
+        self.last_error: Optional[str] = None
+
+    # -- branch persistence --
+
+    def _settings_path(self) -> Path:
+        return Path(os.path.expandvars(os.path.expanduser(self.aio_folder))) / "aio_settings.json"
+
+    def _load_saved_branch(self) -> Optional[str]:
+        try:
+            p = self._settings_path()
+            if p.exists():
+                data = json.loads(p.read_text())
+                v = data.get(SETTINGS_KEY)
+                if isinstance(v, str) and v.strip():
+                    return v.strip()
+        except Exception as e:
+            logger.warning(f"Could not load saved branch: {e}")
+        return None
+
+    def save_branch(self, branch: str) -> None:
+        if not branch or not branch.strip():
+            return
+        branch = branch.strip()
+        try:
+            p = self._settings_path()
+            data: dict = {}
+            if p.exists():
+                try:
+                    data = json.loads(p.read_text())
+                except Exception:
+                    data = {}
+            data[SETTINGS_KEY] = branch
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(json.dumps(data, indent=2))
+            logger.info(f"Saved bots branch '{branch}' to {p}")
+        except Exception as e:
+            logger.error(f"Failed to save branch '{branch}': {e}")
+
+    def get_saved_branch(self) -> str:
+        return self._load_saved_branch() or DEFAULT_BOTS_BRANCH
+
+    def resolve_startup_branch(self, remote_branches: Optional[List[str]]) -> str:
+        """Return persisted branch if it exists on remote, else default."""
+        saved = self._load_saved_branch()
+        if not saved:
+            return DEFAULT_BOTS_BRANCH
+        if remote_branches is None:
+            # API failure: keep saved (don't invalidate)
+            return saved
+        if saved in remote_branches:
+            return saved
+        logger.warning(f"Saved branch '{saved}' not on remote {remote_branches} -> fallback to {DEFAULT_BOTS_BRANCH}")
+        self.save_branch(DEFAULT_BOTS_BRANCH)
+        return DEFAULT_BOTS_BRANCH
 
     def repo_exists(self) -> bool:
         """Check if bot repository exists locally."""
         return self.target_dir_path.exists() and (self.target_dir_path / ".git").is_dir()
 
-    def get_available_branches(self) -> List[str]:
-        """Get list of available branches from remote."""
+    def get_available_branches(self) -> Optional[List[str]]:
+        """Get list of available branches from remote. Returns None on failure."""
         try:
             if self.repo_management is None:
                 self.repo_management = GitRepoManagement(
@@ -49,10 +107,13 @@ class XBridgeBotManager:
                     branch=self.current_branch,
                     workdir=self.aio_folder
                 )
-            return self.repo_management.get_remote_branches() or ["main"]
+            result = self.repo_management.get_remote_branches()
+            if result is None:
+                return None
+            return result or [DEFAULT_BOTS_BRANCH]
         except Exception as e:
             logger.error(f"Error fetching branches: {e}", exc_info=True)
-            return ["main"]
+            return None
 
     def install_or_update(self, branch: str) -> None:
         """Install or update repository from specified branch."""
@@ -62,6 +123,9 @@ class XBridgeBotManager:
         if not branch:
             logger.error("Invalid branch name: empty string")
             return
+
+        # Persist user choice immediately (even before install succeeds)
+        self.save_branch(branch)
 
         logger.info(f"Starting install/update for branch: {branch}")
         self.installer_thread = threading.Thread(
@@ -75,6 +139,15 @@ class XBridgeBotManager:
 
     def _do_install_update(self, branch: str) -> None:
         """Implementation of repository installation/update."""
+        # Detect broken state before switch (for post-repair)
+        try:
+            from utilities.repo_repair import detect_broken_state, repair_broken_worktree
+            broken_info = detect_broken_state(self.target_dir_path)
+            has_broken = broken_info.get("broken", False)
+        except Exception:
+            has_broken = False
+            broken_info = {}
+
         try:
             logger.info(f"Starting install/update for {branch}")
             self.repo_management = GitRepoManagement(
@@ -90,47 +163,46 @@ class XBridgeBotManager:
 
             logger.info(f"Setting up repository...")
             self.repo_management.setup()
+
+            # Post-repair: archive orphan config_bak_* and restore user configs verbatim
+            if has_broken:
+                try:
+                    from utilities.repo_repair import repair_broken_worktree
+                    report = repair_broken_worktree(
+                        self.target_dir_path,
+                        aio_folder=Path(self.aio_folder),
+                        branch=branch,
+                    )
+                    logger.info(f"Repair completed: {report}")
+                except Exception as repair_e:
+                    logger.error(f"Post-repair failed: {repair_e}", exc_info=True)
+
+            # Success: truthfully record branch
             self.current_branch = branch
+            self.save_branch(branch)
+            self.last_error = None
             logger.info(f"Successfully updated repository to branch: {branch}")
+        except BranchSwitchBlockedError as e:
+            self.last_error = str(e)
+            logger.error(f"Branch switch blocked: {e} blocked_paths={getattr(e, 'blocked_paths', [])}", exc_info=True)
+            self.installer_thread = None
+            self.deferred_start = False
+            return
         except Exception as e:
+            self.last_error = str(e)
+            logger.error(f"Repository update failed: {str(e)}", exc_info=True)
             logger.debug(f"Repository URL: {self.repo_url}")
             logger.debug(f"Target directory: {self.target_dir}")
             logger.debug(f"Branch: {branch}")
-            if "conflict prevents checkout" in str(e) or "conflicts prevent checkout" in str(e):
-                logger.warning("Detected config conflict during update")
-                self.handle_config_folder_rename()
-            else:
-                logger.error(f"Repository update failed: {str(e)}", exc_info=True)
             self.installer_thread = None
-            self.deferred_start = False  # Reset deferred flag on failure   
+            self.deferred_start = False
+            return
         finally:
-            # Start execution if flag was set
             if self.deferred_start:
                 self.deferred_start = False
-                if self.repo_management:  # Only start if installation succeeded
+                if self.repo_management and self.last_error is None:
                     logger.debug("Triggering deferred execution post-install")
                     self._start_execution()
-
-    def handle_config_folder_rename(self) -> None:
-        """Resolve config conflicts by renaming folder."""
-        config_path = self.target_dir_path / "config"
-        if not config_path.exists():
-            logger.warning("Config directory not found, cannot resolve conflict")
-            return
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        config_bak_path = self.target_dir_path / f"config_bak_{timestamp}"
-
-        try:
-            os.rename(str(config_path), str(config_bak_path))
-            logger.info(f"Renamed config to resolve conflict: {config_bak_path}")
-            
-            if self.repo_management:
-                logger.info("Retrying setup after config rename")
-                self.repo_management.setup()
-                logger.info("Setup completed after conflict resolution")
-        except Exception as e:
-            logger.error(f"Failed to resolve config conflict: {str(e)}")
 
     def delete_local_repo(self) -> None:
         """Delete local repository."""
@@ -143,7 +215,8 @@ class XBridgeBotManager:
             logger.info(f"Deleting repository at: {self.target_dir}")
             shutil.rmtree(self.target_dir)
             self.repo_management = None
-            self.current_branch = "main"
+            self.current_branch = DEFAULT_BOTS_BRANCH
+            self.save_branch(DEFAULT_BOTS_BRANCH)
             logger.info("Repository deleted successfully")
         except Exception as e:
             logger.error(f"Repository delete failed: {str(e)}", exc_info=True)
@@ -153,7 +226,6 @@ class XBridgeBotManager:
         logger.info("Toggling bot execution")
         use_branch = branch or self.current_branch
         
-        # Check if installation in progress and defer execution
         if self.installer_thread and self.installer_thread.is_alive():
             logger.info("Deferring execution until installation completes")
             self.deferred_start = True
@@ -205,7 +277,7 @@ class XBridgeBotManager:
         try:
             self.process.terminate()
             try:
-                self.process.wait(timeout=10)  # 10 second timeout
+                self.process.wait(timeout=10)
             except TimeoutExpired:
                 logger.warning("Process not terminating, forcing kill")
                 self.process.kill()
