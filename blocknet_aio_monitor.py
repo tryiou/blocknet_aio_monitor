@@ -1,19 +1,74 @@
 import asyncio
 import logging
 import os
+import platform
 import signal
+import sys
 
-import customtkinter as ctk
-from PIL import Image
+# Early environment validation before Tk imports (issue #26: no console debugging)
+try:
+    from utilities.environment import validate_or_exit, show_startup_error
 
-import widgets_strings
-from gui.binary_manager import BinaryManager
-from gui.blockdx_manager import BlockDXManager
-from gui.blocknet_manager import BlocknetManager
-from gui.tooltip_manager import TooltipManager
-from gui.xlite_manager import XliteManager
-from utilities.app_container import get_container
-from utilities import utils
+    validate_or_exit()
+except SystemExit:
+    raise
+except Exception as e:
+    # Fallback: log and continue, later imports will show dialog
+    logging.getLogger(__name__).error(f"Environment validation failed: {e}", exc_info=True)
+
+# GUI imports — wrapped to show native dialog if Tk/pygit2 missing
+try:
+    import customtkinter as ctk
+    from PIL import Image
+except Exception as e:
+    try:
+        from utilities.environment import show_startup_error, _current_py_mm, _tk_fix_commands
+
+        py_mm = _current_py_mm()
+        tk_cmds = _tk_fix_commands()
+        details = (
+            f"Failed to import GUI library: {e}\n\n"
+            f"System: {platform.system()} {platform.machine()} / Python {platform.python_version()}\n\n"
+            "Fix — click to copy:\n" + "\n".join(f"  {c}" for c in tk_cmds)
+        )
+        show_startup_error(
+            "Missing GUI dependency",
+            f"Failed to import GUI library: {e}",
+            details,
+        )
+    except Exception:
+        print(f"Failed to import GUI library: {e}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    import widgets_strings
+    from gui.binary_manager import BinaryManager
+    from gui.blockdx_manager import BlockDXManager
+    from gui.blocknet_manager import BlocknetManager
+    from gui.tooltip_manager import TooltipManager
+    from gui.xlite_manager import XliteManager
+    from utilities.app_container import get_container
+    from utilities import utils
+except Exception as e:
+    try:
+        from utilities.environment import show_startup_error, _current_py_mm
+
+        py_mm = _current_py_mm()
+        details = (
+            f"Failed to load application modules: {e}\n\n"
+            f"System: {platform.system()} {platform.machine()} / Python {platform.python_version()} ({sys.executable})\n\n"
+            f"Try recreating venv: {sys.executable} -m venv venv && {sys.executable} -m pip install -r requirements.txt\n"
+            f"Or with versioned Python: python{py_mm} -m venv venv\n"
+            f"Report: https://github.com/tryiou/blocknet_aio_monitor/issues/new"
+        )
+        show_startup_error(
+            "Startup failed",
+            f"Failed to load application modules: {e}",
+            details,
+        )
+    except Exception:
+        print(f"Failed to load modules: {e}", file=sys.stderr)
+    sys.exit(1)
 
 # Create or get the root logger
 logger = logging.getLogger()
