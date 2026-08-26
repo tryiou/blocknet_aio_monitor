@@ -136,8 +136,9 @@ class TestVirtualEnvironment(unittest.TestCase):
         self.assertEqual(venv.python_exe, "python")
         self.assertEqual(venv.pip_exe, "pip")
 
+    @patch.object(VirtualEnvironment, '_is_broken', return_value=(False, ""))
     @patch('utilities.git_repo_management.run_command')
-    def test_create_already_exists(self, mock_run):
+    def test_create_already_exists(self, mock_run, mock_broken):
         """Test creation when venv already exists."""
         # Create fake venv directory
         venv_bin_path = Path(self.temp_dir) / "venv" / "bin"
@@ -146,20 +147,22 @@ class TestVirtualEnvironment(unittest.TestCase):
         self.venv.create()
         mock_run.assert_not_called()
 
+    @patch.object(VirtualEnvironment, '_is_broken', return_value=(False, ""))
     @patch('utilities.git_repo_management.run_command')
     @patch.object(Path, 'exists')
     @patch.object(Path, 'mkdir')
-    def test_create_success(self, mock_mkdir, mock_exists, mock_run):
+    def test_create_success(self, mock_mkdir, mock_exists, mock_run, mock_broken):
         """Test successful venv creation."""
         mock_run.return_value = (0, "success", "")
-        mock_exists.side_effect = [False, True]  # venv_bin_path doesn't exist, then does
+        mock_exists.side_effect = [False, True, True]  # venv_bin_path doesn't exist, then does (extra buffer)
 
         self.venv.create()
         mock_run.assert_called_once()
 
+    @patch.object(VirtualEnvironment, '_is_broken', return_value=(False, ""))
     @patch('utilities.git_repo_management.run_command')
     @patch.object(Path, 'exists')
-    def test_create_bin_dir_not_created(self, mock_exists, mock_run):
+    def test_create_bin_dir_not_created(self, mock_exists, mock_run, mock_broken):
         """Test venv creation when bin directory is not created."""
         mock_run.return_value = (0, "success", "")
         mock_exists.return_value = False  # venv_bin_path never exists
@@ -169,11 +172,12 @@ class TestVirtualEnvironment(unittest.TestCase):
 
         self.assertIn("bin directory not created", str(context.exception))
 
+    @patch.object(VirtualEnvironment, '_is_broken', return_value=(False, ""))
     @patch('sys.platform', 'darwin')
     @patch('utilities.git_repo_management.run_command')
     @patch.object(Path, 'exists')
     @patch.object(Path, 'resolve')
-    def test_create_darwin_portable_python(self, mock_resolve, mock_exists, mock_run):
+    def test_create_darwin_portable_python(self, mock_resolve, mock_exists, mock_run, mock_broken):
         """Test venv creation on Darwin with portable Python."""
         portable_path = Path(self.temp_dir) / "portable_python"
         portable_path.mkdir()
@@ -182,7 +186,7 @@ class TestVirtualEnvironment(unittest.TestCase):
         # First call: venv_bin_path doesn't exist (check before creation)
         # Second call: portable_python_path exists (for Darwin check)
         # Third call: venv_bin_path exists (check after creation)
-        mock_exists.side_effect = [False, True, True]
+        mock_exists.side_effect = [False, True, True, True]
         mock_run.return_value = (0, "success", "")
 
         venv = VirtualEnvironment(Path(self.temp_dir), str(portable_path))
@@ -281,6 +285,149 @@ class TestVirtualEnvironment(unittest.TestCase):
         """Test getting pip path when it doesn't exist."""
         with self.assertRaises(FileNotFoundError):
             self.venv.get_pip_path()
+
+    @patch('utilities.git_repo_management.run_command', return_value=(0, "pip 1.0", ""))
+    def test_is_broken_healthy(self, mock_run):
+        """Test _is_broken returns False for healthy venv."""
+        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        (venv_bin / "python").touch()
+        pip = venv_bin / "pip"
+        pip.write_text(f"#!{venv_bin / 'python'}\nimport pip\n")
+        pip.chmod(0o755)
+        broken, reason = self.venv._is_broken()
+        self.assertFalse(broken)
+
+    def test_is_broken_missing_pip(self):
+        """Test _is_broken detects missing pip."""
+        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        (venv_bin / "python").touch()
+        # no pip
+        broken, reason = self.venv._is_broken()
+        self.assertTrue(broken)
+        self.assertIn("missing pip", reason)
+
+    def test_is_broken_missing_python(self):
+        """Test _is_broken detects missing python."""
+        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        # no python, no pip
+        broken, reason = self.venv._is_broken()
+        self.assertTrue(broken)
+        self.assertIn("missing python", reason)
+
+    def test_is_broken_stale_interpreter_missing(self):
+        """Test _is_broken detects pip shebang with missing interpreter."""
+        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        (venv_bin / "python").touch()
+        pip = venv_bin / "pip"
+        pip.write_text("#!/tmp/other/venv/bin/python\n")
+        pip.chmod(0o755)
+        ve2 = VirtualEnvironment(Path(self.temp_dir), venv_dir=Path(self.temp_dir) / "venv")
+        broken2, reason2 = ve2._is_broken()
+        self.assertTrue(broken2)
+        self.assertIn("stale pip shebang", reason2)
+
+    def test_is_broken_stale_legacy_path(self):
+        """Test _is_broken detects legacy xbridge_trading_bots/venv path after relocation."""
+        venv_bin = Path(self.temp_dir) / "relocated_venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        (venv_bin / "python").touch()
+        pip = venv_bin / "pip"
+        pip.write_text("#!/home/tryou/.AIO_Blocknet/xbridge_trading_bots/venv/bin/python\n")
+        pip.chmod(0o755)
+        ve = VirtualEnvironment(Path(self.temp_dir), venv_dir=Path(self.temp_dir) / "relocated_venv")
+        broken, reason = ve._is_broken()
+        self.assertTrue(broken)
+        self.assertIn("stale pip shebang", reason)
+
+    def test_is_broken_pip_not_runnable(self):
+        """Test _is_broken detects pip not runnable via python -m pip."""
+        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        (venv_bin / "python").touch()
+        pip = venv_bin / "pip"
+        pip.write_text(f"#!{venv_bin / 'python'}\n")
+        pip.chmod(0o755)
+        with patch('utilities.git_repo_management.run_command', return_value=(1, "", "error")):
+            broken, reason = self.venv._is_broken()
+            self.assertTrue(broken)
+            self.assertIn("pip not runnable", reason)
+
+    def test_is_broken_missing_bin_dir(self):
+        """Test _is_broken detects venv dir exists but bin missing."""
+        venv_dir = Path(self.temp_dir) / "venv"
+        venv_dir.mkdir(parents=True)
+        # no bin subdir, but venv_dir exists -> should be broken
+        ve = VirtualEnvironment(Path(self.temp_dir), venv_dir=venv_dir)
+        broken, reason = ve._is_broken()
+        self.assertTrue(broken)
+        self.assertIn("missing bin", reason)
+
+    @patch('utilities.git_repo_management.run_command', return_value=(0, "pip 1.0", ""))
+    @patch('shutil.rmtree')
+    @patch.object(VirtualEnvironment, '_create_venv_force')
+    def test_ensure_healthy_recreates_when_broken(self, mock_create, mock_rm, mock_run):
+        """Test ensure_healthy recreates broken venv."""
+        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        # missing pip -> broken
+        (venv_bin / "python").touch()
+        # mock _is_broken to sequence: first broken, then healthy after create
+        with patch.object(VirtualEnvironment, '_is_broken', side_effect=[(True, "missing pip"), (False, "")]):
+            recreated = self.venv.ensure_healthy()
+            self.assertTrue(recreated)
+            mock_create.assert_called_once()
+
+    @patch.object(VirtualEnvironment, '_is_broken', side_effect=[(True, "stale pip shebang"), (False, "")])
+    @patch('shutil.rmtree')
+    def test_create_recreates_when_broken(self, mock_rm, mock_broken):
+        """Test create() recreates when existing venv is broken."""
+        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin.mkdir(parents=True)
+        (venv_bin / "python").touch()
+        (venv_bin / "pip").touch()
+        with patch.object(VirtualEnvironment, '_create_venv_force') as mock_force:
+            self.venv.create()
+            mock_force.assert_called_once()
+            mock_rm.assert_called()
+
+    @patch('utilities.git_repo_management.run_command')
+    @patch.object(Path, 'exists', return_value=True)
+    def test_install_requirements_uses_python_m_pip(self, mock_exists, mock_run):
+        """Test install_requirements uses python -m pip (shebang-independent)."""
+        req_file = Path(self.temp_dir) / "requirements.txt"
+        req_file.write_text("pytest\n")
+        # mock python path exists and run_command success
+        mock_run.return_value = (0, "success", "")
+        with patch.object(VirtualEnvironment, 'get_python_path', return_value="/fake/python"):
+            with patch.object(VirtualEnvironment, 'get_pip_path', return_value="/fake/pip"):
+                # ensure _is_broken not triggered
+                with patch.object(VirtualEnvironment, '_is_broken', return_value=(False, "")):
+                    self.venv.install_requirements(req_file)
+                    # should call python -m pip, not direct pip
+                    called_cmd = mock_run.call_args[0][0]
+                    self.assertIn("-m", called_cmd)
+                    self.assertIn("pip", called_cmd)
+                    self.assertEqual(called_cmd[0], "/fake/python")
+
+    @patch('utilities.git_repo_management.run_command')
+    def test_install_requirements_heals_on_failure(self, mock_run):
+        """Test install_requirements retries after venv heal on ExecutionError."""
+        req_file = Path(self.temp_dir) / "requirements.txt"
+        req_file.write_text("pytest\n")
+        # first call raises ExecutionError (simulates pip not found), second succeeds
+        mock_run.side_effect = [ExecutionError("Command not found: pip"), (0, "success", "")]
+        with patch.object(VirtualEnvironment, 'get_python_path', side_effect=["/fake/python", "/fake/python2"]):
+            with patch.object(VirtualEnvironment, '_is_broken', return_value=(True, "stale")):
+                with patch.object(VirtualEnvironment, 'ensure_healthy', return_value=True):
+                    self.venv.install_requirements(req_file)
+                    self.assertEqual(mock_run.call_count, 2)
+                    # second call should use healed python path
+                    second_cmd = mock_run.call_args_list[1][0][0]
+                    self.assertEqual(second_cmd[0], "/fake/python2")
 
 
 class TestGitRepository(unittest.TestCase):
