@@ -56,7 +56,9 @@ class ConfigManager:
                 ("Linux",
                  "riscv64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-riscv64-linux-gnu.tar.gz",
                 ("Darwin",
-                 "x86_64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz"
+                 "x86_64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz",
+                ("Darwin",
+                 "arm64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz"
             },
             'blockdx_releases_urls': {
                 ("Windows",
@@ -64,14 +66,17 @@ class ConfigManager:
                 ("Linux",
                  "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-linux-x64.tar.gz",
                 ("Darwin",
-                 "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg"
+                 "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg",
+                ("Darwin",
+                 "arm64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg"
             },
             'xlite_releases_urls': {
                 ("Windows",
                  "AMD64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip",
                 ("Linux",
                  "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz",
-                ("Darwin", "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg"
+                ("Darwin", "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg",
+                ("Darwin", "arm64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg"
             },
             'blocknet_default_paths': {
                 "Windows": "%appdata%\\Blocknet",
@@ -111,7 +116,8 @@ class ConfigManager:
             'xlite_daemon_bin_name': {
                 ("Linux", "x86_64"): "xlite-daemon-linux64",
                 ("Windows", "AMD64"): "xlite-daemon-win64.exe",
-                ("Darwin", "x86_64"): "xlite-daemon-osx64"
+                ("Darwin", "x86_64"): "xlite-daemon-osx64",
+                ("Darwin", "arm64"): "xlite-daemon-osx64"
             },
             'blocknet_bin_path': ["blocknet-4.4.1", "bin"],
             'blockdx_bin_path': {
@@ -242,11 +248,26 @@ class ConfigManager:
         value = self.config[key]
         if isinstance(value, dict):
             if current_system_key in value:
-                return value[current_system_key]
-            elif self.system in value:
-                return value[self.system]
-            else:
-                return None
+                v = value[current_system_key]
+                if v is not None and v != "":
+                    return v
+            # Rosetta fallback for Darwin arm64 -> x86_64
+            if self.system == "Darwin" and self.machine == "arm64":
+                fallback = (self.system, "x86_64")
+                if fallback in value and value[fallback] not in (None, ""):
+                    logger.info(f"Using Rosetta fallback {fallback} for {current_system_key} key={key}")
+                    return value[fallback]
+            # Alias aarch64 <-> arm64
+            alias_map = {"aarch64": "arm64", "arm64": "aarch64"}
+            if self.machine in alias_map:
+                alias_key = (self.system, alias_map[self.machine])
+                if alias_key in value and value[alias_key] not in (None, ""):
+                    return value[alias_key]
+            if self.system in value:
+                v = value[self.system]
+                if v is not None and v != "":
+                    return v
+            return None
         return value
 
     def _set_system_value(self, key, value):
@@ -254,8 +275,8 @@ class ConfigManager:
         current_system_key = (self.system, self.machine)
         
         if key in SYSTEM_SPECIFIC_KEYS:
-            # If value is None or empty, skip and keep template default
-            if value is None:
+            # If value is None or empty string, skip and keep template default (avoids persisting null/empty)
+            if value is None or (isinstance(value, str) and not value.strip()):
                 return
             
             # Check if the CURRENT config value is corrupted, not the new value
@@ -267,7 +288,7 @@ class ConfigManager:
                 return
             
             # Handle string that was supposed to be a list (YAML corruption)
-            if isinstance(current_value, (list, tuple)) and isinstance(current_value, str):
+            if isinstance(value, str) and isinstance(current_value, (list, tuple)):
                 logger.warning(f"Corrupted config for {key}, restoring from template")
                 return
             
