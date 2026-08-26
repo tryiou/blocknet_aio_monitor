@@ -244,7 +244,15 @@ class XliteHandler(BaseBinUtil):
         self.terminate_processes(self.xlite_daemon_pids, "Xlite-daemon")
 
     def download_xlite_bin(self):
-        url = self.container.conf_data.xlite_releases_urls.get((self.container.system, self.container.machine))
+        # Use container's Rosetta-aware URL (supports Darwin arm64 fallback to x86_64)
+        url = self.container.xlite_release_url
+        if url is None:
+            # Fallback to direct dict for edge cases, with alias handling
+            from utilities.app_container import _get_value_from_config
+
+            url = _get_value_from_config(
+                self.container.conf_data.xlite_releases_urls, self.container.system, self.container.machine
+            )
         if url is None:
             raise ValueError(f"Unsupported OS or architecture {self.container.system} {self.container.machine}")
 

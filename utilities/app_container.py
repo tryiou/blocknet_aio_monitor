@@ -64,11 +64,30 @@ def _get_value_from_config(config_dict, system: str, machine: str) -> Optional[A
     # Try (system, machine) tuple key first
     key = (system, machine)
     value = config_dict.get(key)
-    if value:
+    if value is not None and value != "":
         return value
     
+    # Rosetta fallback for Darwin arm64 -> x86_64
+    if system == "Darwin" and machine == "arm64":
+        fallback = (system, "x86_64")
+        fv = config_dict.get(fallback)
+        if fv not in (None, ""):
+            logger.info(f"Using Rosetta fallback {fallback} for {(system, machine)}")
+            return fv
+    
+    # Alias aarch64 <-> arm64
+    alias_map = {"aarch64": "arm64", "arm64": "aarch64"}
+    if machine in alias_map:
+        alias_key = (system, alias_map[machine])
+        av = config_dict.get(alias_key)
+        if av not in (None, ""):
+            return av
+    
     # Try system-only key
-    return config_dict.get(system)
+    v = config_dict.get(system)
+    if v not in (None, ""):
+        return v
+    return None
 
 
 @dataclass

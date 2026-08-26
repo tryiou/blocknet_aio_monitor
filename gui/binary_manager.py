@@ -421,7 +421,10 @@ class BinaryManager:
         if app_info["is_dir"] and os.path.isdir(full_path):
             return app_info["dir_prefix"] in base_name
         elif not app_info["is_dir"]:
-            return app_info["darwin_file"] in base_name
+            darwin_file = app_info.get("darwin_file")
+            if not darwin_file:
+                return False
+            return darwin_file in base_name
         return False
 
     def check_and_update_aio_folder(self) -> None:
@@ -493,7 +496,11 @@ class BinaryManager:
                 self._log_incorrect_target(full_path)
         elif not app_info["is_dir"] and os.path.isfile(full_path):
             # File check for Darwin (macOS) for blockdx and xlite
-            if app_info["darwin_file"] in item:
+            darwin_file = app_info.get("darwin_file")
+            if not darwin_file:
+                self._log_incorrect_target(full_path)
+                return
+            if darwin_file in item:
                 app_info["found"] = True
             else:
                 self._log_incorrect_target(full_path)

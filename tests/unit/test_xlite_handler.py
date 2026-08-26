@@ -179,6 +179,7 @@ class TestXliteHandler(unittest.TestCase):
         self.mock_container.machine = 'x86_64'
         # Ensure no release URL is configured for this unsupported OS
         self.mock_conf_data.xlite_releases_urls.pop(('UnsupportedOS', 'x86_64'), None)
+        self.mock_container.xlite_release_url = None
 
         handler = XliteHandler(self.mock_container)
 
