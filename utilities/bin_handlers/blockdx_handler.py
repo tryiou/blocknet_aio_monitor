@@ -133,9 +133,13 @@ class BlockDXHandler(BaseBinUtil):
                 cwd = os.path.dirname(self.executable_path)
 
             self.blockdx_process = self.start_process(command, cwd=cwd)
+            # also set generic process for BaseBinUtil compatibility
+            self.process = self.blockdx_process
             logger.info(f"Started Blockdx process with PID {self.blockdx_process.pid}: {command}")
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error: {e}", exc_info=True)
+            # re-raise so BinaryManager can show copy-pasteable report (issue #14)
+            raise
 
     def close_blockdx(self):
         if self.blockdx_process:

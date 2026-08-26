@@ -224,10 +224,11 @@ class XliteHandler(BaseBinUtil):
                 else:
                     logger.warning(f"Environment variable string '{env_var_str}' does not contain '='. Skipping.")
             self.xlite_process = self.start_process(command, cwd=cwd, env_vars=parsed_env_vars)
+            self.process = self.xlite_process
             logger.info(f"Started Xlite process with PID {self.xlite_process.pid}: {command}")
         except Exception as e:
             logger.error(f"Error starting Xlite process: {e}\n{traceback.format_exc()}")
-            # logger.error(f"Error AA: {e}")
+            raise
 
     def close_xlite(self):
         if self.xlite_process:

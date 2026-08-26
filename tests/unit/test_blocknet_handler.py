@@ -1014,12 +1014,20 @@ class TestBlocknetHandlerBootstrap(unittest.TestCase):
 
     def test_download_blocknet_bin_unsupported(self):
         """Test downloading blocknet binary on unsupported platform."""
+        orig_system = self.handler.container.system
+        orig_machine = self.handler.container.machine
+        orig_url = self.handler.container.blocknet_release_url
         self.handler.container.system = 'Unsupported'
         self.handler.container.machine = 'x86_64'
         self.handler.container.blocknet_release_url = None
 
-        with self.assertRaises(ValueError):
-            self.handler.download_blocknet_bin()
+        try:
+            with self.assertRaises(ValueError):
+                self.handler.download_blocknet_bin()
+        finally:
+            self.handler.container.system = orig_system
+            self.handler.container.machine = orig_machine
+            self.handler.container.blocknet_release_url = orig_url
 
 
 class TestBlocknetHandlerRPC(unittest.TestCase):

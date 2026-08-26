@@ -311,7 +311,9 @@ class TestBinaryManager(unittest.TestCase):
             stop_func=self.mock_root_gui.blocknet_manager.utility.close_blocknet,
             start_func=self.mock_root_gui.blocknet_manager.utility.start_blocknet,
             button=self.binary_manager.frame_manager.blocknet_start_close_button,
-            disable_flag='disable_start_blocknet_button'
+            disable_flag='disable_start_blocknet_button',
+            app_name='Blocknet Core',
+            handler=self.mock_root_gui.blocknet_manager.utility
         )
 
     @patch.object(BinaryManager, '_start_or_close_binary')
@@ -325,7 +327,9 @@ class TestBinaryManager(unittest.TestCase):
             stop_func=self.mock_root_gui.blockdx_manager.utility.close_blockdx,
             start_func=self.mock_root_gui.blockdx_manager.utility.start_blockdx,
             button=self.binary_manager.frame_manager.blockdx_start_close_button,
-            disable_flag='disable_start_blockdx_button'
+            disable_flag='disable_start_blockdx_button',
+            app_name='Block-DX',
+            handler=self.mock_root_gui.blockdx_manager.utility
         )
 
     @patch.object(BinaryManager, '_start_or_close_binary')
@@ -340,6 +344,8 @@ class TestBinaryManager(unittest.TestCase):
         self.assertEqual(kwargs['stop_func'], self.mock_root_gui.xlite_manager.utility.close_xlite)
         self.assertEqual(kwargs['button'], self.binary_manager.frame_manager.xlite_toggle_execution_button)
         self.assertEqual(kwargs['disable_flag'], 'disable_start_xlite_button')
+        self.assertEqual(kwargs['app_name'], 'XLite')
+        self.assertEqual(kwargs['handler'], self.mock_root_gui.xlite_manager.utility)
         start_func_lambda = kwargs['start_func']
         start_func_lambda()
         self.mock_root_gui.xlite_manager.utility.start_xlite.assert_called_once_with(

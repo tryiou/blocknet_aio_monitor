@@ -524,7 +524,9 @@ class TestXliteHandler(unittest.TestCase):
         with patch('os.path.exists', return_value=True), \
                 patch.object(self.handler, 'start_process', side_effect=Exception("Test error")), \
                 patch('utilities.bin_handlers.xlite_handler.logger.error') as mock_error:
-            self.handler.start_xlite()
+            with self.assertRaises(Exception) as ctx:
+                self.handler.start_xlite()
+            self.assertEqual(str(ctx.exception), "Test error")
             mock_error.assert_called()
 
     def test_close_xlite_with_process(self):
