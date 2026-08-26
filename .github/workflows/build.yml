@@ -14,28 +14,36 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-ubuntu:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v3
-        if: github.event.pull_request.draft == false
+      - uses: actions/checkout@v4
 
       - name: Set VERSION_NUMBER
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF: ${{ github.ref }}
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "VERSION_NUMBER=${{ github.ref_name }}" >> $GITHUB_ENV
+          if [[ "$REF" == refs/tags/v* ]]; then
+            printf '%s\n' "VERSION_NUMBER=$REF_NAME" >> $GITHUB_ENV
           else
-            echo "VERSION_NUMBER=" >> $GITHUB_ENV
+            printf '%s\n' "VERSION_NUMBER=dev-${GITHUB_SHA:0:7}" >> $GITHUB_ENV
           fi
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Install Tk dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk tk
 
       - name: Locate Python and pip
         run: |
@@ -48,7 +56,7 @@ jobs:
           python3.12 -m pip install --upgrade pip
           source venv/bin/activate     
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller==6.22.2
           
           scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
 
@@ -69,51 +77,55 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: artifacts-linux
+          retention-days: 14
           path: |
             dist/blocknet_aio_monitor-*
 
-      - uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          name: blocknet_aio_monitor ${{ github.ref_name}}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: true
-          files: |
-            dist/blocknet_aio_monitor-*
-
-  build-macos-13:
-    runs-on: macos-13
+  build-macos:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: x86-64
+            artifact: artifacts-macos-x86-64
+          - runner: macos-15
+            arch: arm64
+            artifact: artifacts-macos-arm64
+    runs-on: ${{ matrix.runner }}
 
     steps:
-      - uses: actions/checkout@v3
-        if: github.event.pull_request.draft == false
+      - uses: actions/checkout@v4
 
       - name: Set VERSION_NUMBER
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF: ${{ github.ref }}
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "VERSION_NUMBER=${{ github.ref_name }}" >> $GITHUB_ENV
+          if [[ "$REF" == refs/tags/v* ]]; then
+            printf '%s\n' "VERSION_NUMBER=$REF_NAME" >> $GITHUB_ENV
           else
-            echo "VERSION_NUMBER=" >> $GITHUB_ENV
+            printf '%s\n' "VERSION_NUMBER=dev-${GITHUB_SHA:0:7}" >> $GITHUB_ENV
           fi
 
-      - name: Set up Python using Homebrew
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Tk dependencies
         run: |
           brew update
-          brew upgrade || true
-          brew link --overwrite python@3.12
-          brew install python
-          brew install python-tk
-          python3 -m pip install --upgrade pip
-          # brew install python@3.12
-          # brew install python-tk@3.12
-          # python3.12 -m pip install --upgrade pip
+          brew install tcl-tk
+          python3.12 -c "import tkinter; print(f'Tk {tkinter.TkVersion} available')"
 
       - name: Install dependencies / Build executable on macOS
         run: |
-          python3 -m venv venv
+          python3.12 -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller==6.22.2
           
           scriptPath="${{ github.workspace }}/blocknet_aio_monitor.py"
           
@@ -136,37 +148,32 @@ jobs:
         run: |
           mkdir -p dmg
           hdiutil create -volname "Blocknet AIO Monitor" -format UDRW -ov -srcfolder my_bin -o dmg/blocknet_aio_monitor-macos-base.dmg
-          hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-macos.dmg
+          hdiutil convert dmg/blocknet_aio_monitor-macos-base.dmg -format UDZO -o dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-${{ matrix.arch }}-macos.dmg
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifacts-macos-13
+          name: ${{ matrix.artifact }}
+          retention-days: 14
           path: |
-            dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-macos.dmg
-
-      - uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          name: blocknet_aio_monitor ${{ github.ref_name}}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: true
-          files: |
-            dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-macos.dmg
+            dmg/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-${{ matrix.arch }}-macos.dmg
 
   build-windows:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v3
-        if: github.event.pull_request.draft == false
+      - uses: actions/checkout@v4
 
       - name: Set VERSION_NUMBER
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           if ($env:GITHUB_REF -like 'refs/tags/v*') {
-            $VERSION_NUMBER = $env:GITHUB_REF -replace 'refs/tags/', ''
+            $VERSION_NUMBER = $env:GITHUB_REF_NAME
             Write-Host "Extracted tag: $VERSION_NUMBER"
           } else {
-            $VERSION_NUMBER = ""
+            $VERSION_NUMBER = "dev-$($env:GITHUB_SHA.Substring(0,7))"
+            Write-Host "Non-tag build, using $VERSION_NUMBER"
           }
           echo "VERSION_NUMBER=$VERSION_NUMBER" >> $env:GITHUB_ENV
 
@@ -175,7 +182,7 @@ jobs:
           Write-Host "DEBUG: VERSION_NUMBER = $env:VERSION_NUMBER"
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -192,17 +199,15 @@ jobs:
           python -m venv venv
           venv\Scripts\activate.bat 
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller==6.22.2
 
       - name: Build executable on Windows
         run: |
-
           $scriptPath = "$env:GITHUB_WORKSPACE\blocknet_aio_monitor.py"
-          
-          $command = "pyinstaller --noconfirm --onefile --log-level=DEBUG --add-data `"theme:theme`" --add-data `"img:img`" --clean `"$scriptPath`""
-          
-          Write-Host "Running: $command"
-          Invoke-Expression $command
+          $args = @("--noconfirm", "--onefile", "--log-level=DEBUG", "--add-data", "theme;theme", "--add-data", "img;img", "--clean", $scriptPath)
+          Write-Host "Running: pyinstaller $($args -join ' ')"
+          & pyinstaller @args
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 
       - name: Rename executable
@@ -216,14 +221,35 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: artifacts-win
+          retention-days: 14
           path: |
             dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-windows.exe
 
-      - uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-ubuntu, build-macos, build-windows]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: blocknet_aio_monitor ${{ github.ref_name}}
+          path: ./artifacts
+          merge-multiple: false
+
+      - name: Display downloaded artifacts
+        run: |
+          ls -R ./artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: blocknet_aio_monitor ${{ github.ref_name }}
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
-            dist/blocknet_aio_monitor-${{ env.VERSION_NUMBER }}-x86-64-windows.exe
+            ./artifacts/**/*
