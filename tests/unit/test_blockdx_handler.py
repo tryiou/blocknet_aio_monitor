@@ -437,10 +437,9 @@ class TestBlockDXHandler(unittest.TestCase):
         self.handler.executable_path = "/mock/path"
         self.mock_base_binutil_subprocess_Popen.side_effect = Exception("Failed to start")
 
-        result = self.handler.start_blockdx()
-
-        # Should return False on exception
-        self.assertFalse(result)
+        with self.assertRaises(Exception) as ctx:
+            self.handler.start_blockdx()
+        self.assertEqual(str(ctx.exception), "Failed to start")
 
     def test_start_blockdx_linux(self):
         """Test start_blockdx on Linux."""

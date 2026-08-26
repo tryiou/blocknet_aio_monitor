@@ -95,6 +95,7 @@ class BinaryManager:
         self.file_change_queue = queue.Queue()
         self.process_file_changes()
         self.last_directory_mtime = 0  # Added tracker
+        self._reported_failures: set = set()
 
     async def setup(self):
         self.frame_manager = BinaryFrameManager(self)
@@ -105,9 +106,11 @@ class BinaryManager:
 
     def _start_or_close_binary(self, process_running: bool, stop_func: callable, 
                               start_func: callable, button: ctk.CTkButton, 
-                              disable_flag: str) -> None:
+                              disable_flag: str, app_name: str = "", handler=None) -> None:
         """
         Starts or stops a binary process and updates UI state accordingly.
+        When starting, monitors the launched process for early failure (return code !=0)
+        and shows a copy-pasteable error report dialog (issue #14).
 
         Args:
             process_running: Indicates if the binary process is currently running
@@ -115,15 +118,119 @@ class BinaryManager:
             start_func: Function to call for starting the process
             button: The UI button being processed
             disable_flag: Attribute name for the button disable flag
+            app_name: Human readable name for reporting
+            handler: Utility handler instance (with process / get_launch_context)
         """
         img = self.root_gui.stop_greyed_img if process_running else self.root_gui.start_greyed_img
         utils.disable_button(button, img=img)
         setattr(self, disable_flag, True)
         if process_running:
-            Thread(target=stop_func).start()
+            Thread(target=stop_func, daemon=True).start()
         else:
-            Thread(target=start_func).start()
+            # Wrap start_func to catch immediate launch exceptions (e.g., ENOENT, Permission)
+            def _wrapped_start():
+                try:
+                    start_func()
+                except Exception as e:
+                    logger.error(f"Launch exception for {app_name}: {e}", exc_info=True)
+                    # Try to get context from handler if available
+                    cmd = None
+                    cwd = None
+                    exe = None
+                    stderr = str(e)
+                    if handler and hasattr(handler, "get_launch_context"):
+                        try:
+                            ctx = handler.get_launch_context()
+                            cmd = ctx.get("command")
+                            cwd = ctx.get("cwd")
+                            exe = ctx.get("executable")
+                            # prefer captured stderr if any, else exception
+                            if ctx.get("stderr"):
+                                stderr = ctx.get("stderr") + f"\nException: {e}"
+                        except Exception as ex:
+                            logger.debug(f"Failed to get launch context: {ex}")
+                    # schedule dialog on main thread
+                    try:
+                        from gui.error_report_dialog import show_error_report
+
+                        show_error_report(
+                            self.root_gui,
+                            app_name=app_name or "Application",
+                            returncode=None,
+                            command=cmd,
+                            cwd=cwd,
+                            stderr_text=stderr,
+                            executable_path=exe,
+                            extra_info=f"Exception type: {type(e).__name__}",
+                        )
+                    except Exception as dlg_e:
+                        logger.error(f"Failed to show error dialog: {dlg_e}", exc_info=True)
+                else:
+                    # No exception: schedule poll check for early exit (e.g., return code 127)
+                    if handler is not None and app_name:
+                        # use default args to avoid late binding
+                        self.root_gui.after(1500, lambda a=app_name, h=handler: self._check_launch_failure(a, h))
+                        self.root_gui.after(4000, lambda a=app_name, h=handler: self._check_launch_failure(a, h))
+
+            Thread(target=_wrapped_start, daemon=True).start()
         self.root_gui.after(self.root_gui.time_disable_button, self._enable_binary_start_button, disable_flag)
+
+    def _check_launch_failure(self, app_name: str, handler) -> None:
+        """Check if a just-launched process has already terminated with error."""
+        try:
+            # avoid checking after GUI destroyed
+            try:
+                if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                    return
+            except Exception:
+                return
+            # handler.process is the BaseBinUtil.process or handler-specific attribute
+            proc = getattr(handler, "process", None)
+            # also check for app-specific process attrs (blocknet_process, blockdx_process, xlite_process)
+            if proc is None:
+                for attr in ("blocknet_process", "blockdx_process", "xlite_process"):
+                    proc = getattr(handler, attr, None)
+                    if proc is not None:
+                        break
+            if proc is None:
+                return
+            rc = proc.poll()
+            if rc is None:
+                return  # still running
+            if rc == 0:
+                return  # clean exit (user closed quickly, not an error)
+            # de-dupe: avoid double dialog from 1.5s and 4s checks
+            pid = getattr(proc, "pid", "n/a")
+            key = f"{app_name}:{id(proc)}:{pid}:{rc}"
+            if key in self._reported_failures:
+                return
+            self._reported_failures.add(key)
+            # bound set to avoid unbounded growth
+            if len(self._reported_failures) > 100:
+                self._reported_failures.clear()
+            # non-zero -> failure
+            ctx = {}
+            if hasattr(handler, "get_launch_context"):
+                try:
+                    ctx = handler.get_launch_context()
+                except Exception as ex:
+                    logger.debug(f"Failed to get launch context: {ex}")
+                    ctx = {}
+            from gui.error_report_dialog import show_error_report
+
+            show_error_report(
+                self.root_gui,
+                app_name=app_name,
+                returncode=rc,
+                command=ctx.get("command"),
+                cwd=ctx.get("cwd"),
+                stderr_text=ctx.get("stderr") or "",
+                executable_path=ctx.get("executable"),
+                extra_info=f"Process terminated shortly after launch (code {rc}). If this repeats, copy this report to {widgets_strings.github_issue_url}",
+            )
+            logger.warning(f"{app_name} launch failed with code {rc}")
+        except Exception as e:
+            logger.error(f"Failed to check launch failure for {app_name}: {e}", exc_info=True)
 
     def _enable_binary_start_button(self, disable_flag):
         setattr(self, disable_flag, False)
@@ -136,7 +243,9 @@ class BinaryManager:
             stop_func=self.root_gui.blocknet_manager.utility.close_blocknet,
             start_func=self.root_gui.blocknet_manager.utility.start_blocknet,
             button=self.frame_manager.blocknet_start_close_button,
-            disable_flag='disable_start_blocknet_button'
+            disable_flag='disable_start_blocknet_button',
+            app_name="Blocknet Core",
+            handler=self.root_gui.blocknet_manager.utility,
         )
 
     def start_or_close_blockdx(self):
@@ -147,7 +256,9 @@ class BinaryManager:
             stop_func=self.root_gui.blockdx_manager.utility.close_blockdx,
             start_func=self.root_gui.blockdx_manager.utility.start_blockdx,
             button=self.frame_manager.blockdx_start_close_button,
-            disable_flag='disable_start_blockdx_button'
+            disable_flag='disable_start_blockdx_button',
+            app_name="Block-DX",
+            handler=self.root_gui.blockdx_manager.utility,
         )
 
     def start_or_close_xlite(self):
@@ -161,7 +272,9 @@ class BinaryManager:
             stop_func=self.root_gui.xlite_manager.utility.close_xlite,
             start_func=lambda: self.root_gui.xlite_manager.utility.start_xlite(env_vars=env_vars),
             button=self.frame_manager.xlite_toggle_execution_button,
-            disable_flag='disable_start_xlite_button'
+            disable_flag='disable_start_xlite_button',
+            app_name="XLite",
+            handler=self.root_gui.xlite_manager.utility,
         )
 
     def install_delete_blocknet_command(self):

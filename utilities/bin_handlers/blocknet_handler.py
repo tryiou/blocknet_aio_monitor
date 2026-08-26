@@ -87,9 +87,11 @@ class BlocknetHandler(BaseBinUtil):
         try:
             command = [self.blocknet_exe, f"-datadir={self.data_folder}"]
             self.blocknet_process = self.start_process(command)
+            self.process = self.blocknet_process
             logger.info(f"Started Blocknet process: {command} with data directory: {self.data_folder}")
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.error(f"Error: {e}", exc_info=True)
+            raise
 
     def close_blocknet(self):
         if self.blocknet_process:

@@ -25,6 +25,11 @@ class BaseBinUtil:
         self.system = os.name
         self.process = None
         self.container = container or get_container()
+        # for error reporting (issue #14)
+        self._stderr_log_path: Optional[str] = None
+        self._stderr_file_handle = None
+        self._last_command: Optional[list] = None
+        self._last_cwd: Optional[str] = None
 
     def download_binary(self, url: str, tmp_filename: str, exe_path: str, extract_path: str) -> None:
         self.downloading_bin = True
@@ -113,20 +118,103 @@ class BaseBinUtil:
         else:
             full_env = None
 
-        self.process = subprocess.Popen(
-            command,
-            cwd=cwd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=full_env,
-            start_new_session=True
-        )
+        # Capture stderr to a per-app log file for error reporting (issue #14).
+        # Keep file handle open so child can write after Popen; close in graceful_terminate.
+        stderr_log_path = None
+        stderr_file = None
+        try:
+            aio_folder = self.container.aio_folder
+            if aio_folder:
+                os.makedirs(aio_folder, exist_ok=True)
+                stderr_log_path = os.path.join(aio_folder, f"{self.app_name.lower()}_launch.log")
+                # truncate previous launch log
+                stderr_file = open(stderr_log_path, "w", encoding="utf-8", errors="replace")
+                self._stderr_log_path = stderr_log_path
+                self._stderr_file_handle = stderr_file
+            else:
+                self._stderr_log_path = None
+                self._stderr_file_handle = None
+        except Exception as e:
+            logger.debug(f"Failed to open stderr log file: {e}")
+            stderr_file = None
+            self._stderr_log_path = None
+            self._stderr_file_handle = None
+
+        # If we have a file, use it; otherwise fall back to DEVNULL (preserve old behavior for tests where folder is mocked)
+        stderr_dest = stderr_file if stderr_file is not None else subprocess.DEVNULL
+
+        # store context before Popen so exception reports contain it
+        self._last_command = list(command) if isinstance(command, (list, tuple)) else [str(command)]
+        self._last_cwd = cwd
+
+        try:
+            self.process = subprocess.Popen(
+                command,
+                cwd=cwd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=stderr_dest,
+                env=full_env,
+                start_new_session=True
+            )
+        except Exception:
+            # Close handle on failure to avoid FD leak (P0)
+            if stderr_file is not None:
+                try:
+                    stderr_file.close()
+                except Exception:
+                    pass
+                self._stderr_file_handle = None
+            raise
         return self.process
+
+    def get_stderr_snippet(self, max_lines: int = 80, max_chars: int = 4000) -> str:
+        """Read last lines of the launch log for reporting."""
+        path = getattr(self, "_stderr_log_path", None)
+        if not path or not os.path.exists(path):
+            return ""
+        try:
+            # ensure data flushed
+            fh = getattr(self, "_stderr_file_handle", None)
+            if fh:
+                try:
+                    fh.flush()
+                    try:
+                        os.fsync(fh.fileno())
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+                if not content.strip():
+                    return ""
+                # truncate by chars then lines
+                if len(content) > max_chars:
+                    content = content[-max_chars:]
+                lines = content.splitlines()
+                if len(lines) > max_lines:
+                    lines = lines[-max_lines:]
+                return "\n".join(lines)
+        except Exception as e:
+            logger.debug(f"Failed to read stderr log {path}: {e}")
+            return ""
+
+    def get_launch_context(self) -> dict:
+        """Return last launch context for error reporting."""
+        return {
+            "command": getattr(self, "_last_command", None),
+            "cwd": getattr(self, "_last_cwd", None),
+            "stderr": self.get_stderr_snippet(),
+            "executable": self.executable_path,
+            "app_name": self.app_name,
+            "stderr_log_path": getattr(self, "_stderr_log_path", None),
+        }
 
     def graceful_terminate(self, timeout=10):
         if not self.process:
             logger.info("No running process to terminate")
+            self._close_stderr_handle()
             return
 
         try:
@@ -139,6 +227,17 @@ class BaseBinUtil:
             self.force_kill()
             logger.info(f"{self.app_name} has been force terminated")
             self.process = None
+        finally:
+            self._close_stderr_handle()
+
+    def _close_stderr_handle(self):
+        fh = getattr(self, "_stderr_file_handle", None)
+        if fh:
+            try:
+                fh.close()
+            except Exception:
+                pass
+            self._stderr_file_handle = None
 
     def force_kill(self):
         if self.process:
@@ -148,6 +247,7 @@ class BaseBinUtil:
                 self.process = None
             except Exception as e:
                 logger.error(f"Error killing {self.app_name}: {e}")
+        self._close_stderr_handle()
 
     def terminate_processes(self, pids, name):
         if not pids:
