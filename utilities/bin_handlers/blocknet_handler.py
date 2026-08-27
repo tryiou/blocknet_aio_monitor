@@ -21,7 +21,7 @@ from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 
 class BlocknetHandler(BaseBinUtil):
-    def __init__(self, custom_path: Optional[str] = None, container: Optional[AppContainer] = None):
+    def __init__(self, custom_path: str | None = None, container: AppContainer | None = None):
         super().__init__("Blocknet", container)
         self.blocknet_exe = self.container.get_blocknet_executable_path()
         self.parsed_wallet_confs = {}
@@ -626,7 +626,7 @@ def parse_conf_file(file_path=None, input_string=None):
     return conf_data
 
 
-def get_blocknet_data_folder(custom_path: Optional[str] = None):
+def get_blocknet_data_folder(custom_path: str | None = None):
     container = get_container()
     if custom_path:
         path = custom_path

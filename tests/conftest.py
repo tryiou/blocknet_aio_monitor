@@ -15,7 +15,8 @@ import sys
 import tempfile
 from contextlib import AbstractContextManager, ExitStack, contextmanager
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Optional
+from typing import Any, Optional
+from collections.abc import Callable, Iterable, Iterator
 from unittest.mock import MagicMock, Mock, patch
 
 import customtkinter as ctk
@@ -487,7 +488,7 @@ def _build_utils_container(with_binaries: bool = False) -> MagicMock:
 @contextmanager
 def _utils_container_env(
     container: MagicMock,
-    exists_side_effect: Optional[Callable[[Any], bool]] = None,
+    exists_side_effect: Callable[[Any], bool] | None = None,
     extra_patches: Iterable[AbstractContextManager] = (),
 ) -> Iterator[MagicMock]:
     """Apply the patch environment shared by utils container fixtures."""

@@ -19,7 +19,7 @@ SETTINGS_KEY = "xbridge_bots_branch"
 class XBridgeBotManager:
     """Manages installation and execution of XBridge trading bots."""
 
-    def __init__(self, current_branch: Optional[str] = None) -> None:
+    def __init__(self, current_branch: str | None = None) -> None:
         self.author = "tryiou"
         self.repo_name = "xbridge_trading_bots"
         self.repo_url = f"https://github.com/{self.author}/{self.repo_name}"
@@ -34,18 +34,18 @@ class XBridgeBotManager:
         # Resolve startup branch from persisted settings
         persisted = self._load_saved_branch()
         self.current_branch = persisted if persisted else (current_branch or DEFAULT_BOTS_BRANCH)
-        self.repo_management: Optional[GitRepoManagement] = None
-        self.installer_thread: Optional[threading.Thread] = None
-        self.process: Optional[subprocess.Popen] = None
+        self.repo_management: GitRepoManagement | None = None
+        self.installer_thread: threading.Thread | None = None
+        self.process: subprocess.Popen | None = None
         self.deferred_start = False
-        self.last_error: Optional[str] = None
+        self.last_error: str | None = None
 
     # -- branch persistence --
 
     def _settings_path(self) -> Path:
         return Path(os.path.expandvars(os.path.expanduser(self.aio_folder))) / "aio_settings.json"
 
-    def _load_saved_branch(self) -> Optional[str]:
+    def _load_saved_branch(self) -> str | None:
         try:
             p = self._settings_path()
             if p.exists():
@@ -79,7 +79,7 @@ class XBridgeBotManager:
     def get_saved_branch(self) -> str:
         return self._load_saved_branch() or DEFAULT_BOTS_BRANCH
 
-    def resolve_startup_branch(self, remote_branches: Optional[List[str]]) -> str:
+    def resolve_startup_branch(self, remote_branches: list[str] | None) -> str:
         """Return persisted branch if it exists on remote, else default."""
         saved = self._load_saved_branch()
         if not saved:
@@ -97,7 +97,7 @@ class XBridgeBotManager:
         """Check if bot repository exists locally."""
         return self.target_dir_path.exists() and (self.target_dir_path / ".git").is_dir()
 
-    def get_available_branches(self) -> Optional[List[str]]:
+    def get_available_branches(self) -> list[str] | None:
         """Get list of available branches from remote. Returns None on failure."""
         try:
             if self.repo_management is None:
@@ -221,7 +221,7 @@ class XBridgeBotManager:
         except Exception as e:
             logger.error(f"Repository delete failed: {str(e)}", exc_info=True)
 
-    def toggle_execution(self, branch: Optional[str] = None) -> None:
+    def toggle_execution(self, branch: str | None = None) -> None:
         """Toggle trading bots execution state without blocking GUI."""
         logger.info("Toggling bot execution")
         use_branch = branch or self.current_branch

@@ -50,7 +50,7 @@ class IntegrationTestHelper:
         return config_path
 
     @staticmethod
-    def mock_file_system_structure(workspace: Path) -> Dict[str, Path]:
+    def mock_file_system_structure(workspace: Path) -> dict[str, Path]:
         """Create a mock file system structure for testing."""
         structure = {}
 
@@ -78,7 +78,7 @@ class IntegrationTestHelper:
         return structure
 
     @staticmethod
-    def create_test_data(workspace: Path) -> Dict[str, Any]:
+    def create_test_data(workspace: Path) -> dict[str, Any]:
         """Create test data for integration tests."""
         test_data = {}
 
@@ -205,7 +205,7 @@ selectedWallets_blocknet=BLOCK
             p.stop()
 
     @staticmethod
-    def simulate_download_workflow(workspace: Path, app_name: str, version: str = "1.0.0") -> Dict[str, Any]:
+    def simulate_download_workflow(workspace: Path, app_name: str, version: str = "1.0.0") -> dict[str, Any]:
         """Simulate a download workflow for testing."""
         result = {}
 
@@ -283,7 +283,7 @@ class WorkflowSimulator:
         self.workspace = workspace
         self.helper = IntegrationTestHelper()
 
-    def simulate_blocknet_install_workflow(self) -> Dict[str, Any]:
+    def simulate_blocknet_install_workflow(self) -> dict[str, Any]:
         """Simulate Blocknet installation workflow."""
         result = {}
 
@@ -323,7 +323,7 @@ addnode=node1.example.com:41412
 
         return result
 
-    def simulate_blockdx_install_workflow(self) -> Dict[str, Any]:
+    def simulate_blockdx_install_workflow(self) -> dict[str, Any]:
         """Simulate Block-DX installation workflow."""
         result = {}
 
@@ -364,7 +364,7 @@ selectedWallets_blocknet=BLOCK
 
         return result
 
-    def simulate_xlite_install_workflow(self) -> Dict[str, Any]:
+    def simulate_xlite_install_workflow(self) -> dict[str, Any]:
         """Simulate XLite installation workflow."""
         result = {}
 
@@ -403,7 +403,7 @@ rpcpassword=testpass
 
         return result
 
-    def simulate_process_lifecycle(self, binary_path: Path) -> Dict[str, Any]:
+    def simulate_process_lifecycle(self, binary_path: Path) -> dict[str, Any]:
         """Simulate process lifecycle (start, monitor, stop)."""
         result = {}
 

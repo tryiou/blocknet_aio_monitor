@@ -5,14 +5,14 @@ from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel, ThemeManag
 
 class CTkInputDialog(CTkToplevel):
     def __init__(self,
-                 fg_color: Optional[Union[str, Tuple[str, str]]] = None,
-                 text_color: Optional[Union[str, Tuple[str, str]]] = None,
-                 button_fg_color: Optional[Union[str, Tuple[str, str]]] = None,
-                 button_hover_color: Optional[Union[str, Tuple[str, str]]] = None,
-                 button_text_color: Optional[Union[str, Tuple[str, str]]] = None,
-                 entry_fg_color: Optional[Union[str, Tuple[str, str]]] = None,
-                 entry_border_color: Optional[Union[str, Tuple[str, str]]] = None,
-                 entry_text_color: Optional[Union[str, Tuple[str, str]]] = None,
+                 fg_color: str | tuple[str, str] | None = None,
+                 text_color: str | tuple[str, str] | None = None,
+                 button_fg_color: str | tuple[str, str] | None = None,
+                 button_hover_color: str | tuple[str, str] | None = None,
+                 button_text_color: str | tuple[str, str] | None = None,
+                 entry_fg_color: str | tuple[str, str] | None = None,
+                 entry_border_color: str | tuple[str, str] | None = None,
+                 entry_text_color: str | tuple[str, str] | None = None,
                  show: str = "",  # added
 
                  title: str = "CTkDialog",
@@ -36,7 +36,7 @@ class CTkInputDialog(CTkToplevel):
         self._entry_text_color = ThemeManager.theme["CTkEntry"][
             "text_color"] if entry_text_color is None else self._check_color_type(entry_text_color)
 
-        self._user_input: Union[str, None] = None
+        self._user_input: str | None = None
         self._running: bool = False
         self._text = text
         self._show = show  # added

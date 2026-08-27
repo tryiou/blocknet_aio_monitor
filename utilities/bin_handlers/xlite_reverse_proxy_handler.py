@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class XliteReverseProxyHandler(BaseBinUtil):
     PORT = 11111
 
-    def __init__(self, container: Optional[AppContainer] = None):
+    def __init__(self, container: AppContainer | None = None):
         super().__init__("XliteReverseProxy", container)
 
         self.release_url = self.container.xlite_reverse_proxy_release_url

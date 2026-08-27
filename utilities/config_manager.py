@@ -234,7 +234,7 @@ class ConfigManager:
             # Save to ensure missing keys are persisted
         self._save_config()
 
-    def _deep_merge(self, base: Dict, update: Dict) -> Dict:
+    def _deep_merge(self, base: dict, update: dict) -> dict:
         for key, value in update.items():
             if key in base and isinstance(base[key], dict) and isinstance(value, dict):
                 base[key] = self._deep_merge(base[key], value)

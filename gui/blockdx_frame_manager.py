@@ -87,7 +87,7 @@ class BlockDxFrameManager:
                     get_container().conf_data.blockdx_selectedWallets_blocknet in blockdx_conf.get('selectedWallets', [])
             )
             self.valid_config_checkbox_state.set(
-                (self.parent.is_config_sync and self.root_gui.blocknet_manager.utility.valid_rpc))
+                self.parent.is_config_sync and self.root_gui.blocknet_manager.utility.valid_rpc)
 
         else:
             self.valid_config_checkbox_state.set(False)

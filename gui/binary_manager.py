@@ -37,7 +37,7 @@ class BinaryFileHandler(FileSystemEventHandler):
         :param binary_manager: The manager responsible for binary updates.
         """
         super().__init__()
-        self.binary_manager: 'BinaryManager' = binary_manager
+        self.binary_manager: BinaryManager = binary_manager
         self.max_delay: float = 5  # seconds
         self.last_run: float = 0
         self.scheduled: bool = False
@@ -109,7 +109,7 @@ class BinaryManager:
             except Exception:
                 pass
 
-    def _create_observer(self, aio_folder) -> Optional[object]:
+    def _create_observer(self, aio_folder) -> object | None:
         """Create file watcher with ENOSPC fallback to PollingObserver (2.0s)."""
         if not aio_folder or not self.handler:
             return None

@@ -34,8 +34,8 @@ class SystemInfo:
 @dataclass
 class PathConfig:
     """Path configuration container."""
-    aio_folder: Optional[str] = None
-    theme_path: Optional[str] = None
+    aio_folder: str | None = None
+    theme_path: str | None = None
 
     def __post_init__(self):
         if self.aio_folder is None:
@@ -50,7 +50,7 @@ class PathConfig:
             )
 
 
-def _get_value_from_config(config_dict, system: str, machine: str) -> Optional[Any]:
+def _get_value_from_config(config_dict, system: str, machine: str) -> Any | None:
     """
     Get a value from a system-specific config dict.
     
@@ -93,11 +93,11 @@ def _get_value_from_config(config_dict, system: str, machine: str) -> Optional[A
 @dataclass
 class BinaryConfig:
     """Binary configuration container."""
-    blocknet_bin: Optional[str] = None
-    xlite_daemon_bin: Optional[str] = None
-    blockdx_bin: Optional[str] = None
-    xlite_bin: Optional[str] = None
-    xlite_reverse_proxy_bin: Optional[str] = None
+    blocknet_bin: str | None = None
+    xlite_daemon_bin: str | None = None
+    blockdx_bin: str | None = None
+    xlite_bin: str | None = None
+    xlite_reverse_proxy_bin: str | None = None
 
     def __post_init__(self):
         system = platform.system()
@@ -118,10 +118,10 @@ class BinaryConfig:
 @dataclass
 class ReleaseConfig:
     """Release URL configuration container."""
-    blocknet_release_url: Optional[str] = None
-    blockdx_release_url: Optional[str] = None
-    xlite_release_url: Optional[str] = None
-    xlite_reverse_proxy_release_url: Optional[str] = None
+    blocknet_release_url: str | None = None
+    blockdx_release_url: str | None = None
+    xlite_release_url: str | None = None
+    xlite_reverse_proxy_release_url: str | None = None
 
     def __post_init__(self):
         system = platform.system()
@@ -148,8 +148,8 @@ class ReleaseConfig:
 @dataclass
 class PathInfo:
     """Additional path information."""
-    blockdx_curpath: Optional[str] = None
-    xlite_curpath: Optional[str] = None
+    blockdx_curpath: str | None = None
+    xlite_curpath: str | None = None
 
     def __post_init__(self):
         system = platform.system()
@@ -163,8 +163,8 @@ class PathInfo:
 @dataclass
 class VolumeInfo:
     """macOS volume information for DMG files."""
-    blockdx_volume_name: Optional[str] = None
-    xlite_volume_name: Optional[str] = None
+    blockdx_volume_name: str | None = None
+    xlite_volume_name: str | None = None
 
     def __post_init__(self):
         system = platform.system()
@@ -223,7 +223,7 @@ class AppContainer:
         self._volume_info = VolumeInfo()
 
         # Cache for computed values
-        self._computed_cache: Dict[str, Any] = {}
+        self._computed_cache: dict[str, Any] = {}
 
         logger.info(f"AppContainer initialized for {self._system_info.system} {self._system_info.machine}")
 
@@ -258,152 +258,152 @@ class AppContainer:
         self._system_info.dirpath = value
 
     @property
-    def aio_folder(self) -> Optional[str]:
+    def aio_folder(self) -> str | None:
         """Get the AIO data folder path."""
         return self._path_config.aio_folder
 
     @aio_folder.setter
-    def aio_folder(self, value: Optional[str]) -> None:
+    def aio_folder(self, value: str | None) -> None:
         """Set the AIO data folder path (for testing)."""
         self._path_config.aio_folder = value
 
     @property
-    def theme_path(self) -> Optional[str]:
+    def theme_path(self) -> str | None:
         """Get the theme file path."""
         return self._path_config.theme_path
 
     @theme_path.setter
-    def theme_path(self, value: Optional[str]) -> None:
+    def theme_path(self, value: str | None) -> None:
         """Set the theme file path (for testing)."""
         self._path_config.theme_path = value
 
     @property
-    def blocknet_bin(self) -> Optional[str]:
+    def blocknet_bin(self) -> str | None:
         """Get the Blocknet binary name."""
         return self._binary_config.blocknet_bin
 
     @blocknet_bin.setter
-    def blocknet_bin(self, value: Optional[str]) -> None:
+    def blocknet_bin(self, value: str | None) -> None:
         """Set the Blocknet binary name (for testing)."""
         self._binary_config.blocknet_bin = value
 
     @property
-    def xlite_daemon_bin(self) -> Optional[str]:
+    def xlite_daemon_bin(self) -> str | None:
         """Get the XLite daemon binary name."""
         return self._binary_config.xlite_daemon_bin
 
     @xlite_daemon_bin.setter
-    def xlite_daemon_bin(self, value: Optional[str]) -> None:
+    def xlite_daemon_bin(self, value: str | None) -> None:
         """Set the XLite daemon binary name (for testing)."""
         self._binary_config.xlite_daemon_bin = value
 
     @property
-    def blockdx_bin(self) -> Optional[str]:
+    def blockdx_bin(self) -> str | None:
         """Get the Block-DX binary name."""
         return self._binary_config.blockdx_bin
 
     @blockdx_bin.setter
-    def blockdx_bin(self, value: Optional[str]) -> None:
+    def blockdx_bin(self, value: str | None) -> None:
         """Set the Block-DX binary name (for testing)."""
         self._binary_config.blockdx_bin = value
 
     @property
-    def xlite_bin(self) -> Optional[str]:
+    def xlite_bin(self) -> str | None:
         """Get the XLite binary name."""
         return self._binary_config.xlite_bin
 
     @xlite_bin.setter
-    def xlite_bin(self, value: Optional[str]) -> None:
+    def xlite_bin(self, value: str | None) -> None:
         """Set the XLite binary name (for testing)."""
         self._binary_config.xlite_bin = value
 
     @property
-    def xlite_reverse_proxy_bin(self) -> Optional[str]:
+    def xlite_reverse_proxy_bin(self) -> str | None:
         """Get the XLite reverse proxy binary name."""
         return self._binary_config.xlite_reverse_proxy_bin
 
     @xlite_reverse_proxy_bin.setter
-    def xlite_reverse_proxy_bin(self, value: Optional[str]) -> None:
+    def xlite_reverse_proxy_bin(self, value: str | None) -> None:
         """Set the XLite reverse proxy binary name (for testing)."""
         self._binary_config.xlite_reverse_proxy_bin = value
 
     @property
-    def blocknet_release_url(self) -> Optional[str]:
+    def blocknet_release_url(self) -> str | None:
         """Get the Blocknet release URL."""
         return self._release_config.blocknet_release_url
 
     @blocknet_release_url.setter
-    def blocknet_release_url(self, value: Optional[str]) -> None:
+    def blocknet_release_url(self, value: str | None) -> None:
         """Set the Blocknet release URL (for testing)."""
         self._release_config.blocknet_release_url = value
 
     @property
-    def blockdx_release_url(self) -> Optional[str]:
+    def blockdx_release_url(self) -> str | None:
         """Get the Block-DX release URL."""
         return self._release_config.blockdx_release_url
 
     @blockdx_release_url.setter
-    def blockdx_release_url(self, value: Optional[str]) -> None:
+    def blockdx_release_url(self, value: str | None) -> None:
         """Set the Block-DX release URL (for testing)."""
         self._release_config.blockdx_release_url = value
 
     @property
-    def xlite_release_url(self) -> Optional[str]:
+    def xlite_release_url(self) -> str | None:
         """Get the XLite release URL."""
         return self._release_config.xlite_release_url
 
     @xlite_release_url.setter
-    def xlite_release_url(self, value: Optional[str]) -> None:
+    def xlite_release_url(self, value: str | None) -> None:
         """Set the XLite release URL (for testing)."""
         self._release_config.xlite_release_url = value
 
     @property
-    def xlite_reverse_proxy_release_url(self) -> Optional[str]:
+    def xlite_reverse_proxy_release_url(self) -> str | None:
         """Get the XLite reverse proxy release URL."""
         return self._release_config.xlite_reverse_proxy_release_url
 
     @xlite_reverse_proxy_release_url.setter
-    def xlite_reverse_proxy_release_url(self, value: Optional[str]) -> None:
+    def xlite_reverse_proxy_release_url(self, value: str | None) -> None:
         """Set the XLite reverse proxy release URL (for testing)."""
         self._release_config.xlite_reverse_proxy_release_url = value
 
     @property
-    def blockdx_curpath(self) -> Optional[str]:
+    def blockdx_curpath(self) -> str | None:
         """Get the Block-DX current path."""
         return self._path_info.blockdx_curpath
 
     @blockdx_curpath.setter
-    def blockdx_curpath(self, value: Optional[str]) -> None:
+    def blockdx_curpath(self, value: str | None) -> None:
         """Set the Block-DX current path (for testing)."""
         self._path_info.blockdx_curpath = value
 
     @property
-    def xlite_curpath(self) -> Optional[str]:
+    def xlite_curpath(self) -> str | None:
         """Get the XLite current path."""
         return self._path_info.xlite_curpath
 
     @xlite_curpath.setter
-    def xlite_curpath(self, value: Optional[str]) -> None:
+    def xlite_curpath(self, value: str | None) -> None:
         """Set the XLite current path (for testing)."""
         self._path_info.xlite_curpath = value
 
     @property
-    def blockdx_volume_name(self) -> Optional[str]:
+    def blockdx_volume_name(self) -> str | None:
         """Get the Block-DX volume name (macOS only)."""
         return self._volume_info.blockdx_volume_name
 
     @blockdx_volume_name.setter
-    def blockdx_volume_name(self, value: Optional[str]) -> None:
+    def blockdx_volume_name(self, value: str | None) -> None:
         """Set the Block-DX volume name (for testing)."""
         self._volume_info.blockdx_volume_name = value
 
     @property
-    def xlite_volume_name(self) -> Optional[str]:
+    def xlite_volume_name(self) -> str | None:
         """Get the XLite volume name (macOS only)."""
         return self._volume_info.xlite_volume_name
 
     @xlite_volume_name.setter
-    def xlite_volume_name(self, value: Optional[str]) -> None:
+    def xlite_volume_name(self, value: str | None) -> None:
         """Set the XLite volume name (for testing)."""
         self._volume_info.xlite_volume_name = value
 
@@ -507,7 +507,7 @@ class AppContainer:
                 xlite_bin_name
             )
 
-    def validate_configuration(self) -> Tuple[bool, list]:
+    def validate_configuration(self) -> tuple[bool, list]:
         """
         Validate the current configuration.
         

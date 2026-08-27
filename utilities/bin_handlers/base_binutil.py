@@ -16,20 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 class BaseBinUtil:
-    def __init__(self, app_name: str, container: Optional[AppContainer] = None):
-        self.executable_path: Optional[str] = None
-        self.dmg_mount_path: Optional[str] = None
+    def __init__(self, app_name: str, container: AppContainer | None = None):
+        self.executable_path: str | None = None
+        self.dmg_mount_path: str | None = None
         self.app_name = app_name
-        self.binary_percent_download: Optional[float] = None
+        self.binary_percent_download: float | None = None
         self.downloading_bin = False
         self.system = os.name
         self.process = None
         self.container = container or get_container()
         # for error reporting (issue #14)
-        self._stderr_log_path: Optional[str] = None
+        self._stderr_log_path: str | None = None
         self._stderr_file_handle = None
-        self._last_command: Optional[list] = None
-        self._last_cwd: Optional[str] = None
+        self._last_command: list | None = None
+        self._last_cwd: str | None = None
 
     def download_binary(self, url: str, tmp_filename: str, exe_path: str, extract_path: str) -> None:
         self.downloading_bin = True

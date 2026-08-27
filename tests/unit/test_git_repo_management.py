@@ -1084,7 +1084,7 @@ class TestGitRepoManagement(unittest.TestCase):
         self.repo_mgmt.venv = create_venv_mock(self.temp_dir)
 
         mock_process = MagicMock()
-        mock_process.stdout.readline.side_effect = IOError("Pipe closed")
+        mock_process.stdout.readline.side_effect = OSError("Pipe closed")
         mock_process.stderr.readline.return_value = b''
         mock_process.poll.return_value = 0
         mock_popen.return_value = mock_process

@@ -12,11 +12,11 @@ import widgets_strings
 logger = logging.getLogger(__name__)
 
 
-def _extract_commands(text: str) -> List[str]:
+def _extract_commands(text: str) -> list[str]:
     """Extract copyable shell commands from a report/details string."""
     if not text:
         return []
-    cmds: List[str] = []
+    cmds: list[str] = []
     # patterns for commands we want to make copyable
     prefixes = ("brew ", "sudo ", "pip ", "pip3 ", "python", "python3", "py ", "apt ", "dnf ", "sudo apt", "sudo dnf", "xcode-select")
     for line in text.splitlines():
@@ -318,12 +318,12 @@ class ErrorReportDialog(ctk.CTkToplevel):
 
 def build_report(
     app_name: str,
-    returncode: Optional[int],
-    command: Optional[list],
-    cwd: Optional[str],
-    stderr_text: Optional[str],
-    executable_path: Optional[str] = None,
-    extra_info: Optional[str] = None,
+    returncode: int | None,
+    command: list | None,
+    cwd: str | None,
+    stderr_text: str | None,
+    executable_path: str | None = None,
+    extra_info: str | None = None,
 ) -> str:
     """Build a copy-pasteable report for GitHub issues."""
     lines = []
@@ -361,12 +361,12 @@ def build_report(
 def show_error_report(
     parent,
     app_name: str,
-    returncode: Optional[int],
-    command: Optional[list],
-    cwd: Optional[str],
-    stderr_text: Optional[str],
-    executable_path: Optional[str] = None,
-    extra_info: Optional[str] = None,
+    returncode: int | None,
+    command: list | None,
+    cwd: str | None,
+    stderr_text: str | None,
+    executable_path: str | None = None,
+    extra_info: str | None = None,
 ) -> None:
     """Thread-safe helper: schedule dialog on main thread if needed."""
     report = build_report(app_name, returncode, command, cwd, stderr_text, executable_path, extra_info)

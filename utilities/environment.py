@@ -67,11 +67,11 @@ def _read_pygit2_spec() -> str:
     return ">=1.20"
 
 
-def _tk_fix_commands() -> List[str]:
+def _tk_fix_commands() -> list[str]:
     py_mm = _current_py_mm()
     py_exe = _python_exe()
     system = platform.system()
-    cmds: List[str] = []
+    cmds: list[str] = []
     if system == "Darwin":
         cmds.append(f"brew install python-tk@{py_mm}")
         cmds.append(f"{py_exe} -m venv venv  # or: python{py_mm} -m venv venv")
@@ -90,11 +90,11 @@ def _tk_fix_commands() -> List[str]:
     return cmds
 
 
-def _pygit2_fix_commands() -> List[str]:
+def _pygit2_fix_commands() -> list[str]:
     py_mm = _current_py_mm()
     py_ver = _current_py_version()
     spec = _read_pygit2_spec()
-    cmds: List[str] = []
+    cmds: list[str] = []
     # Prefer upgrading to spec from requirements
     cmds.append(f'{_python_exe()} -m pip install --upgrade "pygit2{spec}"  # for Python {py_ver}')
     cmds.append(f"{_python_exe()} -m pip install -r requirements.txt  # recreate venv first if needed")
@@ -106,7 +106,7 @@ def _pygit2_fix_commands() -> List[str]:
     return cmds
 
 
-def check_python_version() -> Tuple[bool, str]:
+def check_python_version() -> tuple[bool, str]:
     ver = sys.version_info
     try:
         cur = (ver.major, ver.minor)  # type: ignore
@@ -121,7 +121,7 @@ def check_python_version() -> Tuple[bool, str]:
     return True, ""
 
 
-def check_tkinter() -> Tuple[bool, str, str]:
+def check_tkinter() -> tuple[bool, str, str]:
     """Check Tkinter availability. Returns (ok, error_message, details)."""
     py_ver = _current_py_version()
     sys_info = f"System: {platform.system()} {platform.machine()}"
@@ -155,7 +155,7 @@ def check_tkinter() -> Tuple[bool, str, str]:
         return False, f"Tkinter check failed: {e}", str(e)
 
 
-def check_pygit2() -> Tuple[bool, str, str]:
+def check_pygit2() -> tuple[bool, str, str]:
     """Check pygit2 importability (covers missing libgit2 / git2.h and Python version mismatch)."""
     py_ver = _current_py_version()
     sys_info = f"Python: {py_ver} on {platform.system()} {platform.machine()} ({sys.executable})"
@@ -189,7 +189,7 @@ def check_pygit2() -> Tuple[bool, str, str]:
         return False, f"pygit2 check failed: {e}", str(e)
 
 
-def check_customtkinter() -> Tuple[bool, str, str]:
+def check_customtkinter() -> tuple[bool, str, str]:
     try:
         import customtkinter  # noqa: F401
 
@@ -198,7 +198,7 @@ def check_customtkinter() -> Tuple[bool, str, str]:
         return False, f"customtkinter not available: {e}", str(e)
 
 
-def validate_environment() -> List[Tuple[str, str, str]]:
+def validate_environment() -> list[tuple[str, str, str]]:
     """Run all checks, return list of (title, message, details) for failures that should block startup."""
     failures = []
     ok, msg = check_python_version()

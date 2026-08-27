@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class BlockDXHandler(BaseBinUtil):
-    def __init__(self, container: Optional[AppContainer] = None):
+    def __init__(self, container: AppContainer | None = None):
         super().__init__("Blockdx", container)
         if self.container.system == "Darwin":
             blockdx_volume_name = self.container.blockdx_volume_name
@@ -62,7 +62,7 @@ class BlockDXHandler(BaseBinUtil):
         self.blockdx_conf_local = meta_data
 
     def compare_and_update_local_conf(self, xbridgeconfpath, rpc_user, rpc_password):
-        xbridgeconfpath = r"{}".format(xbridgeconfpath)
+        xbridgeconfpath = rf"{xbridgeconfpath}"
         data_folder = get_blockdx_data_folder()
         if not data_folder:
             raise ValueError("BlockDX data folder not configured")

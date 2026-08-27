@@ -62,7 +62,7 @@ def install_vc_redist(url):
 
 
 class XliteHandler(BaseBinUtil):
-    def __init__(self, container: Optional[AppContainer] = None):
+    def __init__(self, container: AppContainer | None = None):
         super().__init__("Xlite", container)
         if self.container.system == "Darwin":
             xlite_release_url = self.container.xlite_release_url

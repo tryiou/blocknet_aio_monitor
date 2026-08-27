@@ -32,7 +32,7 @@ class KeyringManager:
     FALLBACK_FILE = "aio_settings.json"
     FALLBACK_KEY_NAME = "salt"  # Use "salt" for backward compatibility
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: str | None = None):
         """
         Initialize KeyringManager.
         
@@ -54,7 +54,7 @@ class KeyringManager:
         """Get the full path to the fallback file."""
         return self.fallback_path
 
-    def _load_fallback(self) -> Optional[str]:
+    def _load_fallback(self) -> str | None:
         """Load encryption key from fallback storage (aio_settings.json)."""
         try:
             fallback_path = self._get_fallback_path()
@@ -123,7 +123,7 @@ class KeyringManager:
             logger.error(f"Failed to delete from fallback: {e}")
             return False
 
-    def store_key(self, key: Union[str, bytes]) -> Tuple[bool, str]:
+    def store_key(self, key: str | bytes) -> tuple[bool, str]:
         """
         Store encryption key in keyring (or fallback).
         
@@ -165,7 +165,7 @@ class KeyringManager:
             logger.error(f"Error storing key: {e}")
             return False, f"Error: {str(e)}"
 
-    def retrieve_key(self) -> Tuple[Optional[str], str]:
+    def retrieve_key(self) -> tuple[str | None, str]:
         """
         Retrieve encryption key from keyring (or fallback).
         
@@ -194,7 +194,7 @@ class KeyringManager:
             logger.error(f"Error retrieving key: {e}")
             return None, f"Error: {str(e)}"
 
-    def delete_key(self) -> Tuple[bool, str]:
+    def delete_key(self) -> tuple[bool, str]:
         """
         Delete encryption key from keyring and fallback.
         
@@ -290,7 +290,7 @@ class KeyringMigration:
         """Detect if config data is in old format with salt key."""
         return "salt" in config_data and "xl_pass" in config_data
 
-    def migrate_from_old_format(self, config_data: dict) -> Tuple[bool, dict, str, Optional[str]]:
+    def migrate_from_old_format(self, config_data: dict) -> tuple[bool, dict, str, str | None]:
         """
         Migrate from old format to new format.
         
@@ -334,7 +334,7 @@ class KeyringMigration:
             self.logger.error(f"Migration failed: {e}")
             return False, config_data, f"Migration error: {str(e)}", None
 
-    def migrate_config_file(self, config_file_path: str) -> Tuple[bool, str]:
+    def migrate_config_file(self, config_file_path: str) -> tuple[bool, str]:
         """
         Migrate a configuration file from old to new format.
         

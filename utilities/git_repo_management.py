@@ -31,14 +31,14 @@ class ExecutionError(Exception):
 class BranchSwitchBlockedError(Exception):
     """Raised when branch switch is blocked by local conflicts."""
 
-    def __init__(self, message: str, blocked_paths: Optional[List[str]] = None):
+    def __init__(self, message: str, blocked_paths: list[str] | None = None):
         super().__init__(message)
         self.blocked_paths = blocked_paths or []
 
 
-def run_command(cmd_list: List[str],
-               cwd: Optional[Path] = None,
-               timeout: int = 300) -> Tuple[int, str, str]:
+def run_command(cmd_list: list[str],
+               cwd: Path | None = None,
+               timeout: int = 300) -> tuple[int, str, str]:
     """
     Execute a command and capture its output.
 
@@ -75,7 +75,7 @@ def run_command(cmd_list: List[str],
 class VirtualEnvironment:
     """Manages Python virtual environments with portable support."""
 
-    def __init__(self, target_dir: Path, portable_python_path: str = None, venv_dir: Optional[Path] = None):
+    def __init__(self, target_dir: Path, portable_python_path: str = None, venv_dir: Path | None = None):
         """
         Initialize virtual environment manager.
         
@@ -307,7 +307,7 @@ class GitRepository:
     """Manages Git operations using pygit2."""
 
     def __init__(self, repo_url: str, target_dir: Path, remote_branch: str = "main",
-                 backup_base: Optional[Path] = None):
+                 backup_base: Path | None = None):
         self.repo_url = repo_url
         self.target_dir = target_dir
         self.remote_branch = remote_branch
@@ -338,7 +338,7 @@ class GitRepository:
             logger.warning(f"Could not compute changed paths: {e}")
             return set()
 
-    def _collect_blockers(self, target_oid) -> List[str]:
+    def _collect_blockers(self, target_oid) -> list[str]:
         """Collect dirty/untracked paths that would block checkout to target."""
         try:
             status = self.repo.status()
@@ -350,7 +350,7 @@ class GitRepository:
         changed = self._get_changed_paths(target_oid)
         # If diff failed or empty, be conservative: any dirty file could block
         # but we already filtered to changed-intersection for surgical backup
-        blockers: List[str] = []
+        blockers: list[str] = []
         for path, flags in status.items():
             if changed and path not in changed:
                 # File not on the changed path set -> not blocking
@@ -362,7 +362,7 @@ class GitRepository:
             logger.warning(f"Checkout blockers detected ({len(blockers)}): {blockers[:10]}")
         return blockers
 
-    def _backup_blockers(self, blockers: List[str]) -> Optional[Path]:
+    def _backup_blockers(self, blockers: list[str]) -> Path | None:
         """Move blocking paths to timestamped backup dir. Returns backup dir."""
         if not blockers:
             return None
@@ -587,7 +587,7 @@ class GitRepository:
         logger.error(f"Remote '{remote_name}' not found")
         raise ExecutionError(f"Remote '{remote_name}' not found")
 
-    def get_remote_branches(self) -> Optional[List[str]]:
+    def get_remote_branches(self) -> list[str] | None:
         """
         Return list of available branches from remote repo using GitHub API.
         Returns None if API request fails (caller should not invalidate saved branch).
@@ -716,8 +716,8 @@ class GitRepoManagement:
         except Exception as e:
             raise Exception(f"Repository setup failed: {e}")
 
-    def run_script(self, script_path: str, script_args: Optional[List[str]] = None,
-                   timeout: Optional[int] = None) -> Optional[subprocess.Popen]:
+    def run_script(self, script_path: str, script_args: list[str] | None = None,
+                   timeout: int | None = None) -> subprocess.Popen | None:
         """
         Execute a Python script using the virtual environment's Python interpreter.
 
@@ -757,7 +757,7 @@ class GitRepoManagement:
                     for line in iter(stream.readline, ''):
                         if line:
                             print(f"{prefix}: {line.strip()}")
-                except (ValueError, IOError) as e:
+                except (OSError, ValueError) as e:
                     logger.debug(f"Stream reader stopped: {e}")
 
             stdout_thread = threading.Thread(target=stream_reader,
@@ -791,7 +791,7 @@ class GitRepoManagement:
             logger.error(f"Failed to run script: {e}")
             return None
 
-    def get_remote_branches(self) -> Optional[List[str]]:
+    def get_remote_branches(self) -> list[str] | None:
         """Fetch list of remote branch names. Returns None on failure."""
         return self.git_repo.get_remote_branches()
 

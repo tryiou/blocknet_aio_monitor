@@ -15,14 +15,14 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
-def _find_config_baks(target: Path) -> List[Path]:
+def _find_config_baks(target: Path) -> list[Path]:
     return sorted(target.glob("config_bak_*"), key=lambda p: p.name)
 
 
-def detect_broken_state(target_dir: Path) -> Dict:
+def detect_broken_state(target_dir: Path) -> dict:
     """Return description of broken-state signatures (read-only)."""
     target = Path(target_dir)
-    info: Dict = {"config_baks": [], "has_git": False, "head": None}
+    info: dict = {"config_baks": [], "has_git": False, "head": None}
     baks = _find_config_baks(target)
     info["config_baks"] = [str(p) for p in baks]
     git_head = target / ".git" / "HEAD"
@@ -57,9 +57,9 @@ def _regenerate_config_from_templates(target: Path) -> int:
     return count
 
 
-def _stage_user_configs(target: Path, staging: Path) -> List[str]:
+def _stage_user_configs(target: Path, staging: Path) -> list[str]:
     """Collect runtime config yamls/jsons from config_baks into staging. Returns list of staged relative paths."""
-    staged: List[str] = []
+    staged: list[str] = []
     staging.mkdir(parents=True, exist_ok=True)
     for bak in _find_config_baks(target):
         for item in bak.rglob("*"):
@@ -79,9 +79,9 @@ def _stage_user_configs(target: Path, staging: Path) -> List[str]:
     return staged
 
 
-def _restore_user_configs(target: Path, staging: Path) -> List[str]:
+def _restore_user_configs(target: Path, staging: Path) -> list[str]:
     """Copy staged configs verbatim into target/config/. Returns restored paths."""
-    restored: List[str] = []
+    restored: list[str] = []
     config_dir = target / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
     for item in staging.rglob("*"):
@@ -99,9 +99,9 @@ def _restore_user_configs(target: Path, staging: Path) -> List[str]:
 
 def repair_broken_worktree(
     target_dir: Path,
-    aio_folder: Optional[Path] = None,
-    branch: Optional[str] = None,
-) -> Dict:
+    aio_folder: Path | None = None,
+    branch: str | None = None,
+) -> dict:
     """
     Fully-automatic repair for broken worktrees.
 
@@ -121,7 +121,7 @@ def repair_broken_worktree(
     backup_dir.mkdir(parents=True, exist_ok=True)
     staging = backup_dir / "_staging_configs"
 
-    report: Dict = {
+    report: dict = {
         "timestamp": timestamp,
         "target": str(target),
         "backup_dir": str(backup_dir),
