@@ -3,7 +3,7 @@ import platform
 import sys
 from unittest.mock import MagicMock, mock_open, patch
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from utilities import environment
 
@@ -111,7 +111,10 @@ def test_show_startup_error_tk_fails_fallback(capsys, monkeypatch):
     monkeypatch.setattr(environment, "_show_with_win32", lambda t, m: False)
     monkeypatch.setattr(environment, "_show_with_zenity", lambda t, m: False)
     # Mock the new copyable startup dialog path (prevents CTk window on desk)
-    monkeypatch.setattr("gui.error_report_dialog.show_startup_error_report", lambda *a, **k: (_ for _ in ()).throw(Exception("mocked no CTk")))
+    monkeypatch.setattr(
+        "gui.error_report_dialog.show_startup_error_report",
+        lambda *a, **k: (_ for _ in ()).throw(Exception("mocked no CTk")),
+    )
     # Also ensure Tk/CTk are mocked (global conftest does, but be explicit)
     monkeypatch.setattr("tkinter.Tk", MagicMock)
     try:
@@ -183,7 +186,7 @@ def test_pygit2_fix_commands_dynamic(monkeypatch):
 def test_extract_commands_copyable():
     from gui.error_report_dialog import _extract_commands
 
-    text = "Fix:\n  brew install python-tk@3.14\n  sudo apt install python3-tk\n  pip install \"pygit2>=1.20\""
+    text = 'Fix:\n  brew install python-tk@3.14\n  sudo apt install python3-tk\n  pip install "pygit2>=1.20"'
     cmds = _extract_commands(text)
     assert any("brew install python-tk@3.14" in c for c in cmds)
     assert any("sudo apt install python3-tk" in c for c in cmds)
@@ -202,9 +205,14 @@ def test_copyable_command_row_no_window():
     mock_parent.clipboard_append = MagicMock()
     mock_parent.update = MagicMock()
     # Mock CTk internals to avoid real Tk
-    with patch("gui.error_report_dialog.ctk.CTkFrame.__init__", lambda self, *a, **k: None), \
-         patch("gui.error_report_dialog.ctk.CTkEntry.__init__", lambda self, *a, **k: setattr(self, "command", k.get("command", "")) or None), \
-         patch("gui.error_report_dialog.ctk.CTkButton.__init__", lambda self, *a, **k: None):
+    with (
+        patch("gui.error_report_dialog.ctk.CTkFrame.__init__", lambda self, *a, **k: None),
+        patch(
+            "gui.error_report_dialog.ctk.CTkEntry.__init__",
+            lambda self, *a, **k: setattr(self, "command", k.get("command", "")) or None,
+        ),
+        patch("gui.error_report_dialog.ctk.CTkButton.__init__", lambda self, *a, **k: None),
+    ):
         # We test the logic by instantiating with mocked base
         # Instead test the copy logic directly
         row = CopyableCommandRow.__new__(CopyableCommandRow)

@@ -9,7 +9,7 @@ class BlocknetManager:
         self.root_gui = root_gui
         container = get_container()
         if container.blocknet_release_url:
-            self.version = [container.blocknet_release_url.split('/')[7]]
+            self.version = [container.blocknet_release_url.split("/")[7]]
         else:
             self.version = ["unknown"]
         self.blocknet_process_running = False

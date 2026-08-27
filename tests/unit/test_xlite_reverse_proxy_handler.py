@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
 # Add the project root to the sys.path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from utilities.app_container import AppContainer
 from utilities.bin_handlers.xlite_reverse_proxy_handler import XliteReverseProxyHandler
@@ -28,24 +28,22 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
     def _setup_app_container(self):
         """Set up AppContainer mock."""
         self.mock_container = MagicMock()
-        self.mock_container.system = 'Linux'
-        self.mock_container.machine = 'x86_64'
-        self.mock_container.aio_folder = '/mock/aio_folder'
-        self.mock_container.xlite_reverse_proxy_release_url = (
-            'https://github.com/blocknetdx/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy-v1.0.0-linux-x64.tar.gz'
-        )
-        self.mock_container.xlite_reverse_proxy_bin = 'xlite-reverse-proxy'
+        self.mock_container.system = "Linux"
+        self.mock_container.machine = "x86_64"
+        self.mock_container.aio_folder = "/mock/aio_folder"
+        self.mock_container.xlite_reverse_proxy_release_url = "https://github.com/blocknetdx/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy-v1.0.0-linux-x64.tar.gz"
+        self.mock_container.xlite_reverse_proxy_bin = "xlite-reverse-proxy"
 
     def _apply_common_patches(self):
         """Apply common patches needed for handler initialization."""
+        self.patches.append(patch("utilities.app_container.get_container", return_value=self.mock_container))
         self.patches.append(
-            patch('utilities.app_container.get_container', return_value=self.mock_container))
-        self.patches.append(
-            patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists', return_value=True))
-        self.patches.append(patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs'))
-        self.patches.append(patch('utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket'))
-        self.patches.append(patch('utilities.bin_handlers.xlite_reverse_proxy_handler.subprocess.Popen'))
-        self.patches.append(patch('re.search'))  # Patch re module directly
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists", return_value=True)
+        )
+        self.patches.append(patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs"))
+        self.patches.append(patch("utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket"))
+        self.patches.append(patch("utilities.bin_handlers.xlite_reverse_proxy_handler.subprocess.Popen"))
+        self.patches.append(patch("re.search"))  # Patch re module directly
 
         # Start all patches
         for p in self.patches:
@@ -75,7 +73,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.mock_container.xlite_reverse_proxy_release_url = None
         self.mock_container.xlite_reverse_proxy_bin = None
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
             handler = XliteReverseProxyHandler(self.mock_container)
             self.assertIsNone(handler.executable_path)
             mock_logger.error.assert_called_once_with("Reverse proxy not configured for current system")
@@ -86,10 +84,10 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         mock_match = MagicMock()
         mock_match.group.return_value = "1.0.0"
 
-        with patch('re.search', return_value=mock_match):
+        with patch("re.search", return_value=mock_match):
             handler = XliteReverseProxyHandler(self.mock_container)
             # The path should be constructed from aio_folder, version folder, and bin_name
-            expected_path = '/mock/aio_folder/xlite-reverse-proxy-1.0.0/xlite-reverse-proxy'
+            expected_path = "/mock/aio_folder/xlite-reverse-proxy-1.0.0/xlite-reverse-proxy"
             self.assertEqual(handler.executable_path, expected_path)
 
     # ============================================================================
@@ -101,22 +99,22 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         mock_socket_instance = MagicMock()
         mock_socket_instance.connect_ex.return_value = 0  # Port is occupied
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket') as mock_socket_class:
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket") as mock_socket_class:
             mock_socket_class.return_value.__enter__.return_value = mock_socket_instance
             result = self.handler.port_occupied()
             self.assertTrue(result)
-            mock_socket_instance.connect_ex.assert_called_once_with(('localhost', 11111))
+            mock_socket_instance.connect_ex.assert_called_once_with(("localhost", 11111))
 
     def test_port_occupied_false(self):
         """Test port_occupied returns False when port is available."""
         mock_socket_instance = MagicMock()
         mock_socket_instance.connect_ex.return_value = 1  # Port is available
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket') as mock_socket_class:
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket") as mock_socket_class:
             mock_socket_class.return_value.__enter__.return_value = mock_socket_instance
             result = self.handler.port_occupied()
             self.assertFalse(result)
-            mock_socket_instance.connect_ex.assert_called_once_with(('localhost', 11111))
+            mock_socket_instance.connect_ex.assert_called_once_with(("localhost", 11111))
 
     # ============================================================================
     # Start Tests
@@ -124,11 +122,13 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
 
     def test_start_success(self):
         """Test successful proxy start."""
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists', return_value=False), \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs'), \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket') as mock_socket_class, \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.subprocess.Popen') as mock_popen, \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with (
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists", return_value=False),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs"),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket") as mock_socket_class,
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.subprocess.Popen") as mock_popen,
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger,
+        ):
             mock_socket = MagicMock()
             mock_socket.connect_ex.return_value = 1  # Port available
             mock_socket_class.return_value.__enter__.return_value = mock_socket
@@ -138,7 +138,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
             mock_popen.return_value = mock_process
 
             # Mock download_standalone_binary to return True
-            with patch.object(self.handler, 'download_standalone_binary', return_value=True):
+            with patch.object(self.handler, "download_standalone_binary", return_value=True):
                 self.handler.start()
 
                 # Verify process was started
@@ -151,8 +151,10 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
 
     def test_start_port_occupied(self):
         """Test start when port is already occupied."""
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket') as mock_socket_class, \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with (
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket") as mock_socket_class,
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger,
+        ):
             mock_socket = MagicMock()
             mock_socket.connect_ex.return_value = 0  # Port occupied
             mock_socket_class.return_value.__enter__.return_value = mock_socket
@@ -171,7 +173,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.mock_container.xlite_reverse_proxy_release_url = None
         self.mock_container.xlite_reverse_proxy_bin = None
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
             handler = XliteReverseProxyHandler(self.mock_container)
             handler.start()
 
@@ -181,16 +183,18 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
 
     def test_start_download_fails(self):
         """Test start when download fails."""
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists', return_value=False), \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs'), \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket') as mock_socket_class, \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with (
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists", return_value=False),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs"),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket") as mock_socket_class,
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger,
+        ):
             mock_socket = MagicMock()
             mock_socket.connect_ex.return_value = 1  # Port available
             mock_socket_class.return_value.__enter__.return_value = mock_socket
 
             # Mock download_standalone_binary to return False
-            with patch.object(self.handler, 'download_standalone_binary', return_value=False):
+            with patch.object(self.handler, "download_standalone_binary", return_value=False):
                 self.handler.start()
 
                 # Verify process was not started
@@ -202,11 +206,13 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
 
     def test_start_exception_during_start(self):
         """Test start when an exception occurs during process start."""
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists', return_value=False), \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs'), \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket') as mock_socket_class, \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.subprocess.Popen') as mock_popen, \
-                patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with (
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.path.exists", return_value=False),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs"),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket") as mock_socket_class,
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.subprocess.Popen") as mock_popen,
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger,
+        ):
             mock_socket = MagicMock()
             mock_socket.connect_ex.return_value = 1  # Port available
             mock_socket_class.return_value.__enter__.return_value = mock_socket
@@ -214,7 +220,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
             mock_popen.side_effect = Exception("Test exception")
 
             # Mock download_standalone_binary to return True
-            with patch.object(self.handler, 'download_standalone_binary', return_value=True):
+            with patch.object(self.handler, "download_standalone_binary", return_value=True):
                 self.handler.start()
 
                 # Verify process was not started
@@ -238,7 +244,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.handler.process = mock_process
         self.handler.running_locally = True
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
             self.handler.stop()
 
             # Verify process was terminated
@@ -262,9 +268,9 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.handler.process = mock_process
         self.handler.running_locally = True
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
-            with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg'):
-                with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid', return_value=12345):
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
+            with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg"):
+                with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", return_value=12345):
                     self.handler.stop()
 
             # Verify process was terminated and killed
@@ -291,9 +297,9 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.handler.process = mock_process
         self.handler.running_locally = True
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
-            with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg'):
-                with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid', return_value=12345):
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
+            with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg"):
+                with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", return_value=12345):
                     self.handler.stop()
 
             # Verify logger was called with error
@@ -311,7 +317,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.handler.process = mock_process
         self.handler.running_locally = False
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
             self.handler.stop()
 
             # Verify process was not terminated
@@ -326,7 +332,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.handler.process = None
         self.handler.running_locally = True
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
             self.handler.stop()
 
             # Verify logger was not called
@@ -340,7 +346,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.handler.process = mock_process
         self.handler.running_locally = True
 
-        with patch('utilities.bin_handlers.xlite_reverse_proxy_handler.logger') as mock_logger:
+        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
             self.handler.stop()
 
             # Verify process was not terminated (already dead)
@@ -354,5 +360,5 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
             mock_logger.info.assert_called_once_with("Proxy already stopped")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

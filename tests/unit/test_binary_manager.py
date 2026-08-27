@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, call, patch
 from watchdog.events import FileSystemEvent
 
 # Add the project root to the sys.path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import customtkinter as ctk
 
@@ -40,10 +40,10 @@ class TestBinaryManager(unittest.TestCase):
         self.mock_root_gui.tooltip_manager = MagicMock()
 
         # Setup manager mocks
-        for manager_name in ['blocknet_manager', 'blockdx_manager', 'xlite_manager']:
+        for manager_name in ["blocknet_manager", "blockdx_manager", "xlite_manager"]:
             manager = MagicMock()
             manager.utility = MagicMock()
-            manager.version = ["v4.4.1"] if manager_name == 'blocknet_manager' else ["v1.0.0"]
+            manager.version = ["v4.4.1"] if manager_name == "blocknet_manager" else ["v1.0.0"]
             setattr(self.mock_root_gui, manager_name, manager)
 
         # Setup process running states
@@ -52,35 +52,43 @@ class TestBinaryManager(unittest.TestCase):
         self.mock_root_gui.xlite_manager.process_running = False
 
         # Setup download states
-        for manager in [self.mock_root_gui.blocknet_manager,
-                        self.mock_root_gui.blockdx_manager,
-                        self.mock_root_gui.xlite_manager]:
+        for manager in [
+            self.mock_root_gui.blocknet_manager,
+            self.mock_root_gui.blockdx_manager,
+            self.mock_root_gui.xlite_manager,
+        ]:
             manager.utility.downloading_bin = False
             manager.utility.bootstrap_checking = False
             manager.utility.valid_rpc = True
             manager.utility.binary_percent_download = None
 
         # Setup image mocks
-        for img_attr in ['install_greyed_img', 'install_img', 'delete_greyed_img',
-                         'delete_img', 'stop_greyed_img', 'stop_img',
-                         'start_greyed_img', 'start_img']:
+        for img_attr in [
+            "install_greyed_img",
+            "install_img",
+            "delete_greyed_img",
+            "delete_img",
+            "stop_greyed_img",
+            "stop_img",
+            "start_greyed_img",
+            "start_img",
+        ]:
             setattr(self.mock_root_gui, img_attr, MagicMock())
 
         # Setup patchers
-        self.patcher_get_container = patch('gui.binary_manager.get_container',
-                                           return_value=self.mock_container)
-        self.patcher_utils = patch('gui.binary_manager.utils', new=MagicMock(spec=utils))
-        self.patcher_os_listdir = patch('os.listdir', return_value=[])
-        self.patcher_os_path_isdir = patch('os.path.isdir', return_value=True)
-        self.patcher_os_path_isfile = patch('os.path.isfile', return_value=False)
-        self.patcher_os_path_exists = patch('os.path.exists', return_value=True)
-        self.patcher_os_makedirs = patch('os.makedirs')
-        self.patcher_shutil_rmtree = patch('shutil.rmtree')
-        self.patcher_os_remove = patch('os.remove')
-        self.patcher_thread = patch('gui.binary_manager.Thread')
-        self.patcher_observer = patch('gui.binary_manager.Observer')
-        self.patcher_binary_file_handler = patch('gui.binary_manager.BinaryFileHandler')
-        self.patcher_os_stat = patch('gui.binary_manager.os.stat')
+        self.patcher_get_container = patch("gui.binary_manager.get_container", return_value=self.mock_container)
+        self.patcher_utils = patch("gui.binary_manager.utils", new=MagicMock(spec=utils))
+        self.patcher_os_listdir = patch("os.listdir", return_value=[])
+        self.patcher_os_path_isdir = patch("os.path.isdir", return_value=True)
+        self.patcher_os_path_isfile = patch("os.path.isfile", return_value=False)
+        self.patcher_os_path_exists = patch("os.path.exists", return_value=True)
+        self.patcher_os_makedirs = patch("os.makedirs")
+        self.patcher_shutil_rmtree = patch("shutil.rmtree")
+        self.patcher_os_remove = patch("os.remove")
+        self.patcher_thread = patch("gui.binary_manager.Thread")
+        self.patcher_observer = patch("gui.binary_manager.Observer")
+        self.patcher_binary_file_handler = patch("gui.binary_manager.BinaryFileHandler")
+        self.patcher_os_stat = patch("gui.binary_manager.os.stat")
 
         # Start all patchers
         self.mock_get_container = self.patcher_get_container.start()
@@ -108,29 +116,37 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.frame_manager.parent = self.binary_manager
 
         # Setup frame manager boolvars
-        for binary in ['blocknet', 'blockdx', 'xlite']:
+        for binary in ["blocknet", "blockdx", "xlite"]:
             boolvar = MagicMock(spec=ctk.BooleanVar)
             boolvar.get.return_value = False
-            setattr(self.binary_manager.frame_manager, f'{binary}_installed_boolvar', boolvar)
+            setattr(self.binary_manager.frame_manager, f"{binary}_installed_boolvar", boolvar)
 
         # Setup frame manager buttons and string vars
-        for binary in ['blocknet', 'blockdx', 'xlite']:
-            button_attr = f'{binary}_start_close_button' if binary != 'xlite' else 'xlite_toggle_execution_button'
+        for binary in ["blocknet", "blockdx", "xlite"]:
+            button_attr = f"{binary}_start_close_button" if binary != "xlite" else "xlite_toggle_execution_button"
             setattr(self.binary_manager.frame_manager, button_attr, MagicMock())
-            setattr(self.binary_manager.frame_manager, f'{button_attr}_string_var', MagicMock())
+            setattr(self.binary_manager.frame_manager, f"{button_attr}_string_var", MagicMock())
 
-        for binary in ['blocknet', 'blockdx', 'xlite']:
-            setattr(self.binary_manager.frame_manager, f'install_delete_{binary}_button', MagicMock())
-            setattr(self.binary_manager.frame_manager, f'install_delete_{binary}_string_var', MagicMock())
+        for binary in ["blocknet", "blockdx", "xlite"]:
+            setattr(self.binary_manager.frame_manager, f"install_delete_{binary}_button", MagicMock())
+            setattr(self.binary_manager.frame_manager, f"install_delete_{binary}_string_var", MagicMock())
 
     def tearDown(self):
         """Clean up patchers and queue after each test."""
         patchers = [
-            self.patcher_get_container, self.patcher_utils, self.patcher_os_listdir,
-            self.patcher_os_path_isdir, self.patcher_os_path_isfile, self.patcher_os_path_exists,
-            self.patcher_os_makedirs, self.patcher_shutil_rmtree, self.patcher_os_remove,
-            self.patcher_thread, self.patcher_observer, self.patcher_binary_file_handler,
-            self.patcher_os_stat
+            self.patcher_get_container,
+            self.patcher_utils,
+            self.patcher_os_listdir,
+            self.patcher_os_path_isdir,
+            self.patcher_os_path_isfile,
+            self.patcher_os_path_exists,
+            self.patcher_os_makedirs,
+            self.patcher_shutil_rmtree,
+            self.patcher_os_remove,
+            self.patcher_thread,
+            self.patcher_observer,
+            self.patcher_binary_file_handler,
+            self.patcher_os_stat,
         ]
         for patcher in patchers:
             patcher.stop()
@@ -184,7 +200,7 @@ class TestBinaryManager(unittest.TestCase):
         mock_event = MagicMock(spec=FileSystemEvent)
         mock_event.src_path = "/mock/path/file.txt"
 
-        with patch.object(self.binary_manager, 'check_and_update_aio_folder') as mock_check_update:
+        with patch.object(self.binary_manager, "check_and_update_aio_folder") as mock_check_update:
             self.mock_root_gui.after.reset_mock()
             handler.on_modified(mock_event)
             mock_check_update.assert_not_called()
@@ -198,20 +214,21 @@ class TestBinaryManager(unittest.TestCase):
         mock_binary_manager.root_gui.after = MagicMock()
         handler = BinaryFileHandler(mock_binary_manager)
 
-        with patch('gui.binary_manager.threading.current_thread') as mock_thread:
-            mock_thread.return_value.name = 'MainThread'
+        with patch("gui.binary_manager.threading.current_thread") as mock_thread:
+            mock_thread.return_value.name = "MainThread"
             handler.schedule_delayed_task(1000)
             mock_binary_manager.root_gui.after.assert_called_once_with(1000, handler._execute_scheduled)
 
     def test_binary_file_handler_schedule_delayed_task_worker_thread(self):
         """Test BinaryFileHandler.schedule_delayed_task in worker thread."""
         import queue
+
         mock_binary_manager = MagicMock()
         mock_binary_manager.file_change_queue = queue.Queue()
         handler = BinaryFileHandler(mock_binary_manager)
 
-        with patch('threading.current_thread') as mock_thread:
-            mock_thread.return_thread.name = 'WorkerThread'
+        with patch("threading.current_thread") as mock_thread:
+            mock_thread.return_thread.name = "WorkerThread"
             handler.schedule_delayed_task(1000)
             self.assertEqual(mock_binary_manager.file_change_queue.qsize(), 1)
             msg_type, delay = mock_binary_manager.file_change_queue.get_nowait()
@@ -225,7 +242,7 @@ class TestBinaryManager(unittest.TestCase):
         handler = BinaryFileHandler(mock_binary_manager)
         handler.scheduled = True
 
-        with patch('time.time', return_value=1234567890):
+        with patch("time.time", return_value=1234567890):
             handler._execute_scheduled()
             mock_binary_manager.check_and_update_aio_folder.assert_called_once()
             self.assertEqual(handler.last_run, 1234567890)
@@ -246,18 +263,20 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_setup(self):
         """Test BinaryManager setup method."""
-        with patch('gui.binary_manager.BinaryFrameManager') as MockBinaryFrameManager:
+        with patch("gui.binary_manager.BinaryFrameManager") as MockBinaryFrameManager:
             asyncio.run(self.binary_manager.setup())
             MockBinaryFrameManager.assert_called_once_with(self.binary_manager)
-            self.mock_root_gui.after.assert_has_calls([
-                call(0, self.binary_manager.check_and_update_aio_folder),
-                call(0, self.binary_manager.update_all_binary_buttons),
-                call(0, self.binary_manager.update_xbridge_bots_buttons)
-            ])
+            self.mock_root_gui.after.assert_has_calls(
+                [
+                    call(0, self.binary_manager.check_and_update_aio_folder),
+                    call(0, self.binary_manager.update_all_binary_buttons),
+                    call(0, self.binary_manager.update_xbridge_bots_buttons),
+                ]
+            )
 
     # ==================== Binary Start/Stop Tests ====================
 
-    @patch('gui.binary_manager.Thread')
+    @patch("gui.binary_manager.Thread")
     def test_start_or_close_binary_start(self, mock_thread):
         """Test _start_or_close_binary when starting a binary."""
         self.binary_manager._start_or_close_binary(
@@ -265,18 +284,17 @@ class TestBinaryManager(unittest.TestCase):
             stop_func=MagicMock(),
             start_func=MagicMock(),
             button=self.binary_manager.frame_manager.blocknet_start_close_button,
-            disable_flag='disable_start_blocknet_button'
+            disable_flag="disable_start_blocknet_button",
         )
         self.mock_utils.disable_button.assert_called_with(
-            self.binary_manager.frame_manager.blocknet_start_close_button,
-            img=self.mock_root_gui.start_greyed_img
+            self.binary_manager.frame_manager.blocknet_start_close_button, img=self.mock_root_gui.start_greyed_img
         )
         self.assertTrue(self.binary_manager.disable_start_blocknet_button)
         mock_thread.assert_called_once()
         mock_thread.return_value.start.assert_called_once()
         self.assertEqual(self.mock_root_gui.after.call_count, 2)
 
-    @patch('gui.binary_manager.Thread')
+    @patch("gui.binary_manager.Thread")
     def test_start_or_close_binary_stop(self, mock_thread):
         """Test _start_or_close_binary when stopping a binary."""
         self.binary_manager._start_or_close_binary(
@@ -284,11 +302,10 @@ class TestBinaryManager(unittest.TestCase):
             stop_func=MagicMock(),
             start_func=MagicMock(),
             button=self.binary_manager.frame_manager.blocknet_start_close_button,
-            disable_flag='disable_start_blocknet_button'
+            disable_flag="disable_start_blocknet_button",
         )
         self.mock_utils.disable_button.assert_called_with(
-            self.binary_manager.frame_manager.blocknet_start_close_button,
-            img=self.mock_root_gui.stop_greyed_img
+            self.binary_manager.frame_manager.blocknet_start_close_button, img=self.mock_root_gui.stop_greyed_img
         )
         self.assertTrue(self.binary_manager.disable_start_blocknet_button)
         mock_thread.assert_called_once()
@@ -298,10 +315,10 @@ class TestBinaryManager(unittest.TestCase):
     def test_enable_binary_start_button(self):
         """Test _enable_binary_start_button method."""
         self.binary_manager.disable_start_blocknet_button = True
-        self.binary_manager._enable_binary_start_button('disable_start_blocknet_button')
+        self.binary_manager._enable_binary_start_button("disable_start_blocknet_button")
         self.assertFalse(self.binary_manager.disable_start_blocknet_button)
 
-    @patch.object(BinaryManager, '_start_or_close_binary')
+    @patch.object(BinaryManager, "_start_or_close_binary")
     def test_start_or_close_blocknet(self, mock_start_or_close_binary):
         """Test start_or_close_blocknet method."""
         self.mock_root_gui.blocknet_manager.blocknet_process_running = False
@@ -312,12 +329,12 @@ class TestBinaryManager(unittest.TestCase):
             stop_func=self.mock_root_gui.blocknet_manager.utility.close_blocknet,
             start_func=self.mock_root_gui.blocknet_manager.utility.start_blocknet,
             button=self.binary_manager.frame_manager.blocknet_start_close_button,
-            disable_flag='disable_start_blocknet_button',
-            app_name='Blocknet Core',
-            handler=self.mock_root_gui.blocknet_manager.utility
+            disable_flag="disable_start_blocknet_button",
+            app_name="Blocknet Core",
+            handler=self.mock_root_gui.blocknet_manager.utility,
         )
 
-    @patch.object(BinaryManager, '_start_or_close_binary')
+    @patch.object(BinaryManager, "_start_or_close_binary")
     def test_start_or_close_blockdx(self, mock_start_or_close_binary):
         """Test start_or_close_blockdx method."""
         self.mock_root_gui.blockdx_manager.process_running = False
@@ -328,12 +345,12 @@ class TestBinaryManager(unittest.TestCase):
             stop_func=self.mock_root_gui.blockdx_manager.utility.close_blockdx,
             start_func=self.mock_root_gui.blockdx_manager.utility.start_blockdx,
             button=self.binary_manager.frame_manager.blockdx_start_close_button,
-            disable_flag='disable_start_blockdx_button',
-            app_name='Block-DX',
-            handler=self.mock_root_gui.blockdx_manager.utility
+            disable_flag="disable_start_blockdx_button",
+            app_name="Block-DX",
+            handler=self.mock_root_gui.blockdx_manager.utility,
         )
 
-    @patch.object(BinaryManager, '_start_or_close_binary')
+    @patch.object(BinaryManager, "_start_or_close_binary")
     def test_start_or_close_xlite(self, mock_start_or_close_binary):
         """Test start_or_close_xlite method."""
         self.mock_root_gui.xlite_manager.process_running = False
@@ -341,16 +358,16 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.start_or_close_xlite()
         mock_start_or_close_binary.assert_called_once()
         args, kwargs = mock_start_or_close_binary.call_args
-        self.assertFalse(kwargs['process_running'])
-        self.assertEqual(kwargs['stop_func'], self.mock_root_gui.xlite_manager.utility.close_xlite)
-        self.assertEqual(kwargs['button'], self.binary_manager.frame_manager.xlite_toggle_execution_button)
-        self.assertEqual(kwargs['disable_flag'], 'disable_start_xlite_button')
-        self.assertEqual(kwargs['app_name'], 'XLite')
-        self.assertEqual(kwargs['handler'], self.mock_root_gui.xlite_manager.utility)
-        start_func_lambda = kwargs['start_func']
+        self.assertFalse(kwargs["process_running"])
+        self.assertEqual(kwargs["stop_func"], self.mock_root_gui.xlite_manager.utility.close_xlite)
+        self.assertEqual(kwargs["button"], self.binary_manager.frame_manager.xlite_toggle_execution_button)
+        self.assertEqual(kwargs["disable_flag"], "disable_start_xlite_button")
+        self.assertEqual(kwargs["app_name"], "XLite")
+        self.assertEqual(kwargs["handler"], self.mock_root_gui.xlite_manager.utility)
+        start_func_lambda = kwargs["start_func"]
         start_func_lambda()
         self.mock_root_gui.xlite_manager.utility.start_xlite.assert_called_once_with(
-            env_vars=['CC_WALLET_PASS=test_password', 'CC_WALLET_AUTOLOGIN=true']
+            env_vars=["CC_WALLET_PASS=test_password", "CC_WALLET_AUTOLOGIN=true"]
         )
 
     # ==================== Install/Delete Command Tests ====================
@@ -358,14 +375,14 @@ class TestBinaryManager(unittest.TestCase):
     def test_install_delete_blocknet_command_install(self):
         """Test install_delete_blocknet_command when installing."""
         self.binary_manager.frame_manager.blocknet_installed_boolvar.get.return_value = False
-        with patch.object(self.binary_manager, 'download_blocknet_command') as mock_download:
+        with patch.object(self.binary_manager, "download_blocknet_command") as mock_download:
             self.binary_manager.install_delete_blocknet_command()
             mock_download.assert_called_once()
 
     def test_install_delete_blocknet_command_delete(self):
         """Test install_delete_blocknet_command when deleting."""
         self.binary_manager.frame_manager.blocknet_installed_boolvar.get.return_value = True
-        with patch.object(self.binary_manager, 'delete_blocknet_command') as mock_delete:
+        with patch.object(self.binary_manager, "delete_blocknet_command") as mock_delete:
             self.binary_manager.install_delete_blocknet_command()
             mock_delete.assert_called_once()
 
@@ -373,12 +390,10 @@ class TestBinaryManager(unittest.TestCase):
         """Test download_blocknet_command method."""
         self.binary_manager.download_blocknet_command()
         self.mock_utils.disable_button.assert_called_once_with(
-            self.binary_manager.frame_manager.install_delete_blocknet_button,
-            img=self.mock_root_gui.install_greyed_img
+            self.binary_manager.frame_manager.install_delete_blocknet_button, img=self.mock_root_gui.install_greyed_img
         )
         self.mock_thread.assert_called_once_with(
-            target=self.mock_root_gui.blocknet_manager.utility.download_blocknet_bin,
-            daemon=True
+            target=self.mock_root_gui.blocknet_manager.utility.download_blocknet_bin, daemon=True
         )
         self.mock_thread.return_value.start.assert_called_once()
 
@@ -389,21 +404,19 @@ class TestBinaryManager(unittest.TestCase):
         self.mock_os_path_isdir.side_effect = lambda x: "blocknet-" in x or "other_folder" in x
 
         self.binary_manager.delete_blocknet_command()
-        self.mock_shutil_rmtree.assert_called_once_with(
-            os.path.join(self.mock_container.aio_folder, "blocknet-4.4.1")
-        )
+        self.mock_shutil_rmtree.assert_called_once_with(os.path.join(self.mock_container.aio_folder, "blocknet-4.4.1"))
 
     def test_install_delete_blockdx_command_install(self):
         """Test install_delete_blockdx_command when installing."""
         self.binary_manager.frame_manager.blockdx_installed_boolvar.get.return_value = False
-        with patch.object(self.binary_manager, 'download_blockdx_command') as mock_download:
+        with patch.object(self.binary_manager, "download_blockdx_command") as mock_download:
             self.binary_manager.install_delete_blockdx_command()
             mock_download.assert_called_once()
 
     def test_install_delete_blockdx_command_delete(self):
         """Test install_delete_blockdx_command when deleting."""
         self.binary_manager.frame_manager.blockdx_installed_boolvar.get.return_value = True
-        with patch.object(self.binary_manager, 'delete_blockdx_command') as mock_delete:
+        with patch.object(self.binary_manager, "delete_blockdx_command") as mock_delete:
             self.binary_manager.install_delete_blockdx_command()
             mock_delete.assert_called_once()
 
@@ -411,12 +424,10 @@ class TestBinaryManager(unittest.TestCase):
         """Test download_blockdx_command method."""
         self.binary_manager.download_blockdx_command()
         self.mock_utils.disable_button.assert_called_once_with(
-            self.binary_manager.frame_manager.install_delete_blockdx_button,
-            img=self.mock_root_gui.install_greyed_img
+            self.binary_manager.frame_manager.install_delete_blockdx_button, img=self.mock_root_gui.install_greyed_img
         )
         self.mock_thread.assert_called_once_with(
-            target=self.mock_root_gui.blockdx_manager.utility.download_blockdx_bin,
-            daemon=True
+            target=self.mock_root_gui.blockdx_manager.utility.download_blockdx_bin, daemon=True
         )
         self.mock_thread.return_value.start.assert_called_once()
 
@@ -428,9 +439,7 @@ class TestBinaryManager(unittest.TestCase):
         self.mock_os_path_isdir.side_effect = lambda x: "BLOCK-DX-" in x or "other_folder" in x
 
         self.binary_manager.delete_blockdx_command()
-        self.mock_shutil_rmtree.assert_called_once_with(
-            os.path.join(self.mock_container.aio_folder, "BLOCK-DX-1.0.0")
-        )
+        self.mock_shutil_rmtree.assert_called_once_with(os.path.join(self.mock_container.aio_folder, "BLOCK-DX-1.0.0"))
 
     def test_delete_blockdx_command_darwin(self):
         """Test delete_blockdx_command on Darwin (macOS)."""
@@ -441,21 +450,19 @@ class TestBinaryManager(unittest.TestCase):
 
         self.binary_manager.delete_blockdx_command()
         self.mock_root_gui.blockdx_manager.unmount_dmg.assert_called_once()
-        self.mock_os_remove.assert_called_once_with(
-            os.path.join(self.mock_container.aio_folder, "blockdx.dmg")
-        )
+        self.mock_os_remove.assert_called_once_with(os.path.join(self.mock_container.aio_folder, "blockdx.dmg"))
 
     def test_install_delete_xlite_command_install(self):
         """Test install_delete_xlite_command when installing."""
         self.binary_manager.frame_manager.xlite_installed_boolvar.get.return_value = False
-        with patch.object(self.binary_manager, 'download_xlite_command') as mock_download:
+        with patch.object(self.binary_manager, "download_xlite_command") as mock_download:
             self.binary_manager.install_delete_xlite_command()
             mock_download.assert_called_once()
 
     def test_install_delete_xlite_command_delete(self):
         """Test install_delete_xlite_command when deleting."""
         self.binary_manager.frame_manager.xlite_installed_boolvar.get.return_value = True
-        with patch.object(self.binary_manager, 'delete_xlite_command') as mock_delete:
+        with patch.object(self.binary_manager, "delete_xlite_command") as mock_delete:
             self.binary_manager.install_delete_xlite_command()
             mock_delete.assert_called_once()
 
@@ -463,12 +470,10 @@ class TestBinaryManager(unittest.TestCase):
         """Test download_xlite_command method."""
         self.binary_manager.download_xlite_command()
         self.mock_utils.disable_button.assert_called_once_with(
-            self.binary_manager.frame_manager.install_delete_xlite_button,
-            img=self.mock_root_gui.install_greyed_img
+            self.binary_manager.frame_manager.install_delete_xlite_button, img=self.mock_root_gui.install_greyed_img
         )
         self.mock_thread.assert_called_once_with(
-            target=self.mock_root_gui.xlite_manager.utility.download_xlite_bin,
-            daemon=True
+            target=self.mock_root_gui.xlite_manager.utility.download_xlite_bin, daemon=True
         )
         self.mock_thread.return_value.start.assert_called_once()
 
@@ -480,9 +485,7 @@ class TestBinaryManager(unittest.TestCase):
         self.mock_os_path_isdir.side_effect = lambda x: "XLite-" in x or "other_folder" in x
 
         self.binary_manager.delete_xlite_command()
-        self.mock_shutil_rmtree.assert_called_once_with(
-            os.path.join(self.mock_container.aio_folder, "XLite-1.0.0")
-        )
+        self.mock_shutil_rmtree.assert_called_once_with(os.path.join(self.mock_container.aio_folder, "XLite-1.0.0"))
 
     def test_delete_xlite_command_darwin(self):
         """Test delete_xlite_command on Darwin (macOS)."""
@@ -493,9 +496,7 @@ class TestBinaryManager(unittest.TestCase):
 
         self.binary_manager.delete_xlite_command()
         self.mock_root_gui.xlite_manager.utility.unmount_dmg.assert_called_once()
-        self.mock_os_remove.assert_called_once_with(
-            os.path.join(self.mock_container.aio_folder, "xlite.dmg")
-        )
+        self.mock_os_remove.assert_called_once_with(os.path.join(self.mock_container.aio_folder, "xlite.dmg"))
 
     # ==================== Folder Scanning Tests ====================
 
@@ -542,7 +543,7 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.last_directory_mtime = 123456789
         self.mock_os_stat.return_value.st_mtime_ns = 123456789
 
-        with patch.object(self.binary_manager, 'scan_directory_for_binaries') as mock_scan:
+        with patch.object(self.binary_manager, "scan_directory_for_binaries") as mock_scan:
             self.binary_manager.check_and_update_aio_folder()
             mock_scan.assert_not_called()
 
@@ -552,7 +553,7 @@ class TestBinaryManager(unittest.TestCase):
         self.mock_os_path_isdir.return_value = True
         self.mock_root_gui.blocknet_manager.version = ["v4.4.1"]
 
-        with patch('gui.binary_manager.logger') as mock_logger:
+        with patch("gui.binary_manager.logger") as mock_logger:
             self.binary_manager.check_and_update_aio_folder()
             mock_logger.info.assert_called()
             self.assertIn("incorrect version", mock_logger.info.call_args[0][0])
@@ -563,14 +564,14 @@ class TestBinaryManager(unittest.TestCase):
         del mock_stat.st_mtime_ns  # Remove attribute to trigger fallback
         mock_stat.st_mtime = 1234567890.123
 
-        with patch('os.stat', return_value=mock_stat):
+        with patch("os.stat", return_value=mock_stat):
             result = self.binary_manager.get_directory_mtime()
             # Allow small floating point differences
             self.assertAlmostEqual(result, 1234567890123000000, delta=1000000)
 
     def test_get_directory_mtime_oserror(self):
         """Test get_directory_mtime handles OSError."""
-        with patch('gui.binary_manager.os.stat', side_effect=OSError("Permission denied")):
+        with patch("gui.binary_manager.os.stat", side_effect=OSError("Permission denied")):
             result = self.binary_manager.get_directory_mtime()
             self.assertEqual(result, 0)
 
@@ -583,18 +584,16 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.update_binary_buttons("blocknet")
 
         self.binary_manager.frame_manager.blocknet_start_close_button_string_var.set.assert_called_once_with(
-            widgets_strings.close_string)
+            widgets_strings.close_string
+        )
         self.mock_root_gui.tooltip_manager.update_tooltip.assert_any_call(
-            widget=self.binary_manager.frame_manager.blocknet_start_close_button,
-            msg=widgets_strings.close_string
+            widget=self.binary_manager.frame_manager.blocknet_start_close_button, msg=widgets_strings.close_string
         )
         self.mock_utils.enable_button.assert_any_call(
-            self.binary_manager.frame_manager.blocknet_start_close_button,
-            img=self.mock_root_gui.stop_img
+            self.binary_manager.frame_manager.blocknet_start_close_button, img=self.mock_root_gui.stop_img
         )
         self.mock_utils.disable_button.assert_any_call(
-            self.binary_manager.frame_manager.install_delete_blocknet_button,
-            img=self.mock_root_gui.delete_greyed_img
+            self.binary_manager.frame_manager.install_delete_blocknet_button, img=self.mock_root_gui.delete_greyed_img
         )
 
     def test_update_binary_buttons_blocknet_not_installed_not_running(self):
@@ -604,14 +603,13 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.update_binary_buttons("blocknet")
 
         self.binary_manager.frame_manager.blocknet_start_close_button_string_var.set.assert_called_once_with(
-            widgets_strings.start_string)
-        self.mock_utils.enable_button.assert_any_call(
-            self.binary_manager.frame_manager.blocknet_start_close_button,
-            img=self.mock_root_gui.start_img
+            widgets_strings.start_string
         )
         self.mock_utils.enable_button.assert_any_call(
-            self.binary_manager.frame_manager.install_delete_blocknet_button,
-            img=self.mock_root_gui.install_img
+            self.binary_manager.frame_manager.blocknet_start_close_button, img=self.mock_root_gui.start_img
+        )
+        self.mock_utils.enable_button.assert_any_call(
+            self.binary_manager.frame_manager.install_delete_blocknet_button, img=self.mock_root_gui.install_img
         )
 
     def test_update_binary_buttons_blockdx(self):
@@ -620,7 +618,7 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.frame_manager.blockdx_installed_boolvar.get.return_value = False
         self.mock_root_gui.blockdx_manager.utility.downloading_bin = True
 
-        with patch.object(self.binary_manager, 'update_blockdx_start_close_button') as mock_update:
+        with patch.object(self.binary_manager, "update_blockdx_start_close_button") as mock_update:
             self.binary_manager.update_binary_buttons("blockdx")
             mock_update.assert_called_once()
             # Verify _update_install_delete_button was called (which calls disable_button)
@@ -632,7 +630,7 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.frame_manager.xlite_installed_boolvar.get.return_value = False
         self.mock_root_gui.xlite_manager.utility.downloading_bin = True
 
-        with patch.object(self.binary_manager, 'update_xlite_start_close_button') as mock_update:
+        with patch.object(self.binary_manager, "update_xlite_start_close_button") as mock_update:
             self.binary_manager.update_binary_buttons("xlite")
             mock_update.assert_called_once()
             # Verify _update_install_delete_button was called (which calls disable_button)
@@ -640,26 +638,22 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_update_all_binary_buttons(self):
         """Test update_all_binary_buttons method."""
-        with patch.object(self.binary_manager, 'update_binary_buttons') as mock_update_binary_buttons:
+        with patch.object(self.binary_manager, "update_binary_buttons") as mock_update_binary_buttons:
             self.binary_manager.update_all_binary_buttons()
-            mock_update_binary_buttons.assert_has_calls([
-                call("blocknet"),
-                call("blockdx"),
-                call("xlite")
-            ])
+            mock_update_binary_buttons.assert_has_calls([call("blocknet"), call("blockdx"), call("xlite")])
             self.assertEqual(self.mock_root_gui.after.call_count, 2)
 
     def test_update_all_binary_buttons_winfo_exists_false(self):
         """Test update_all_binary_buttons when winfo_exists returns False."""
         self.mock_root_gui.winfo_exists.return_value = False
-        with patch.object(self.binary_manager, 'update_binary_buttons') as mock_update:
+        with patch.object(self.binary_manager, "update_binary_buttons") as mock_update:
             self.binary_manager.update_all_binary_buttons()
             mock_update.assert_not_called()
 
     def test_update_all_binary_buttons_winfo_exists_true(self):
         """Test update_all_binary_buttons when winfo_exists returns True."""
         self.mock_root_gui.winfo_exists.return_value = True
-        with patch.object(self.binary_manager, 'update_binary_buttons') as mock_update:
+        with patch.object(self.binary_manager, "update_binary_buttons") as mock_update:
             self.binary_manager.update_all_binary_buttons()
             mock_update.assert_called()
             # Should schedule next update
@@ -677,14 +671,13 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.update_blockdx_start_close_button()
 
         self.binary_manager.frame_manager.blockdx_start_close_button_string_var.set.assert_called_once_with(
-            widgets_strings.start_string)
+            widgets_strings.start_string
+        )
         self.mock_root_gui.tooltip_manager.update_tooltip.assert_called_once_with(
-            widget=self.binary_manager.frame_manager.blockdx_start_close_button,
-            msg=widgets_strings.start_string
+            widget=self.binary_manager.frame_manager.blockdx_start_close_button, msg=widgets_strings.start_string
         )
         self.mock_utils.enable_button.assert_called_once_with(
-            self.binary_manager.frame_manager.blockdx_start_close_button,
-            img=self.mock_root_gui.start_img
+            self.binary_manager.frame_manager.blockdx_start_close_button, img=self.mock_root_gui.start_img
         )
         self.mock_utils.disable_button.assert_not_called()
 
@@ -698,14 +691,14 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.update_blockdx_start_close_button()
 
         self.binary_manager.frame_manager.blockdx_start_close_button_string_var.set.assert_called_once_with(
-            widgets_strings.start_string)
+            widgets_strings.start_string
+        )
         self.mock_root_gui.tooltip_manager.update_tooltip.assert_called_once_with(
             widget=self.binary_manager.frame_manager.blockdx_start_close_button,
-            msg=widgets_strings.blockdx_missing_blocknet_config_string
+            msg=widgets_strings.blockdx_missing_blocknet_config_string,
         )
         self.mock_utils.disable_button.assert_called_once_with(
-            self.binary_manager.frame_manager.blockdx_start_close_button,
-            img=self.mock_root_gui.start_greyed_img
+            self.binary_manager.frame_manager.blockdx_start_close_button, img=self.mock_root_gui.start_greyed_img
         )
         self.mock_utils.enable_button.assert_not_called()
 
@@ -717,8 +710,7 @@ class TestBinaryManager(unittest.TestCase):
 
         self.binary_manager.update_blockdx_start_close_button()
         self.mock_root_gui.tooltip_manager.update_tooltip.assert_called_with(
-            widget=self.binary_manager.frame_manager.blockdx_start_close_button,
-            msg=widgets_strings.close_string
+            widget=self.binary_manager.frame_manager.blockdx_start_close_button, msg=widgets_strings.close_string
         )
         self.mock_utils.enable_button.assert_called_once()
 
@@ -742,14 +734,13 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.update_xlite_start_close_button()
 
         self.binary_manager.frame_manager.xlite_toggle_execution_string_var.set.assert_called_once_with(
-            widgets_strings.start_string)
+            widgets_strings.start_string
+        )
         self.mock_root_gui.tooltip_manager.update_tooltip.assert_called_once_with(
-            widget=self.binary_manager.frame_manager.xlite_toggle_execution_button,
-            msg=widgets_strings.start_string
+            widget=self.binary_manager.frame_manager.xlite_toggle_execution_button, msg=widgets_strings.start_string
         )
         self.mock_utils.enable_button.assert_called_once_with(
-            self.binary_manager.frame_manager.xlite_toggle_execution_button,
-            img=self.mock_root_gui.start_img
+            self.binary_manager.frame_manager.xlite_toggle_execution_button, img=self.mock_root_gui.start_img
         )
         self.mock_utils.disable_button.assert_not_called()
 
@@ -762,14 +753,13 @@ class TestBinaryManager(unittest.TestCase):
         self.binary_manager.update_xlite_start_close_button()
 
         self.binary_manager.frame_manager.xlite_toggle_execution_string_var.set.assert_called_once_with(
-            widgets_strings.start_string)
+            widgets_strings.start_string
+        )
         self.mock_root_gui.tooltip_manager.update_tooltip.assert_called_once_with(
-            widget=self.binary_manager.frame_manager.xlite_toggle_execution_button,
-            msg=widgets_strings.start_string
+            widget=self.binary_manager.frame_manager.xlite_toggle_execution_button, msg=widgets_strings.start_string
         )
         self.mock_utils.disable_button.assert_called_once_with(
-            self.binary_manager.frame_manager.xlite_toggle_execution_button,
-            img=self.mock_root_gui.start_greyed_img
+            self.binary_manager.frame_manager.xlite_toggle_execution_button, img=self.mock_root_gui.start_greyed_img
         )
         self.mock_utils.enable_button.assert_not_called()
 
@@ -780,8 +770,7 @@ class TestBinaryManager(unittest.TestCase):
 
         self.binary_manager.update_xlite_start_close_button()
         self.mock_root_gui.tooltip_manager.update_tooltip.assert_called_with(
-            widget=self.binary_manager.frame_manager.xlite_toggle_execution_button,
-            msg=widgets_strings.close_string
+            widget=self.binary_manager.frame_manager.xlite_toggle_execution_button, msg=widgets_strings.close_string
         )
         self.mock_utils.enable_button.assert_called_once()
 
@@ -799,8 +788,10 @@ class TestBinaryManager(unittest.TestCase):
     def test_update_xbridge_bots_buttons_winfo_exists_false(self):
         """Test update_xbridge_bots_buttons when winfo_exists returns False."""
         self.mock_root_gui.winfo_exists.return_value = False
-        with patch.object(self.binary_manager, 'update_xbridge_bots_start_close_button') as mock_start, \
-                patch.object(self.binary_manager, 'update_xbridge_bots_install_delete_button') as mock_install:
+        with (
+            patch.object(self.binary_manager, "update_xbridge_bots_start_close_button") as mock_start,
+            patch.object(self.binary_manager, "update_xbridge_bots_install_delete_button") as mock_install,
+        ):
             self.binary_manager.update_xbridge_bots_buttons()
             mock_start.assert_not_called()
             mock_install.assert_not_called()
@@ -839,8 +830,7 @@ class TestBinaryManager(unittest.TestCase):
 
         self.binary_manager.update_xbridge_bots_start_close_button()
         self.mock_root_gui.tooltip_manager.update_tooltip.assert_called_with(
-            widget=self.binary_manager.frame_manager.bots_toggle_execution_button,
-            msg=widgets_strings.close_string
+            widget=self.binary_manager.frame_manager.bots_toggle_execution_button, msg=widgets_strings.close_string
         )
         self.mock_utils.enable_button.assert_called_once()
 
@@ -888,35 +878,26 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_check_app_version_directory_wrong_version(self):
         """Test _check_app_version logs incorrect directory version."""
-        app_info = {
-            "is_dir": True,
-            "version": "4.4.1",
-            "darwin_file": None
-        }
+        app_info = {"is_dir": True, "version": "4.4.1", "darwin_file": None}
         item = "blocknet-5.0.0"
         full_path = "/mock/aio_folder/blocknet-5.0.0"
 
-        with patch('gui.binary_manager.logger') as mock_logger:
+        with patch("gui.binary_manager.logger") as mock_logger:
             self.binary_manager._check_app_version(app_info, item, full_path)
             mock_logger.info.assert_called_once()
             self.assertIn("incorrect version", mock_logger.info.call_args[0][0])
 
     def test_check_app_version_file_wrong_version(self):
         """Test _check_app_version logs incorrect file version."""
-        app_info = {
-            "is_dir": False,
-            "version": "1.0.0",
-            "darwin_file": "blockdx.dmg"
-        }
+        app_info = {"is_dir": False, "version": "1.0.0", "darwin_file": "blockdx.dmg"}
         item = "wrong_file.dmg"
         full_path = "/mock/aio_folder/wrong_file.dmg"
 
-        with patch('gui.binary_manager.logger') as mock_logger, \
-                patch('os.path.isfile', return_value=True):
+        with patch("gui.binary_manager.logger") as mock_logger, patch("os.path.isfile", return_value=True):
             self.binary_manager._check_app_version(app_info, item, full_path)
             mock_logger.info.assert_called_once()
             self.assertIn("incorrect version", mock_logger.info.call_args[0][0])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -47,13 +47,9 @@ class TestProcessManagementWorkflow:
         mock_process.poll.return_value = None
         mock_process.wait.return_value = None
 
-        with patch('subprocess.Popen', return_value=mock_process) as mock_popen:
+        with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
             # Simulate starting process
-            process = subprocess.Popen(
-                [str(binary_path)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
+            process = subprocess.Popen([str(binary_path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             # Verify process was started
             mock_popen.assert_called_once()
@@ -74,7 +70,7 @@ class TestProcessManagementWorkflow:
         mock_psutil_process.is_running.return_value = True
         mock_psutil_process.status.return_value = "running"
 
-        with patch('psutil.Process', return_value=mock_psutil_process):
+        with patch("psutil.Process", return_value=mock_psutil_process):
             # Read PID from file
             pid = int(pid_file.read_text())
             assert pid == 12345
@@ -104,8 +100,10 @@ class TestProcessManagementWorkflow:
         mock_psutil_process.terminate = MagicMock()
         mock_psutil_process.kill = MagicMock()
 
-        with patch('subprocess.Popen', return_value=mock_process), \
-                patch('psutil.Process', return_value=mock_psutil_process):
+        with (
+            patch("subprocess.Popen", return_value=mock_process),
+            patch("psutil.Process", return_value=mock_psutil_process),
+        ):
             # Start process
             process = subprocess.Popen(["echo", "test"])
 
@@ -134,8 +132,10 @@ class TestProcessManagementWorkflow:
         mock_psutil_process.is_running.return_value = True
         mock_psutil_process.kill = MagicMock()
 
-        with patch('subprocess.Popen', return_value=mock_process), \
-                patch('psutil.Process', return_value=mock_psutil_process):
+        with (
+            patch("subprocess.Popen", return_value=mock_process),
+            patch("psutil.Process", return_value=mock_psutil_process),
+        ):
             # Start process
             process = subprocess.Popen(["echo", "test"])
 
@@ -157,7 +157,7 @@ class TestProcessManagementWorkflow:
         mock_process.poll.return_value = None
         mock_process.wait.side_effect = subprocess.TimeoutExpired(["test"], 5)
 
-        with patch('subprocess.Popen', return_value=mock_process):
+        with patch("subprocess.Popen", return_value=mock_process):
             # Start process
             process = subprocess.Popen(["echo", "test"])
 
@@ -175,17 +175,14 @@ class TestProcessManagementWorkflow:
         custom_env = os.environ.copy()
         custom_env["TEST_VAR"] = "test_value"
 
-        with patch('subprocess.Popen', return_value=mock_process) as mock_popen:
+        with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
             # Start process with custom environment
-            process = subprocess.Popen(
-                ["echo", "test"],
-                env=custom_env
-            )
+            process = subprocess.Popen(["echo", "test"], env=custom_env)
 
             # Verify environment was passed
             call_args = mock_popen.call_args
-            assert call_args[1]['env'] == custom_env
-            assert call_args[1]['env']["TEST_VAR"] == "test_value"
+            assert call_args[1]["env"] == custom_env
+            assert call_args[1]["env"]["TEST_VAR"] == "test_value"
 
     def test_process_output_capture_workflow(self):
         """Test capturing process output."""
@@ -195,13 +192,9 @@ class TestProcessManagementWorkflow:
         mock_process.poll.return_value = None
         mock_process.communicate.return_value = (b"stdout output", b"stderr output")
 
-        with patch('subprocess.Popen', return_value=mock_process):
+        with patch("subprocess.Popen", return_value=mock_process):
             # Start process
-            process = subprocess.Popen(
-                ["echo", "test"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
+            process = subprocess.Popen(["echo", "test"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             # Get output
             stdout, stderr = process.communicate()
@@ -303,8 +296,10 @@ class TestProcessManagementWorkflow:
         mock_psutil_process.terminate = MagicMock()
         mock_psutil_process.kill = MagicMock()
 
-        with patch('subprocess.Popen', return_value=mock_process), \
-                patch('psutil.Process', return_value=mock_psutil_process):
+        with (
+            patch("subprocess.Popen", return_value=mock_process),
+            patch("psutil.Process", return_value=mock_psutil_process),
+        ):
             # Step 1: Start process
             process = subprocess.Popen([str(binary_path)])
             pid_file.write_text(str(process.pid))

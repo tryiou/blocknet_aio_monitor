@@ -29,6 +29,7 @@ def check_vc_redist_installed(container: AppContainer):
 
 def check_registry_value(key_path, value_name):
     import winreg
+
     try:
         with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
             value, _ = winreg.QueryValueEx(key, value_name)
@@ -44,7 +45,7 @@ def install_vc_redist(url):
     try:
         installer_name = os.path.basename(url)
 
-        with open(installer_name, 'wb') as file:
+        with open(installer_name, "wb") as file:
             response = requests.get(url)
             file.write(response.content)
 
@@ -65,8 +66,7 @@ class XliteHandler(BaseBinUtil):
         if self.container.system == "Darwin":
             xlite_release_url = self.container.xlite_release_url
             if xlite_release_url and self.container.aio_folder:
-                self.executable_path = os.path.join(self.container.aio_folder,
-                                                    os.path.basename(xlite_release_url))
+                self.executable_path = os.path.join(self.container.aio_folder, os.path.basename(xlite_release_url))
             else:
                 self.executable_path = None
             xlite_volume_name = self.container.xlite_volume_name
@@ -101,9 +101,9 @@ class XliteHandler(BaseBinUtil):
         self.parse_xlite_daemon_conf(silent)
         if self.xlite_daemon_confs_local:
             for coin in self.xlite_daemon_confs_local:
-                port = self.xlite_daemon_confs_local[coin]['rpcPort']
-                user = self.xlite_daemon_confs_local[coin]['rpcUsername']
-                password = self.xlite_daemon_confs_local[coin]['rpcPassword']
+                port = self.xlite_daemon_confs_local[coin]["rpcPort"]
+                user = self.xlite_daemon_confs_local[coin]["rpcUsername"]
+                password = self.xlite_daemon_confs_local[coin]["rpcPassword"]
                 self.coins_rpc[coin] = RPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
 
     def check_xlite_daemon_confs(self):
@@ -117,7 +117,7 @@ class XliteHandler(BaseBinUtil):
             if self.coins_rpc:
                 for coin, rpc_server in self.coins_rpc.items():
                     if coin != "master" and coin != "TBLOCK":
-                        if self.xlite_daemon_confs_local[coin]['rpcEnabled'] is True:
+                        if self.xlite_daemon_confs_local[coin]["rpcEnabled"] is True:
                             res = rpc_server.send_rpc_request("getinfo")
                             if res is not None:
                                 valid = True
@@ -173,7 +173,7 @@ class XliteHandler(BaseBinUtil):
 
         files_in_folder = os.listdir(confs_folder)
 
-        json_files = [file for file in files_in_folder if file.endswith('.json')]
+        json_files = [file for file in files_in_folder if file.endswith(".json")]
 
         for json_file in json_files:
             json_file_path = os.path.join(confs_folder, json_file)
@@ -187,7 +187,8 @@ class XliteHandler(BaseBinUtil):
                 logger.error(f"Error parsing {json_file_path}: {e}")
         if not silent:
             logger.info(
-                f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(self.xlite_daemon_confs_local.keys())}")
+                f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(self.xlite_daemon_confs_local.keys())}"
+            )
 
     def start_xlite(self, env_vars=[]):
         if self.container.system == "Windows":
@@ -203,11 +204,13 @@ class XliteHandler(BaseBinUtil):
         try:
             if self.container.system == "Darwin":
                 self.handle_dmg("mount")
-                full_path = os.path.join(self.dmg_mount_path or "",
-                                         *self.container.conf_data.xlite_bin_name[self.container.system])
+                full_path = os.path.join(
+                    self.dmg_mount_path or "", *self.container.conf_data.xlite_bin_name[self.container.system]
+                )
                 xlite_volume_name = self.container.xlite_volume_name
                 logger.info(
-                    f"volume_name: {xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
+                    f"volume_name: {xlite_volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}"
+                )
                 command = [full_path] + launch_options
                 cwd = os.path.dirname(full_path)
             else:
@@ -216,8 +219,8 @@ class XliteHandler(BaseBinUtil):
 
             parsed_env_vars = {}
             for env_var_str in env_vars:
-                if '=' in env_var_str:
-                    key, value = env_var_str.split('=', 1)
+                if "=" in env_var_str:
+                    key, value = env_var_str.split("=", 1)
                     parsed_env_vars[key] = value
                 else:
                     logger.warning(f"Environment variable string '{env_var_str}' does not contain '='. Skipping.")
@@ -262,12 +265,7 @@ class XliteHandler(BaseBinUtil):
         if not self.executable_path:
             raise ValueError("Executable path not configured")
 
-        self.download_binary(
-            url,
-            tmp_filename,
-            self.executable_path,
-            aio_folder
-        )
+        self.download_binary(url, tmp_filename, self.executable_path, aio_folder)
 
     def unmount_dmg(self):
         if self.container.system != "Darwin":

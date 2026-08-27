@@ -8,23 +8,23 @@ import yaml
 logger = logging.getLogger(__name__)
 
 SYSTEM_SPECIFIC_KEYS = [
-    'blocknet_releases_urls',
-    'blockdx_releases_urls',
-    'xlite_releases_urls',
-    'xlite_reverse_proxy_releases_urls',
-    'xlite_reverse_proxy_bin_name',
-    'blocknet_default_paths',
-    'blockdx_default_paths',
-    'xlite_default_paths',
-    'xlite_daemon_default_paths',
-    'blocknet_bin_name',
-    'blockdx_bin_name',
-    'xlite_bin_name',
-    'xlite_daemon_bin_name',
-    'blocknet_bin_path',
-    'blockdx_bin_path',
-    'xlite_bin_path',
-    'xlite_launch_options'
+    "blocknet_releases_urls",
+    "blockdx_releases_urls",
+    "xlite_releases_urls",
+    "xlite_reverse_proxy_releases_urls",
+    "xlite_reverse_proxy_bin_name",
+    "blocknet_default_paths",
+    "blockdx_default_paths",
+    "xlite_default_paths",
+    "xlite_daemon_default_paths",
+    "blocknet_bin_name",
+    "blockdx_bin_name",
+    "xlite_bin_name",
+    "xlite_daemon_bin_name",
+    "blocknet_bin_path",
+    "blockdx_bin_path",
+    "xlite_bin_path",
+    "xlite_launch_options",
 ]
 
 
@@ -34,120 +34,134 @@ class ConfigManager:
         self.machine = platform.machine()
         self.aio_folder = aio_folder
         self.config_template = {
-            'blocknet_bootstrap_url': "https://utils.blocknet.org/Blocknet.zip",
-            'extra_option_blocknet_core_conf': [
-                {'addnode': '130.185.119.91:41412'},
-                {'addnode': '75.119.135.155:41412'},
-                {'addnode': '75.119.157.65:41412'},
-                {'addnode': 'exrproxy1.airdns.org:42111'},
-                {'rpcthreads': 32},
-                {'rpcworkqueue': 64},
-                {'rpcxbridgetimeout': 120},
-
+            "blocknet_bootstrap_url": "https://utils.blocknet.org/Blocknet.zip",
+            "extra_option_blocknet_core_conf": [
+                {"addnode": "130.185.119.91:41412"},
+                {"addnode": "75.119.135.155:41412"},
+                {"addnode": "75.119.157.65:41412"},
+                {"addnode": "exrproxy1.airdns.org:42111"},
+                {"rpcthreads": 32},
+                {"rpcworkqueue": 64},
+                {"rpcxbridgetimeout": 120},
             ],
-            'blocknet_releases_urls': {
-                ("Windows",
-                 "AMD64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-win64.zip",
-                ("Linux",
-                 "x86_64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-x86_64-linux-gnu.tar.gz",
-                ("Linux",
-                 "aarch64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-aarch64-linux-gnu.tar.gz",
-                ("Linux",
-                 "riscv64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-riscv64-linux-gnu.tar.gz",
-                ("Darwin",
-                 "x86_64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz",
-                ("Darwin",
-                 "arm64"): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz"
+            "blocknet_releases_urls": {
+                (
+                    "Windows",
+                    "AMD64",
+                ): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-win64.zip",
+                (
+                    "Linux",
+                    "x86_64",
+                ): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-x86_64-linux-gnu.tar.gz",
+                (
+                    "Linux",
+                    "aarch64",
+                ): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-aarch64-linux-gnu.tar.gz",
+                (
+                    "Linux",
+                    "riscv64",
+                ): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-riscv64-linux-gnu.tar.gz",
+                (
+                    "Darwin",
+                    "x86_64",
+                ): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz",
+                (
+                    "Darwin",
+                    "arm64",
+                ): "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-osx64.tar.gz",
             },
-            'blockdx_releases_urls': {
-                ("Windows",
-                 "AMD64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-win-x64.zip",
-                ("Linux",
-                 "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-linux-x64.tar.gz",
-                ("Darwin",
-                 "x86_64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg",
-                ("Darwin",
-                 "arm64"): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg"
+            "blockdx_releases_urls": {
+                (
+                    "Windows",
+                    "AMD64",
+                ): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-win-x64.zip",
+                (
+                    "Linux",
+                    "x86_64",
+                ): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-linux-x64.tar.gz",
+                (
+                    "Darwin",
+                    "x86_64",
+                ): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg",
+                (
+                    "Darwin",
+                    "arm64",
+                ): "https://github.com/blocknetdx/block-dx/releases/download/v1.9.5/BLOCK-DX-1.9.5-mac.dmg",
             },
-            'xlite_releases_urls': {
-                ("Windows",
-                 "AMD64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip",
-                ("Linux",
-                 "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz",
-                ("Darwin", "x86_64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg",
-                ("Darwin", "arm64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg"
+            "xlite_releases_urls": {
+                (
+                    "Windows",
+                    "AMD64",
+                ): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip",
+                (
+                    "Linux",
+                    "x86_64",
+                ): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz",
+                (
+                    "Darwin",
+                    "x86_64",
+                ): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg",
+                ("Darwin", "arm64"): "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg",
             },
-            'blocknet_default_paths': {
+            "blocknet_default_paths": {
                 "Windows": "%appdata%\\Blocknet",
                 "Linux": "~/.blocknet",
-                "Darwin": "~/Library/Application Support/Blocknet"
+                "Darwin": "~/Library/Application Support/Blocknet",
             },
-            'blockdx_default_paths': {
+            "blockdx_default_paths": {
                 "Windows": "%userprofile%\\AppData\\Local\\BLOCK-DX",
                 "Linux": "~/.config/BLOCK-DX",
-                "Darwin": "~/Library/Application Support/BLOCK-DX"
+                "Darwin": "~/Library/Application Support/BLOCK-DX",
             },
-            'xlite_default_paths': {
+            "xlite_default_paths": {
                 "Windows": "%appdata%\\xlite",
                 "Linux": "~/.config/xlite",
-                "Darwin": "~/Library/Application Support/xlite"
+                "Darwin": "~/Library/Application Support/xlite",
             },
-            'xlite_daemon_default_paths': {
+            "xlite_daemon_default_paths": {
                 "Windows": "%appdata%\\CloudChains",
                 "Linux": "~/.config/CloudChains",
-                "Darwin": "~/Library/Application Support/CloudChains"
+                "Darwin": "~/Library/Application Support/CloudChains",
             },
-            'blocknet_bin_name': {
-                "Windows": "blocknet-qt.exe",
-                "Linux": "blocknet-qt",
-                "Darwin": "blocknet-qt"
-            },
-            'blockdx_bin_name': {
+            "blocknet_bin_name": {"Windows": "blocknet-qt.exe", "Linux": "blocknet-qt", "Darwin": "blocknet-qt"},
+            "blockdx_bin_name": {
                 "Windows": "BLOCK DX.exe",
                 "Linux": "block-dx",
-                "Darwin": ["BLOCK DX.app", "Contents", "MacOS", "BLOCK DX"]
+                "Darwin": ["BLOCK DX.app", "Contents", "MacOS", "BLOCK DX"],
             },
-            'xlite_bin_name': {
+            "xlite_bin_name": {
                 "Windows": "XLite.exe",
                 "Linux": "xlite",
-                "Darwin": ["XLite.app", "Contents", "MacOS", "XLite"]
+                "Darwin": ["XLite.app", "Contents", "MacOS", "XLite"],
             },
-            'xlite_daemon_bin_name': {
+            "xlite_daemon_bin_name": {
                 ("Linux", "x86_64"): "xlite-daemon-linux64",
                 ("Windows", "AMD64"): "xlite-daemon-win64.exe",
                 ("Darwin", "x86_64"): "xlite-daemon-osx64",
-                ("Darwin", "arm64"): "xlite-daemon-osx64"
+                ("Darwin", "arm64"): "xlite-daemon-osx64",
             },
-            'blocknet_bin_path': ["blocknet-4.4.1", "bin"],
-            'blockdx_bin_path': {
+            "blocknet_bin_path": ["blocknet-4.4.1", "bin"],
+            "blockdx_bin_path": {
                 "Windows": "BLOCK-DX-1.9.5-win-x64",
                 "Linux": "BLOCK-DX-1.9.5-linux-x64",
-                "Darwin": "BLOCK-DX-1.9.5-mac"
+                "Darwin": "BLOCK-DX-1.9.5-mac",
             },
-            'xlite_bin_path': {
+            "xlite_bin_path": {
                 "Windows": "XLite-1.0.7-win-x64",
                 "Linux": "XLite-1.0.7-linux",
-                "Darwin": "XLite-1.0.7-mac"
+                "Darwin": "XLite-1.0.7-mac",
             },
-            'xlite_launch_options': {
-                "Windows": ["--in-process-gpu"],
-                "Linux": [],
-                "Darwin": []
-            },
-            'base_xbridge_conf': {
-                'ExchangeWallets': '',
-                'FullLog': 'true',
-                'ShowAllOrders': 'true'
-            },
-            'remote_blockchain_configuration_repo': "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master",
-            'manifest': "/manifest-latest.json",
-            'remote_manifest_url': "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master/manifest-latest.json",
-            'remote_blocknet_xbridge': "/xbridge-confs/blocknet--v4.3.0.conf",
-            'remote_blocknet_conf': "/wallet-confs/blocknet--v4.3.0.conf",
-            'remote_blocknet_conf_url': "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master/wallet-confs/blocknet--v4.3.0.conf",
-            'remote_xbridge_conf_url': "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master/xbridge-confs/blocknet--v4.3.0.conf",
-            'blockdx_selectedWallets_blocknet': "blocknet--v4.2.0",
-            'blockdx_base_conf': {
+            "xlite_launch_options": {"Windows": ["--in-process-gpu"], "Linux": [], "Darwin": []},
+            "base_xbridge_conf": {"ExchangeWallets": "", "FullLog": "true", "ShowAllOrders": "true"},
+            "remote_blockchain_configuration_repo": "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master",
+            "manifest": "/manifest-latest.json",
+            "remote_manifest_url": "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master/manifest-latest.json",
+            "remote_blocknet_xbridge": "/xbridge-confs/blocknet--v4.3.0.conf",
+            "remote_blocknet_conf": "/wallet-confs/blocknet--v4.3.0.conf",
+            "remote_blocknet_conf_url": "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master/wallet-confs/blocknet--v4.3.0.conf",
+            "remote_xbridge_conf_url": "https://raw.githubusercontent.com/blocknetdx/blockchain-configuration-files/master/xbridge-confs/blocknet--v4.3.0.conf",
+            "blockdx_selectedWallets_blocknet": "blocknet--v4.2.0",
+            "blockdx_base_conf": {
                 "locale": "en",
                 "zoomFactor": 1,
                 "pricingSource": "CRYPTO_COMPARE",
@@ -159,28 +173,46 @@ class ConfigManager:
                 "confUpdaterDisabled": True,
                 "tos": False,
                 "autofillAddresses": False,
-                "upgradedToV4": True
+                "upgradedToV4": True,
             },
-            'vc_redist_win_url': "https://aka.ms/vs/17/release/vc_redist.x64.exe",
-            'xlite_reverse_proxy_releases_urls': {
-                ("Windows", "AMD64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_windows-amd64.exe",
-                ("Windows", "arm64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_windows-arm64.exe",
-                ("Linux", "x86_64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_linux-amd64",
-                ("Linux", "aarch64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_linux-arm64",
-                ("Darwin", "x86_64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_macos-amd64",
-                ("Darwin", "arm64"): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_macos-arm64",
+            "vc_redist_win_url": "https://aka.ms/vs/17/release/vc_redist.x64.exe",
+            "xlite_reverse_proxy_releases_urls": {
+                (
+                    "Windows",
+                    "AMD64",
+                ): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_windows-amd64.exe",
+                (
+                    "Windows",
+                    "arm64",
+                ): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_windows-arm64.exe",
+                (
+                    "Linux",
+                    "x86_64",
+                ): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_linux-amd64",
+                (
+                    "Linux",
+                    "aarch64",
+                ): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_linux-arm64",
+                (
+                    "Darwin",
+                    "x86_64",
+                ): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_macos-amd64",
+                (
+                    "Darwin",
+                    "arm64",
+                ): "https://github.com/tryiou/xlite-reverse-proxy/releases/download/v1.0.0/xlite-reverse-proxy_macos-arm64",
             },
-            'xlite_reverse_proxy_bin_name': {
+            "xlite_reverse_proxy_bin_name": {
                 ("Windows", "AMD64"): "xlite-reverse-proxy_windows-amd64.exe",
                 ("Windows", "arm64"): "xlite-reverse-proxy_windows-arm64.exe",
                 ("Linux", "x86_64"): "xlite-reverse-proxy_linux-amd64",
                 ("Linux", "aarch64"): "xlite-reverse-proxy_linux-arm64",
                 ("Darwin", "x86_64"): "xlite-reverse-proxy_macos-amd64",
                 ("Darwin", "arm64"): "xlite-reverse-proxy_macos-arm64",
-            }
+            },
         }
         if self.system == "Windows":
-            self.config_template['extra_option_blocknet_core_conf'].append({'bantime': 0})
+            self.config_template["extra_option_blocknet_core_conf"].append({"bantime": 0})
 
         self._load_config()
 
@@ -190,11 +222,15 @@ class ConfigManager:
             aio_path = self.aio_folder
         else:
             # Otherwise compute the default path
-            aio_path = os.path.expandvars(os.path.expanduser({
-                                                                 "Windows": "%appdata%\\AIO_Blocknet",
-                                                                 "Linux": "~/.AIO_Blocknet",
-                                                                 "Darwin": "~/Library/AIO_Blocknet"
-                                                             }[self.system]))
+            aio_path = os.path.expandvars(
+                os.path.expanduser(
+                    {
+                        "Windows": "%appdata%\\AIO_Blocknet",
+                        "Linux": "~/.AIO_Blocknet",
+                        "Darwin": "~/Library/AIO_Blocknet",
+                    }[self.system]
+                )
+            )
         os.makedirs(aio_path, exist_ok=True)
         return Path(aio_path)
 

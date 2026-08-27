@@ -4,7 +4,7 @@ import sys
 from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import customtkinter as ctk
 
@@ -37,8 +37,8 @@ class TestXliteManager:
     @staticmethod
     def _create_xlite_manager_with_mocks(mock_root_gui, mock_container):
         """Create XliteManager instance with mocked dependencies."""
-        with patch('gui.xlite_manager.get_container', return_value=mock_container):
-            with patch('gui.xlite_manager.XliteHandler') as MockXliteHandler:
+        with patch("gui.xlite_manager.get_container", return_value=mock_container):
+            with patch("gui.xlite_manager.XliteHandler") as MockXliteHandler:
                 mock_handler = MagicMock()
                 MockXliteHandler.return_value = mock_handler
                 manager = XliteManager(mock_root_gui)
@@ -51,8 +51,8 @@ class TestXliteManager:
         mock_root_gui = self._create_mock_root_gui()
         mock_container = self._create_mock_container()
 
-        with patch('gui.xlite_manager.get_container', return_value=mock_container):
-            with patch('gui.xlite_manager.XliteHandler') as MockXliteHandler:
+        with patch("gui.xlite_manager.get_container", return_value=mock_container):
+            with patch("gui.xlite_manager.XliteHandler") as MockXliteHandler:
                 manager = XliteManager(mock_root_gui)
 
                 assert manager.root_gui is mock_root_gui
@@ -69,7 +69,7 @@ class TestXliteManager:
 
         manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_container)
 
-        with patch('gui.xlite_manager.XliteFrameManager') as MockXliteFrameManager:
+        with patch("gui.xlite_manager.XliteFrameManager") as MockXliteFrameManager:
             asyncio.run(manager.setup())
             MockXliteFrameManager.assert_called_once_with(manager)
             mock_root_gui.after.assert_called_once_with(0, manager.update_status_xlite)
@@ -132,7 +132,7 @@ class TestXliteManager:
         manager.reverse_proxy = MagicMock()
         manager.reverse_proxy_running = False
 
-        with patch.object(manager, 'detect_new_xlite_install_and_add_to_xbridge') as mock_detect:
+        with patch.object(manager, "detect_new_xlite_install_and_add_to_xbridge") as mock_detect:
             manager.update_status_xlite()
 
             mock_detect.assert_called_once()

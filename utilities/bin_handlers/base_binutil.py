@@ -43,7 +43,7 @@ class BaseBinUtil:
                 extract_path,
                 self.system,
                 "binary_percent_download",
-                self
+                self,
             )
         finally:
             self.downloading_bin = False
@@ -54,8 +54,8 @@ class BaseBinUtil:
             response = requests.get(url, stream=True, timeout=(10, 30))
             response.raise_for_status()
 
-            remote_size = int(response.headers.get('Content-Length', 0))
-            with open(tmp_path, 'wb') as f:
+            remote_size = int(response.headers.get("Content-Length", 0))
+            with open(tmp_path, "wb") as f:
                 bytes_downloaded = 0
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
@@ -76,7 +76,7 @@ class BaseBinUtil:
         if url.endswith(".zip"):
             # Skip extraction for empty files
             if os.path.getsize(tmp_path) > 0:
-                with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
+                with zipfile.ZipFile(tmp_path, "r") as zip_ref:
                     # Use handler class name to determine extraction method
                     handler_class = instance.__class__.__name__
 
@@ -98,7 +98,7 @@ class BaseBinUtil:
 
             os.remove(tmp_path)
         elif url.endswith(".tar.gz"):
-            with tarfile.open(tmp_path, 'r:gz') as tar:
+            with tarfile.open(tmp_path, "r:gz") as tar:
                 tar.extractall(extract_to)
             os.remove(tmp_path)
             logger.info(f"Extracted TAR.GZ file to {extract_to}")
@@ -106,8 +106,9 @@ class BaseBinUtil:
             os.rename(tmp_path, final_path)
             logger.info(f"Renamed DMG file to {final_path}")
 
-    def start_process(self, command, cwd=None, env_vars=None, dmg_path=None,
-                      mount_point=None):  # Prepare environment variables if provided
+    def start_process(
+        self, command, cwd=None, env_vars=None, dmg_path=None, mount_point=None
+    ):  # Prepare environment variables if provided
         if not command:
             raise ValueError("Command list cannot be empty")
 
@@ -154,7 +155,7 @@ class BaseBinUtil:
                 stdout=subprocess.DEVNULL,
                 stderr=stderr_dest,
                 env=full_env,
-                start_new_session=True
+                start_new_session=True,
             )
         except Exception:
             # Close handle on failure to avoid FD leak (P0)
@@ -283,7 +284,7 @@ class BaseBinUtil:
                 response = requests.get(url, stream=True, timeout=30)
                 response.raise_for_status()
 
-                with open(temp_path, 'wb') as f:
+                with open(temp_path, "wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)

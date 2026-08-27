@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 class TestBinaryFrameManager(unittest.TestCase):
@@ -53,15 +53,17 @@ class TestBinaryFrameManager(unittest.TestCase):
 
     def _setup_patches(self):
         """Setup all necessary patches for the test."""
-        self.patcher_frame = patch('customtkinter.CTkFrame', return_value=self.mock_frame)
-        self.patcher_label = patch('customtkinter.CTkLabel', return_value=self.mock_label)
-        self.patcher_button = patch('customtkinter.CTkButton', return_value=self.mock_button)
-        self.patcher_option_menu = patch('customtkinter.CTkOptionMenu', return_value=self.mock_option_menu)
-        self.patcher_checkbox = patch('custom_tk_mods.ctkCheckBox.CTkCheckBox', return_value=self.mock_checkbox)
-        self.patcher_bot_manager = patch('gui.xbridge_bot_manager.XBridgeBotManager',
-                                         return_value=self.mock_bot_manager)
-        self.patcher_get_remote_branches = patch('utilities.git_repo_management.GitRepoManagement.get_remote_branches',
-                                                 return_value=["main", "develop"])
+        self.patcher_frame = patch("customtkinter.CTkFrame", return_value=self.mock_frame)
+        self.patcher_label = patch("customtkinter.CTkLabel", return_value=self.mock_label)
+        self.patcher_button = patch("customtkinter.CTkButton", return_value=self.mock_button)
+        self.patcher_option_menu = patch("customtkinter.CTkOptionMenu", return_value=self.mock_option_menu)
+        self.patcher_checkbox = patch("custom_tk_mods.ctkCheckBox.CTkCheckBox", return_value=self.mock_checkbox)
+        self.patcher_bot_manager = patch(
+            "gui.xbridge_bot_manager.XBridgeBotManager", return_value=self.mock_bot_manager
+        )
+        self.patcher_get_remote_branches = patch(
+            "utilities.git_repo_management.GitRepoManagement.get_remote_branches", return_value=["main", "develop"]
+        )
 
         self.patcher_frame.start()
         self.patcher_label.start()
@@ -73,6 +75,7 @@ class TestBinaryFrameManager(unittest.TestCase):
 
         # Import after patching
         from gui.binary_frame_manager import BinaryFrameManager
+
         self.BinaryFrameManager = BinaryFrameManager
 
     def tearDown(self):
@@ -85,7 +88,7 @@ class TestBinaryFrameManager(unittest.TestCase):
         self.patcher_bot_manager.stop()
         self.patcher_get_remote_branches.stop()
 
-        if hasattr(self, 'root'):
+        if hasattr(self, "root"):
             self.root.destroy()
 
     def _create_frame_manager(self):
@@ -148,12 +151,12 @@ class TestBinaryFrameManager(unittest.TestCase):
         self.assertFalse(frame_manager.bots_installed_boolvar.get())
 
         # Check StringVars
-        self.assertEqual(frame_manager.install_delete_blocknet_string_var.get(), '')
-        self.assertEqual(frame_manager.install_delete_blockdx_string_var.get(), '')
-        self.assertEqual(frame_manager.install_delete_xlite_string_var.get(), '')
-        self.assertEqual(frame_manager.blocknet_start_close_button_string_var.get(), '')
-        self.assertEqual(frame_manager.blockdx_start_close_button_string_var.get(), '')
-        self.assertEqual(frame_manager.xlite_toggle_execution_string_var.get(), '')
+        self.assertEqual(frame_manager.install_delete_blocknet_string_var.get(), "")
+        self.assertEqual(frame_manager.install_delete_blockdx_string_var.get(), "")
+        self.assertEqual(frame_manager.install_delete_xlite_string_var.get(), "")
+        self.assertEqual(frame_manager.blocknet_start_close_button_string_var.get(), "")
+        self.assertEqual(frame_manager.blockdx_start_close_button_string_var.get(), "")
+        self.assertEqual(frame_manager.xlite_toggle_execution_string_var.get(), "")
 
     def test_grid_widgets(self):
         """Test grid_widgets method."""
@@ -211,13 +214,13 @@ class TestBinaryFrameManager(unittest.TestCase):
             frame_manager.blocknet_start_close_button,
             frame_manager.blockdx_start_close_button,
             frame_manager.xlite_toggle_execution_button,
-            frame_manager.bots_toggle_execution_button
+            frame_manager.bots_toggle_execution_button,
         ]
 
         for widget in widgets_to_check:
             widget.grid.assert_called_once()
 
-    @patch('utilities.utils.disable_button')
+    @patch("utilities.utils.disable_button")
     def test_install_update_bots_command(self, mock_disable):
         """Test install_update_bots_command with valid branch."""
         frame_manager = self._create_frame_manager()
@@ -234,7 +237,7 @@ class TestBinaryFrameManager(unittest.TestCase):
         # Verify install_or_update was called
         self.mock_bot_manager.install_or_update.assert_called_with("main")
 
-    @patch('utilities.utils.disable_button')
+    @patch("utilities.utils.disable_button")
     def test_install_update_bots_command_no_branch(self, mock_disable):
         """Test install_update_bots_command when no branch is selected."""
         frame_manager = self._create_frame_manager()
@@ -254,7 +257,7 @@ class TestBinaryFrameManager(unittest.TestCase):
         # This should not raise an exception
         frame_manager.install_update_bots_command()
 
-    @patch('utilities.utils.disable_button')
+    @patch("utilities.utils.disable_button")
     def test_toggle_bots_execution_command(self, mock_disable):
         """Test toggle_bots_execution_command with valid branch."""
         frame_manager = self._create_frame_manager()
@@ -276,7 +279,7 @@ class TestBinaryFrameManager(unittest.TestCase):
         # Verify toggle_execution was called
         self.mock_bot_manager.toggle_execution.assert_called_with("main")
 
-    @patch('utilities.utils.disable_button')
+    @patch("utilities.utils.disable_button")
     def test_toggle_bots_execution_command_no_branch(self, mock_disable):
         """Test toggle_bots_execution_command when no branch is selected."""
         frame_manager = self._create_frame_manager()
@@ -319,5 +322,5 @@ class TestBinaryFrameManager(unittest.TestCase):
         self.mock_root.after.assert_called_once()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

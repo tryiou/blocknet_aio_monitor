@@ -2,6 +2,7 @@
 
 All tests use tmp_path only - never touch ~/.AIO_Blocknet.
 """
+
 import shutil
 import tempfile
 from pathlib import Path
@@ -92,6 +93,7 @@ def origin_repo(tmp_path: Path):
 
 def _clone_via_manager(origin: Path, target: Path, branch: str = "main", workdir: Path = None):
     from utilities.git_repo_management import GitRepoManagement
+
     mgr = GitRepoManagement(str(origin), str(target), branch=branch, workdir=str(workdir) if workdir else None)
     # Disable portable python install path for tests (no network)
     mgr.portable_python_dir = None
@@ -103,6 +105,7 @@ def _clone_via_manager(origin: Path, target: Path, branch: str = "main", workdir
 
 def test_clean_switch_dev_to_dev_test(tmp_path: Path, origin_repo: Path):
     from utilities.git_repo_management import GitRepoManagement
+
     aio = tmp_path / "aio"
     aio.mkdir()
     target = aio / "xbridge_trading_bots"
@@ -130,6 +133,7 @@ def test_modified_tracked_blocker_auto_backup(tmp_path: Path, origin_repo: Path)
     aio.mkdir()
     target = aio / "xbridge_trading_bots"
     from utilities.git_repo_management import GitRepoManagement
+
     mgr = GitRepoManagement(str(origin_repo), str(target), branch="dev", workdir=str(aio))
     mgr.portable_python_dir = None
     mgr.portable_python_path = None
@@ -157,6 +161,7 @@ def test_venv_outside_worktree_not_blocker(tmp_path: Path, origin_repo: Path):
     aio.mkdir()
     target = aio / "xbridge_trading_bots"
     from utilities.git_repo_management import GitRepoManagement
+
     mgr = GitRepoManagement(str(origin_repo), str(target), branch="dev", workdir=str(aio))
     mgr.portable_python_dir = None
     mgr.portable_python_path = None
@@ -179,6 +184,7 @@ def test_bidirectional_switch(tmp_path: Path, origin_repo: Path):
     aio.mkdir()
     target = aio / "xbridge_trading_bots"
     from utilities.git_repo_management import GitRepoManagement
+
     for branch in ["dev", "dev_test", "dev", "dev_test"]:
         mgr = GitRepoManagement(str(origin_repo), str(target), branch=branch, workdir=str(aio))
         mgr.portable_python_dir = None

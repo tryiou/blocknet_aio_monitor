@@ -58,7 +58,7 @@ def _read_pygit2_spec() -> str:
                 line = line.split("#", 1)[0].strip()
                 if line.startswith("pygit2"):
                     # line like 'pygit2~=1.20.0' or 'pygit2==1.18.0'
-                    spec = line[len("pygit2"):].strip()
+                    spec = line[len("pygit2") :].strip()
                     if spec:
                         return spec
     except Exception as e:
@@ -77,7 +77,9 @@ def _tk_fix_commands() -> list[str]:
         cmds.append(f"{py_exe} -m pip install -r requirements.txt  # or venv/bin/pip install -r requirements.txt")
     elif system == "Linux":
         # Try to give distro-specific but generic fallback
-        cmds.append(f"sudo apt update && sudo apt install python{py_mm}-tk  # Debian/Ubuntu; fallback: sudo apt install python3-tk")
+        cmds.append(
+            f"sudo apt update && sudo apt install python{py_mm}-tk  # Debian/Ubuntu; fallback: sudo apt install python3-tk"
+        )
         cmds.append(f"sudo dnf install python{py_mm}-tkinter  # Fedora/RHEL fallback: sudo dnf install python3-tkinter")
         cmds.append(f"{py_exe} -m venv venv && {py_exe} -m pip install -r requirements.txt")
     elif system == "Windows":
@@ -99,7 +101,9 @@ def _pygit2_fix_commands() -> list[str]:
     cmds.append(f"{_python_exe()} -m pip install -r requirements.txt  # recreate venv first if needed")
     # Fallback suggestion for wheel missing — dynamic, no hardcoded version
     fallback = f"{MIN_PYTHON[0]}.{MIN_PYTHON[1]}"
-    cmds.append(f"# If wheel still missing for {py_ver}, try Python {fallback}: brew install python@{fallback} && python{fallback} -m venv venv")
+    cmds.append(
+        f"# If wheel still missing for {py_ver}, try Python {fallback}: brew install python@{fallback} && python{fallback} -m venv venv"
+    )
     cmds.append("brew install libgit2  # macOS source build deps")
     cmds.append("sudo apt install libgit2-dev  # Debian/Ubuntu source build deps")
     return cmds
@@ -115,7 +119,10 @@ def check_python_version() -> tuple[bool, str]:
         cur = (ver[0], ver[1])  # type: ignore
         cur_str = f"{ver[0]}.{ver[1]}"
     if cur < MIN_PYTHON:
-        return False, f"Python {cur_str} is too old. Requires >= {MIN_PYTHON[0]}.{MIN_PYTHON[1]}. Current: {cur_str}, please install Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or newer."
+        return (
+            False,
+            f"Python {cur_str} is too old. Requires >= {MIN_PYTHON[0]}.{MIN_PYTHON[1]}. Current: {cur_str}, please install Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or newer.",
+        )
     # No upper bound — allow any newer
     return True, ""
 
@@ -128,6 +135,7 @@ def check_tkinter() -> tuple[bool, str, str]:
     try:
         import _tkinter  # noqa: F401
         import tkinter  # noqa: F401
+
         try:
             import tkinter as tk
 
@@ -145,8 +153,7 @@ def check_tkinter() -> tuple[bool, str, str]:
                 f"Python Tkinter not found: {e}\n"
                 f"{sys_info}\n"
                 f"{py_info}\n\n"
-                "Fix — run one of these (click to copy):\n"
-                + "\n".join(f"  {c}" for c in cmds)
+                "Fix — run one of these (click to copy):\n" + "\n".join(f"  {c}" for c in cmds)
             )
             return False, "Tkinter / _tkinter not found — GUI cannot start", details
         return False, f"Tkinter import failed: {e}", str(e)
@@ -165,11 +172,8 @@ def check_pygit2() -> tuple[bool, str, str]:
         return True, "", f"pygit2 {pygit2.__version__} ok"
     except ModuleNotFoundError as e:
         cmds = _pygit2_fix_commands()
-        details = (
-            f"pygit2 not installed or missing dependency: {e}\n"
-            f"{sys_info}\n\n"
-            "Fix — click to copy:\n"
-            + "\n".join(f"  {c}" for c in cmds)
+        details = f"pygit2 not installed or missing dependency: {e}\n{sys_info}\n\nFix — click to copy:\n" + "\n".join(
+            f"  {c}" for c in cmds
         )
         return False, "pygit2 not available — blockchain config sync will fail", details
     except ImportError as e:
@@ -180,8 +184,7 @@ def check_pygit2() -> tuple[bool, str, str]:
             f"{sys_info}\n"
             f"Current requirements spec: pygit2{spec}\n\n"
             "This often happens when Python version doesn't have a wheel.\n"
-            "Fix — click to copy:\n"
-            + "\n".join(f"  {c}" for c in cmds)
+            "Fix — click to copy:\n" + "\n".join(f"  {c}" for c in cmds)
         )
         return False, "pygit2 failed to load", details + f"\nOriginal: {msg}"
     except Exception as e:
@@ -314,7 +317,10 @@ def show_startup_error(title: str, message: str, details: str = "") -> None:
             fd = os.open(str(log_path), flags, 0o600)
             try:
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
-                    f.write(full_msg + f"\n\nPython: {_current_py_version()} {platform.system()} {platform.machine()} ({sys.executable})\n")
+                    f.write(
+                        full_msg
+                        + f"\n\nPython: {_current_py_version()} {platform.system()} {platform.machine()} ({sys.executable})\n"
+                    )
                     f.write(f"Report: {GITHUB_ISSUE_URL}\n")
                     fd = None
             finally:

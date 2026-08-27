@@ -3,7 +3,7 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 import gui.binary_manager as bm_module
 from gui.binary_manager import BinaryManager
@@ -14,7 +14,7 @@ def _make_mock_root():
     mock_root.after = MagicMock()
     mock_root.tooltip_manager = MagicMock()
     mock_root.winfo_exists = MagicMock(return_value=True)
-    for mgr in ['blocknet_manager', 'blockdx_manager', 'xlite_manager']:
+    for mgr in ["blocknet_manager", "blockdx_manager", "xlite_manager"]:
         m = MagicMock()
         m.utility = MagicMock()
         m.version = ["v1.0.0"]
@@ -41,11 +41,15 @@ def test_inotify_enospc_fallback_to_polling():
     """When inotify hits ENOSPC, should fall back to PollingObserver (2.0s)."""
     mock_root = _make_mock_root()
     mock_container = _make_mock_container()
-    with patch('gui.binary_manager.get_container', return_value=mock_container), \
-         patch('gui.binary_manager.Observer', side_effect=OSError(errno.ENOSPC, "inotify watch limit reached")) as mock_obs, \
-         patch('gui.binary_manager.PollingObserver') as mock_poll, \
-         patch('gui.binary_manager.BinaryFileHandler'), \
-         patch('gui.error_report_dialog.show_error_report'):
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_container),
+        patch(
+            "gui.binary_manager.Observer", side_effect=OSError(errno.ENOSPC, "inotify watch limit reached")
+        ) as mock_obs,
+        patch("gui.binary_manager.PollingObserver") as mock_poll,
+        patch("gui.binary_manager.BinaryFileHandler"),
+        patch("gui.error_report_dialog.show_error_report"),
+    ):
         mock_poll_instance = MagicMock()
         mock_poll.return_value = mock_poll_instance
         mgr = BinaryManager(mock_root)
@@ -64,11 +68,13 @@ def test_inotify_both_observers_fail_fallback_to_periodic_poll():
     """When both observers fail with ENOSPC, should fall back to periodic mtime poll (2000ms)."""
     mock_root = _make_mock_root()
     mock_container = _make_mock_container()
-    with patch('gui.binary_manager.get_container', return_value=mock_container), \
-         patch('gui.binary_manager.Observer', side_effect=OSError(errno.ENOSPC, "limit")), \
-         patch('gui.binary_manager.PollingObserver', side_effect=OSError(errno.ENOSPC, "limit")), \
-         patch('gui.binary_manager.BinaryFileHandler'), \
-         patch('gui.error_report_dialog.show_error_report'):
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_container),
+        patch("gui.binary_manager.Observer", side_effect=OSError(errno.ENOSPC, "limit")),
+        patch("gui.binary_manager.PollingObserver", side_effect=OSError(errno.ENOSPC, "limit")),
+        patch("gui.binary_manager.BinaryFileHandler"),
+        patch("gui.error_report_dialog.show_error_report"),
+    ):
         mgr = BinaryManager(mock_root)
         assert mgr.observer is None
         assert mgr._inotify_fallback_active is True
@@ -80,9 +86,11 @@ def test_inotify_success_no_fallback():
     """Normal case: inotify succeeds, no fallback, no periodic poll extra."""
     mock_root = _make_mock_root()
     mock_container = _make_mock_container()
-    with patch('gui.binary_manager.get_container', return_value=mock_container), \
-         patch('gui.binary_manager.Observer') as mock_obs, \
-         patch('gui.binary_manager.BinaryFileHandler'):
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_container),
+        patch("gui.binary_manager.Observer") as mock_obs,
+        patch("gui.binary_manager.BinaryFileHandler"),
+    ):
         mock_instance = MagicMock()
         mock_obs.return_value = mock_instance
         mgr = BinaryManager(mock_root)
@@ -95,9 +103,11 @@ def test_inotify_success_no_fallback():
 def test_stop_cleans_observer():
     mock_root = _make_mock_root()
     mock_container = _make_mock_container()
-    with patch('gui.binary_manager.get_container', return_value=mock_container), \
-         patch('gui.binary_manager.Observer') as mock_obs, \
-         patch('gui.binary_manager.BinaryFileHandler'):
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_container),
+        patch("gui.binary_manager.Observer") as mock_obs,
+        patch("gui.binary_manager.BinaryFileHandler"),
+    ):
         mock_instance = MagicMock()
         mock_obs.return_value = mock_instance
         mgr = BinaryManager(mock_root)
@@ -111,9 +121,11 @@ def test_poll_aio_folder_no_window():
     """Periodic poll should not open window and should call check_and_update."""
     mock_root = _make_mock_root()
     mock_container = _make_mock_container()
-    with patch('gui.binary_manager.get_container', return_value=mock_container), \
-         patch('gui.binary_manager.Observer') as mock_obs, \
-         patch('gui.binary_manager.BinaryFileHandler'):
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_container),
+        patch("gui.binary_manager.Observer") as mock_obs,
+        patch("gui.binary_manager.BinaryFileHandler"),
+    ):
         mock_instance = MagicMock()
         mock_obs.return_value = mock_instance
         mgr = BinaryManager(mock_root)

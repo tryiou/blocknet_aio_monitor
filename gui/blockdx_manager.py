@@ -12,7 +12,7 @@ class BlockDXManager:
         self.utility = BlockDXHandler()
         container = get_container()
         if container.blockdx_release_url:
-            self.version = [container.blockdx_release_url.split('/')[7]]
+            self.version = [container.blockdx_release_url.split("/")[7]]
         else:
             self.version = ["unknown"]
         self.process_running = False
@@ -31,8 +31,8 @@ class BlockDXManager:
             return  # Blocknet configuration is not available
 
         xbridge_conf_path = os.path.normpath(os.path.join(blocknet_utility.data_folder, "xbridge.conf"))
-        rpc_user = blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcuser')
-        rpc_password = blocknet_utility.blocknet_conf_local.get('global', {}).get('rpcpassword')
+        rpc_user = blocknet_utility.blocknet_conf_local.get("global", {}).get("rpcuser")
+        rpc_password = blocknet_utility.blocknet_conf_local.get("global", {}).get("rpcpassword")
 
         self.utility.compare_and_update_local_conf(xbridge_conf_path, rpc_user, rpc_password)
 

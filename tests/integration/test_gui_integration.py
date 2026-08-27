@@ -36,15 +36,14 @@ class TestGUIIntegrationWorkflow:
     def test_gui_initialization_workflow(self):
         """Test GUI initialization with all components."""
         # Mock GUI components
-        with patch('customtkinter.CTk') as mock_ctk, \
-                patch('PIL.Image.open') as mock_image:
+        with patch("customtkinter.CTk") as mock_ctk, patch("PIL.Image.open") as mock_image:
             # Create mock container
             mock_container = MagicMock()
-            mock_container.theme_path = '/mock/theme.json'
-            mock_container.dirpath = '/mock/dirpath'
+            mock_container.theme_path = "/mock/theme.json"
+            mock_container.dirpath = "/mock/dirpath"
 
             # Patch get_container to return mock
-            with patch('utilities.app_container.get_container', return_value=mock_container):
+            with patch("utilities.app_container.get_container", return_value=mock_container):
                 # Create mock root
                 mock_root = MagicMock()
                 mock_ctk.return_value = mock_root
@@ -201,12 +200,12 @@ class TestGUIIntegrationWorkflow:
         """Test button state management integration."""
         # Mock button states
         button_states = {
-            'blocknet_start': True,
-            'blocknet_stop': False,
-            'blockdx_start': True,
-            'blockdx_stop': False,
-            'xlite_start': True,
-            'xlite_stop': False
+            "blocknet_start": True,
+            "blocknet_stop": False,
+            "blockdx_start": True,
+            "blockdx_stop": False,
+            "xlite_start": True,
+            "xlite_stop": False,
         }
 
         # Mock update function
@@ -227,25 +226,25 @@ class TestGUIIntegrationWorkflow:
         """Test event handling integration."""
         # Mock event handlers
         mock_handlers = {
-            'on_start': MagicMock(),
-            'on_stop': MagicMock(),
-            'on_download': MagicMock(),
-            'on_delete': MagicMock()
+            "on_start": MagicMock(),
+            "on_stop": MagicMock(),
+            "on_download": MagicMock(),
+            "on_delete": MagicMock(),
         }
 
         # Simulate event flow
         def simulate_event_flow():
             # User clicks download button
-            mock_handlers['on_download']()
+            mock_handlers["on_download"]()
 
             # User clicks start button
-            mock_handlers['on_start']()
+            mock_handlers["on_start"]()
 
             # User clicks stop button
-            mock_handlers['on_stop']()
+            mock_handlers["on_stop"]()
 
             # User clicks delete button
-            mock_handlers['on_delete']()
+            mock_handlers["on_delete"]()
 
         # Execute event flow
         simulate_event_flow()
@@ -276,19 +275,15 @@ class TestGUIIntegrationWorkflow:
             download_result = await mock_async_download()
             start_result = await mock_async_start()
 
-            return {
-                'setup': setup_result,
-                'download': download_result,
-                'start': start_result
-            }
+            return {"setup": setup_result, "download": download_result, "start": start_result}
 
         # Execute workflow
         result = asyncio.run(run_async_workflow())
 
         # Verify results
-        assert result['setup'] == "setup_complete"
-        assert result['download'] == "download_complete"
-        assert result['start'] == "start_complete"
+        assert result["setup"] == "setup_complete"
+        assert result["download"] == "download_complete"
+        assert result["start"] == "start_complete"
 
     def test_error_handling_integration_workflow(self):
         """Test error handling integration."""
@@ -324,17 +319,17 @@ class TestGUIIntegrationWorkflow:
         """Test state machine integration."""
         # Define states
         states = {
-            'idle': ['downloading', 'starting'],
-            'downloading': ['idle', 'ready'],
-            'ready': ['starting', 'stopping'],
-            'starting': ['running', 'error'],
-            'running': ['stopping', 'error'],
-            'stopping': ['idle', 'error'],
-            'error': ['idle']
+            "idle": ["downloading", "starting"],
+            "downloading": ["idle", "ready"],
+            "ready": ["starting", "stopping"],
+            "starting": ["running", "error"],
+            "running": ["stopping", "error"],
+            "stopping": ["idle", "error"],
+            "error": ["idle"],
         }
 
         # Mock state transitions
-        current_state = 'idle'
+        current_state = "idle"
 
         def transition_to(new_state):
             nonlocal current_state
@@ -344,27 +339,27 @@ class TestGUIIntegrationWorkflow:
             return False
 
         # Test transitions
-        assert transition_to('downloading') is True
-        assert current_state == 'downloading'
+        assert transition_to("downloading") is True
+        assert current_state == "downloading"
 
-        assert transition_to('ready') is True
-        assert current_state == 'ready'
+        assert transition_to("ready") is True
+        assert current_state == "ready"
 
-        assert transition_to('starting') is True
-        assert current_state == 'starting'
+        assert transition_to("starting") is True
+        assert current_state == "starting"
 
-        assert transition_to('running') is True
-        assert current_state == 'running'
+        assert transition_to("running") is True
+        assert current_state == "running"
 
-        assert transition_to('stopping') is True
-        assert current_state == 'stopping'
+        assert transition_to("stopping") is True
+        assert current_state == "stopping"
 
-        assert transition_to('idle') is True
-        assert current_state == 'idle'
+        assert transition_to("idle") is True
+        assert current_state == "idle"
 
         # Test invalid transition
-        assert transition_to('invalid') is False
-        assert current_state == 'idle'
+        assert transition_to("invalid") is False
+        assert current_state == "idle"
 
     def test_data_flow_integration_workflow(self):
         """Test data flow between components."""
@@ -378,27 +373,27 @@ class TestGUIIntegrationWorkflow:
             return data_store.get(key)
 
         # Simulate data flow
-        update_data('blocknet_version', '4.4.1')
-        update_data('blockdx_version', '1.9.0')
-        update_data('xlite_version', '1.0.7')
-        update_data('rpc_port', 41414)
+        update_data("blocknet_version", "4.4.1")
+        update_data("blockdx_version", "1.9.0")
+        update_data("xlite_version", "1.0.7")
+        update_data("rpc_port", 41414)
 
         # Verify data flow
-        assert get_data('blocknet_version') == '4.4.1'
-        assert get_data('blockdx_version') == '1.9.0'
-        assert get_data('xlite_version') == '1.0.7'
-        assert get_data('rpc_port') == 41414
+        assert get_data("blocknet_version") == "4.4.1"
+        assert get_data("blockdx_version") == "1.9.0"
+        assert get_data("xlite_version") == "1.0.7"
+        assert get_data("rpc_port") == 41414
 
         # Test data propagation
         def propagate_data():
             versions = {
-                'blocknet': get_data('blocknet_version'),
-                'blockdx': get_data('blockdx_version'),
-                'xlite': get_data('xlite_version')
+                "blocknet": get_data("blocknet_version"),
+                "blockdx": get_data("blockdx_version"),
+                "xlite": get_data("xlite_version"),
             }
             return versions
 
         versions = propagate_data()
-        assert versions['blocknet'] == '4.4.1'
-        assert versions['blockdx'] == '1.9.0'
-        assert versions['xlite'] == '1.0.7'
+        assert versions["blocknet"] == "4.4.1"
+        assert versions["blockdx"] == "1.9.0"
+        assert versions["xlite"] == "1.0.7"

@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import MagicMock, call, mock_open, patch
 
 # Add the project root to the sys.path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from utilities.app_container import AppContainer
 from utilities.bin_handlers.blockdx_handler import BlockDXHandler
@@ -33,24 +33,30 @@ class TestBlockDXHandler(unittest.TestCase):
         self.mock_container.conf_data = MagicMock()
         self.mock_container.conf_data.blockdx_bin_path = {
             "Linux": "BLOCK-DX-1.0.0",
-            "Darwin": "Block DX.app/Contents/MacOS"
+            "Darwin": "Block DX.app/Contents/MacOS",
         }
         self.mock_container.conf_data.blockdx_bin_name = {
             "Linux": "block-dx",
-            "Darwin": ["Block DX.app", "Contents", "MacOS", "Block DX"]
+            "Darwin": ["Block DX.app", "Contents", "MacOS", "Block DX"],
         }
         self.mock_container.conf_data.blockdx_default_paths = {
             "Linux": "/home/user/.blockdx",
-            "Darwin": "/Users/user/Library/Application Support/Block DX"
+            "Darwin": "/Users/user/Library/Application Support/Block DX",
         }
         self.mock_container.conf_data.blockdx_releases_urls = {
-            ("Linux", "x86_64"): "https://github.com/BlocknetDX/block-dx/releases/download/v1.9.0/block-dx-v1.9.0-linux-x64.zip",
-            ("Darwin", "x86_64"): "https://github.com/BlocknetDX/block-dx/releases/download/v1.9.0/block-dx-v1.9.0-mac-x64.dmg"
+            (
+                "Linux",
+                "x86_64",
+            ): "https://github.com/BlocknetDX/block-dx/releases/download/v1.9.0/block-dx-v1.9.0-linux-x64.zip",
+            (
+                "Darwin",
+                "x86_64",
+            ): "https://github.com/BlocknetDX/block-dx/releases/download/v1.9.0/block-dx-v1.9.0-mac-x64.dmg",
         }
         self.mock_container.conf_data.blockdx_base_conf = {
             "rpcuser": "defaultuser",
             "rpcpassword": "defaultpassword",
-            "FullLog": "true"
+            "FullLog": "true",
         }
         self.mock_container.conf_data.blockdx_selectedWallets_blocknet = "BLOCK"
 
@@ -60,53 +66,47 @@ class TestBlockDXHandler(unittest.TestCase):
         # Create handler instance with injected container
         self.handler = BlockDXHandler(container=self.mock_container)
         self.handler.dmg_mount_path = os.path.join(
-            self.mock_container.aio_folder,
-            self.mock_container.blockdx_volume_name
+            self.mock_container.aio_folder, self.mock_container.blockdx_volume_name
         )
 
     def _setup_common_mocks(self):
         """Set up commonly used mocks for all tests."""
         # External dependencies
-        self.patcher_os_path_exists = patch('os.path.exists', return_value=True)
-        self.patcher_os_makedirs = patch('os.makedirs')
-        self.patcher_os_chmod = patch('os.chmod')
-        self.patcher_os_path_join = patch('os.path.join', side_effect=os.path.join)
-        self.patcher_os_path_normpath = patch('os.path.normpath', side_effect=os.path.normpath)
-        self.patcher_os_path_expanduser = patch('os.path.expanduser', side_effect=lambda x: x)
-        self.patcher_os_path_expandvars = patch('os.path.expandvars', side_effect=lambda x: x)
-        self.patcher_open = patch('builtins.open', mock_open(read_data=''))
+        self.patcher_os_path_exists = patch("os.path.exists", return_value=True)
+        self.patcher_os_makedirs = patch("os.makedirs")
+        self.patcher_os_chmod = patch("os.chmod")
+        self.patcher_os_path_join = patch("os.path.join", side_effect=os.path.join)
+        self.patcher_os_path_normpath = patch("os.path.normpath", side_effect=os.path.normpath)
+        self.patcher_os_path_expanduser = patch("os.path.expanduser", side_effect=lambda x: x)
+        self.patcher_os_path_expandvars = patch("os.path.expandvars", side_effect=lambda x: x)
+        self.patcher_open = patch("builtins.open", mock_open(read_data=""))
         # Don't patch get_blockdx_data_folder - we'll patch get_container instead
-        self.patcher_os_path_getsize = patch('os.path.getsize', return_value=100)
-        self.patcher_os_name = patch('os.name', new="posix")
-        self.patcher_sys_platform = patch('sys.platform')
-        self.patcher_requests_get = patch('requests.get')
-        self.patcher_json_load = patch('json.load')
-        self.patcher_psutil_process = patch('psutil.Process')
-        self.patcher_os_ismount = patch('os.path.ismount', return_value=True)
+        self.patcher_os_path_getsize = patch("os.path.getsize", return_value=100)
+        self.patcher_os_name = patch("os.name", new="posix")
+        self.patcher_sys_platform = patch("sys.platform")
+        self.patcher_requests_get = patch("requests.get")
+        self.patcher_json_load = patch("json.load")
+        self.patcher_psutil_process = patch("psutil.Process")
+        self.patcher_os_ismount = patch("os.path.ismount", return_value=True)
 
         # Patch get_container for get_blockdx_data_folder function
         self.patcher_get_container = patch(
-            'utilities.bin_handlers.blockdx_handler.get_container',
-            return_value=self.mock_container
+            "utilities.bin_handlers.blockdx_handler.get_container", return_value=self.mock_container
         )
 
         # BaseBinUtil methods
-        self.patcher_base_binutil_subprocess_Popen = patch(
-            'utilities.bin_handlers.base_binutil.subprocess.Popen'
-        )
+        self.patcher_base_binutil_subprocess_Popen = patch("utilities.bin_handlers.base_binutil.subprocess.Popen")
         self.patcher_base_binutil_graceful_terminate = patch(
-            'utilities.bin_handlers.blockdx_handler.BaseBinUtil.graceful_terminate'
+            "utilities.bin_handlers.blockdx_handler.BaseBinUtil.graceful_terminate"
         )
         self.patcher_base_binutil_download_file = patch(
-            'utilities.bin_handlers.blockdx_handler.BaseBinUtil.download_file'
+            "utilities.bin_handlers.blockdx_handler.BaseBinUtil.download_file"
         )
         self.patcher_base_binutil_terminate_processes = patch(
-            'utilities.bin_handlers.blockdx_handler.BaseBinUtil.terminate_processes'
+            "utilities.bin_handlers.blockdx_handler.BaseBinUtil.terminate_processes"
         )
-        self.patcher_base_binutil_handle_dmg = patch(
-            'utilities.bin_handlers.blockdx_handler.BaseBinUtil.handle_dmg'
-        )
-        self.patcher_base_binutil_sys = patch('utilities.bin_handlers.base_binutil.sys')
+        self.patcher_base_binutil_handle_dmg = patch("utilities.bin_handlers.blockdx_handler.BaseBinUtil.handle_dmg")
+        self.patcher_base_binutil_sys = patch("utilities.bin_handlers.base_binutil.sys")
 
         # Start all patches
         self.mock_os_path_exists = self.patcher_os_path_exists.start()
@@ -123,11 +123,8 @@ class TestBlockDXHandler(unittest.TestCase):
         self.mock_sys_platform = self.patcher_sys_platform.start()
         self.mock_sys_platform.return_value = "linux"
         self.mock_requests_get = self.patcher_requests_get.start()
-        self.mock_requests_get.return_value = MagicMock(
-            status_code=200,
-            headers={'Content-Length': '100'}
-        )
-        self.mock_requests_get.return_value.iter_content.return_value = [b'mock_content']
+        self.mock_requests_get.return_value = MagicMock(status_code=200, headers={"Content-Length": "100"})
+        self.mock_requests_get.return_value.iter_content.return_value = [b"mock_content"]
         self.mock_requests_get.return_value.raise_for_status.return_value = None
         self.mock_json_load = self.patcher_json_load.start()
         self.mock_psutil_process = self.patcher_psutil_process.start()
@@ -137,7 +134,7 @@ class TestBlockDXHandler(unittest.TestCase):
         self.mock_base_binutil_subprocess_Popen = self.patcher_base_binutil_subprocess_Popen.start()
         self.mock_base_binutil_graceful_terminate = self.patcher_base_binutil_graceful_terminate.start()
         self.mock_base_binutil_graceful_terminate.side_effect = lambda **kwargs: setattr(
-            self.handler, 'blockdx_process', None
+            self.handler, "blockdx_process", None
         )
         self.mock_base_binutil_download_file = self.patcher_base_binutil_download_file.start()
         self.mock_base_binutil_download_file.return_value = True
@@ -154,16 +151,28 @@ class TestBlockDXHandler(unittest.TestCase):
         """Clean up after each test."""
         # Stop all patches
         patchers = [
-            self.patcher_os_path_exists, self.patcher_os_makedirs, self.patcher_os_chmod,
-            self.patcher_os_path_join, self.patcher_os_path_normpath,
-            self.patcher_os_path_expanduser, self.patcher_os_path_expandvars,
+            self.patcher_os_path_exists,
+            self.patcher_os_makedirs,
+            self.patcher_os_chmod,
+            self.patcher_os_path_join,
+            self.patcher_os_path_normpath,
+            self.patcher_os_path_expanduser,
+            self.patcher_os_path_expandvars,
             self.patcher_open,
-            self.patcher_os_path_getsize, self.patcher_os_name, self.patcher_sys_platform,
-            self.patcher_requests_get, self.patcher_json_load, self.patcher_psutil_process,
-            self.patcher_os_ismount, self.patcher_get_container, self.patcher_base_binutil_subprocess_Popen,
+            self.patcher_os_path_getsize,
+            self.patcher_os_name,
+            self.patcher_sys_platform,
+            self.patcher_requests_get,
+            self.patcher_json_load,
+            self.patcher_psutil_process,
+            self.patcher_os_ismount,
+            self.patcher_get_container,
+            self.patcher_base_binutil_subprocess_Popen,
             self.patcher_base_binutil_graceful_terminate,
-            self.patcher_base_binutil_download_file, self.patcher_base_binutil_terminate_processes,
-            self.patcher_base_binutil_handle_dmg, self.patcher_base_binutil_sys
+            self.patcher_base_binutil_download_file,
+            self.patcher_base_binutil_terminate_processes,
+            self.patcher_base_binutil_handle_dmg,
+            self.patcher_base_binutil_sys,
         ]
         for patcher in patchers:
             try:
@@ -183,9 +192,7 @@ class TestBlockDXHandler(unittest.TestCase):
         self.mock_container.blockdx_volume_name = "Block DX"
         self.mock_container.blockdx_release_url = "http://mock.com/blockdx.dmg"
         self.mock_container.aio_folder = "/mock/aio_folder"
-        self.mock_container.conf_data.blockdx_bin_name = {
-            "Darwin": "Block DX"
-        }
+        self.mock_container.conf_data.blockdx_bin_name = {"Darwin": "Block DX"}
 
     def _set_linux_config(self):
         """Configure for Linux."""
@@ -212,7 +219,7 @@ class TestBlockDXHandler(unittest.TestCase):
     def _mock_psutil_process_iter(self, names):
         """Mock psutil.process_iter to return processes with specific names."""
         mock_proc = MagicMock()
-        mock_proc.info = {'name': names[0]}
+        mock_proc.info = {"name": names[0]}
         mock_proc.pid = 1234
         self.mock_psutil_process.return_value = mock_proc
 
@@ -245,7 +252,13 @@ class TestBlockDXHandler(unittest.TestCase):
     def test_compare_and_update_local_conf_existing_file_no_changes(self):
         """Test compare_and_update_local_conf with existing file and no changes."""
         self.mock_os_path_exists.return_value = True
-        existing_config = {"user": "user", "password": "pass", "xbridgeConfPath": "/path", "selectedWallets": ["BLOCK"], "FullLog": "true"}
+        existing_config = {
+            "user": "user",
+            "password": "pass",
+            "xbridgeConfPath": "/path",
+            "selectedWallets": ["BLOCK"],
+            "FullLog": "true",
+        }
         self.mock_json_load.return_value = existing_config
         self.mock_os_path_join.side_effect = lambda *args: "/".join(args)
 
@@ -254,13 +267,19 @@ class TestBlockDXHandler(unittest.TestCase):
         # Should not write file since no changes (parse happens but no write)
         # Verify open was only called for reading (mode 'r'), not writing (mode 'w')
         call_args_list = self.mock_open.call_args_list
-        write_calls = [call for call in call_args_list if call[0] and 'w' in str(call[0])]
+        write_calls = [call for call in call_args_list if call[0] and "w" in str(call[0])]
         self.assertEqual(len(write_calls), 0)
 
     def test_compare_and_update_local_conf_existing_file_with_changes(self):
         """Test compare_and_update_local_conf with existing file and changes needed."""
         self.mock_os_path_exists.return_value = True
-        existing_config = {"user": "olduser", "password": "oldpass", "xbridgeConfPath": "/oldpath", "selectedWallets": ["BLOCK"], "FullLog": "true"}
+        existing_config = {
+            "user": "olduser",
+            "password": "oldpass",
+            "xbridgeConfPath": "/oldpath",
+            "selectedWallets": ["BLOCK"],
+            "FullLog": "true",
+        }
         self.mock_json_load.return_value = existing_config
         self.mock_os_path_join.side_effect = lambda *args: "/".join(args)
 
@@ -268,20 +287,24 @@ class TestBlockDXHandler(unittest.TestCase):
 
         # Should write new config - verify open was called with 'w' mode
         call_args_list = self.mock_open.call_args_list
-        write_calls = [call for call in call_args_list if call[0] and 'w' in str(call[0])]
+        write_calls = [call for call in call_args_list if call[0] and "w" in str(call[0])]
         self.assertGreater(len(write_calls), 0)
 
     def test_compare_and_update_local_conf_no_existing_file(self):
         """Test compare_and_update_local_conf when no existing file exists."""
         self.mock_os_path_exists.return_value = False
-        self.mock_container.conf_data.blockdx_base_conf = {"rpcuser": "defaultuser", "rpcpassword": "defaultpassword", "FullLog": "true"}
+        self.mock_container.conf_data.blockdx_base_conf = {
+            "rpcuser": "defaultuser",
+            "rpcpassword": "defaultpassword",
+            "FullLog": "true",
+        }
         self.mock_os_path_join.side_effect = lambda *args: "/".join(args)
 
         self.handler.compare_and_update_local_conf("/path", "user", "pass")
 
         # Should write base config - verify open was called with 'w' mode
         call_args_list = self.mock_open.call_args_list
-        write_calls = [call for call in call_args_list if call[0] and 'w' in str(call[0])]
+        write_calls = [call for call in call_args_list if call[0] and "w" in str(call[0])]
         self.assertGreater(len(write_calls), 0)
 
     def test_compare_and_update_local_conf_non_list_selected_wallets(self):
@@ -296,7 +319,7 @@ class TestBlockDXHandler(unittest.TestCase):
 
         # Should handle string as list with one item
         call_args_list = self.mock_open.call_args_list
-        write_calls = [call for call in call_args_list if call[0] and 'w' in str(call[0])]
+        write_calls = [call for call in call_args_list if call[0] and "w" in str(call[0])]
         self.assertGreater(len(write_calls), 0)
 
     def test_download_blockdx_bin_darwin_dmg(self):
@@ -345,8 +368,9 @@ class TestBlockDXHandler(unittest.TestCase):
             "Darwin": "/Users/user/Library/Application Support/Block DX"
         }
 
-        with patch('utilities.bin_handlers.blockdx_handler.get_container', return_value=self.mock_container):
+        with patch("utilities.bin_handlers.blockdx_handler.get_container", return_value=self.mock_container):
             from utilities.bin_handlers.blockdx_handler import get_blockdx_data_folder
+
             folder = get_blockdx_data_folder()
 
             # Should return Darwin path
@@ -355,12 +379,11 @@ class TestBlockDXHandler(unittest.TestCase):
     def test_get_blockdx_data_folder_linux(self):
         """Test get_blockdx_data_folder on Linux."""
         self._set_linux_config()
-        self.mock_container.conf_data.blockdx_default_paths = {
-            "Linux": "/home/user/.blockdx"
-        }
+        self.mock_container.conf_data.blockdx_default_paths = {"Linux": "/home/user/.blockdx"}
 
-        with patch('utilities.bin_handlers.blockdx_handler.get_container', return_value=self.mock_container):
+        with patch("utilities.bin_handlers.blockdx_handler.get_container", return_value=self.mock_container):
             from utilities.bin_handlers.blockdx_handler import get_blockdx_data_folder
+
             folder = get_blockdx_data_folder()
 
             # Should return Linux path
@@ -370,8 +393,9 @@ class TestBlockDXHandler(unittest.TestCase):
         """Test get_blockdx_data_folder with unsupported OS."""
         self._change_system("UnsupportedOS")
 
-        with patch('utilities.bin_handlers.blockdx_handler.get_container', return_value=self.mock_container):
+        with patch("utilities.bin_handlers.blockdx_handler.get_container", return_value=self.mock_container):
             from utilities.bin_handlers.blockdx_handler import get_blockdx_data_folder
+
             with self.assertRaises(ValueError):
                 get_blockdx_data_folder()
 
@@ -386,9 +410,7 @@ class TestBlockDXHandler(unittest.TestCase):
 
     def test_parse_blockdx_conf_creates_folder(self):
         """Test parse_blockdx_conf when data folder doesn't exist."""
-        self.mock_container.conf_data.blockdx_default_paths = {
-            "Linux": "/mock/blockdx_data_folder"
-        }
+        self.mock_container.conf_data.blockdx_default_paths = {"Linux": "/mock/blockdx_data_folder"}
         self.mock_os_path_exists.return_value = False
 
         self.handler.parse_blockdx_conf()
@@ -398,9 +420,7 @@ class TestBlockDXHandler(unittest.TestCase):
 
     def test_parse_blockdx_conf_json_error(self):
         """Test parse_blockdx_conf with JSON parsing error."""
-        self.mock_container.conf_data.blockdx_default_paths = {
-            "Linux": "/mock/blockdx_data_folder"
-        }
+        self.mock_container.conf_data.blockdx_default_paths = {"Linux": "/mock/blockdx_data_folder"}
         self.mock_os_path_exists.return_value = True
         self.mock_json_load.side_effect = json.JSONDecodeError("Error", "", 0)
 

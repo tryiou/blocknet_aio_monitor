@@ -44,13 +44,9 @@ class TestConfigManagementWorkflow:
 
         # Create config file
         config_file = config_dir / "aio_config.json"
-        config_data = {
-            "custom_path": str(self.workspace),
-            "xl_pass": "encrypted_password",
-            "salt": "salt_value"
-        }
+        config_data = {"custom_path": str(self.workspace), "xl_pass": "encrypted_password", "salt": "salt_value"}
 
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             json.dump(config_data, f)
 
         # Verify config file exists
@@ -67,7 +63,7 @@ class TestConfigManagementWorkflow:
     def test_config_reading_workflow(self):
         """Test configuration reading workflow."""
         # Use existing test config
-        config_file = self.test_data['config_file']
+        config_file = self.test_data["config_file"]
 
         # Read config
         with open(config_file) as f:
@@ -97,15 +93,13 @@ class TestConfigManagementWorkflow:
             "custom_path": str(self.workspace / "new_path"),
             "xl_pass": "new_encrypted_password",
             "salt": "new_salt",
-            "extra_option_blocknet_core_conf": [
-                {"addnode": "new_node.example.com:41412"}
-            ],
-            "new_field": "new_value"
+            "extra_option_blocknet_core_conf": [{"addnode": "new_node.example.com:41412"}],
+            "new_field": "new_value",
         }
 
         # Write config
         config_file = self.workspace / "new_config.json"
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             json.dump(new_config, f, indent=2)
 
         # Verify config was written
@@ -120,7 +114,7 @@ class TestConfigManagementWorkflow:
 
     def test_config_update_workflow(self):
         """Test configuration update workflow."""
-        config_file = self.test_data['config_file']
+        config_file = self.test_data["config_file"]
 
         # Read current config
         with open(config_file) as f:
@@ -131,7 +125,7 @@ class TestConfigManagementWorkflow:
         config["xl_pass"] = "updated_password"
 
         # Write updated config
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             json.dump(config, f, indent=2)
 
         # Verify update
@@ -144,7 +138,7 @@ class TestConfigManagementWorkflow:
 
     def test_blocknet_config_workflow(self):
         """Test Blocknet configuration workflow."""
-        blocknet_conf = self.test_data['blocknet_conf']
+        blocknet_conf = self.test_data["blocknet_conf"]
 
         # Read Blocknet config
         with open(blocknet_conf) as f:
@@ -157,11 +151,11 @@ class TestConfigManagementWorkflow:
 
         # Parse config (simulating Blocknet config parsing)
         config_dict = {}
-        for line in config_content.strip().split('\n'):
+        for line in config_content.strip().split("\n"):
             line = line.strip()
-            if line and not line.startswith('#'):
-                if '=' in line:
-                    key, value = line.split('=', 1)
+            if line and not line.startswith("#"):
+                if "=" in line:
+                    key, value = line.split("=", 1)
                     key = key.strip()
                     value = value.strip()
 
@@ -181,7 +175,7 @@ class TestConfigManagementWorkflow:
 
     def test_blockdx_config_workflow(self):
         """Test Block-DX configuration workflow."""
-        blockdx_conf = self.test_data['blockdx_conf']
+        blockdx_conf = self.test_data["blockdx_conf"]
 
         # Read Block-DX config
         with open(blockdx_conf) as f:
@@ -195,11 +189,11 @@ class TestConfigManagementWorkflow:
 
         # Parse config
         config_dict = {}
-        for line in config_content.strip().split('\n'):
+        for line in config_content.strip().split("\n"):
             line = line.strip()
-            if line and not line.startswith('#'):
-                if '=' in line:
-                    key, value = line.split('=', 1)
+            if line and not line.startswith("#"):
+                if "=" in line:
+                    key, value = line.split("=", 1)
                     config_dict[key.strip()] = value.strip()
 
         # Verify parsed config
@@ -215,15 +209,15 @@ class TestConfigManagementWorkflow:
 
         # Verify config manager initialized
         assert config_mgr is not None
-        assert hasattr(config_mgr, 'config')
+        assert hasattr(config_mgr, "config")
 
         # Verify config has expected structure
         config = config_mgr.config
         assert isinstance(config, dict)
 
         # Verify system-specific values
-        assert 'blocknet_bin_name' in config
-        assert 'xlite_launch_options' in config
+        assert "blocknet_bin_name" in config
+        assert "xlite_launch_options" in config
 
     def test_config_path_resolution_workflow(self):
         """Test configuration path resolution workflow."""
@@ -231,7 +225,7 @@ class TestConfigManagementWorkflow:
         test_paths = [
             ("~/.AIO_Blocknet", Path.home() / ".AIO_Blocknet"),
             ("%appdata%\\AIO_Blocknet", Path.home() / "AppData" / "Roaming" / "AIO_Blocknet"),
-            ("/home/user/.AIO_Blocknet", Path("/home/user/.AIO_Blocknet"))
+            ("/home/user/.AIO_Blocknet", Path("/home/user/.AIO_Blocknet")),
         ]
 
         for input_path, expected_path in test_paths:
@@ -251,13 +245,13 @@ class TestConfigManagementWorkflow:
                 {"addnode": "node1.example.com:41412"},
                 {"addnode": "node2.example.com:41412"},
                 {"rpcallowip": "192.168.1.1"},
-                {"addnode": "node3.example.com:41412"}
+                {"addnode": "node3.example.com:41412"},
             ]
         }
 
         # Write config
         config_file = self.workspace / "config_with_extras.json"
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             json.dump(config_data, f, indent=2)
 
         # Read and process extra options
@@ -291,7 +285,7 @@ class TestConfigManagementWorkflow:
     def test_config_backup_workflow(self):
         """Test configuration backup workflow."""
         # Create original config
-        original_config = self.test_data['config_file']
+        original_config = self.test_data["config_file"]
 
         # Create backup
         backup_file = self.workspace / "aio_config_backup.json"
@@ -308,7 +302,7 @@ class TestConfigManagementWorkflow:
 
         config["modified"] = True
 
-        with open(original_config, 'w') as f:
+        with open(original_config, "w") as f:
             json.dump(config, f, indent=2)
 
         # Verify modification
@@ -329,11 +323,7 @@ class TestConfigManagementWorkflow:
     def test_config_validation_workflow(self):
         """Test configuration validation workflow."""
         # Valid config
-        valid_config = {
-            "custom_path": str(self.workspace),
-            "xl_pass": "password",
-            "salt": "salt"
-        }
+        valid_config = {"custom_path": str(self.workspace), "xl_pass": "password", "salt": "salt"}
 
         # Invalid config (missing required fields)
         invalid_config = {

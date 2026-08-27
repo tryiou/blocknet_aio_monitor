@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import widgets_strings
 from gui.xlite_frame_manager import XliteFrameManager
@@ -40,13 +40,13 @@ class TestXliteFrameManager(unittest.TestCase):
 
         # Patch tkinter components
         self.patches = [
-            patch('gui.xlite_frame_manager.ctk', self.mock_ctk),
-            patch('gui.xlite_frame_manager.ctk.CTkFrame', self.mock_ctk_frame),
-            patch('gui.xlite_frame_manager.ctk.CTkLabel', self.mock_ctk_label),
-            patch('gui.xlite_frame_manager.ctk.CTkButton', self.mock_ctk_button),
-            patch('gui.xlite_frame_manager.ctk.BooleanVar', self.mock_ctk_boolean_var),
-            patch('gui.xlite_frame_manager.ctk.StringVar', self.mock_ctk_string_var),
-            patch('gui.xlite_frame_manager.ctkCheckBoxMod.CTkCheckBox', self.mock_ctk_checkbox),
+            patch("gui.xlite_frame_manager.ctk", self.mock_ctk),
+            patch("gui.xlite_frame_manager.ctk.CTkFrame", self.mock_ctk_frame),
+            patch("gui.xlite_frame_manager.ctk.CTkLabel", self.mock_ctk_label),
+            patch("gui.xlite_frame_manager.ctk.CTkButton", self.mock_ctk_button),
+            patch("gui.xlite_frame_manager.ctk.BooleanVar", self.mock_ctk_boolean_var),
+            patch("gui.xlite_frame_manager.ctk.StringVar", self.mock_ctk_string_var),
+            patch("gui.xlite_frame_manager.ctkCheckBoxMod.CTkCheckBox", self.mock_ctk_checkbox),
         ]
 
         for p in self.patches:
@@ -104,7 +104,8 @@ class TestXliteFrameManager(unittest.TestCase):
         self.mock_root_gui.stored_password = "test_password"
         self.manager.update_xlite_store_password_button()
         self.manager.store_password_button_string_var.set.assert_called_with(
-            widgets_strings.xlite_stored_password_string)
+            widgets_strings.xlite_stored_password_string
+        )
 
         # Reset mock
         self.manager.store_password_button_string_var.set.reset_mock()
@@ -113,7 +114,8 @@ class TestXliteFrameManager(unittest.TestCase):
         self.mock_root_gui.stored_password = None
         self.manager.update_xlite_store_password_button()
         self.manager.store_password_button_string_var.set.assert_called_with(
-            widgets_strings.xlite_store_password_string)
+            widgets_strings.xlite_store_password_string
+        )
 
     def test_update_daemon_process_status(self):
         """Test update_xlite_daemon_process_status with both running states"""
@@ -122,7 +124,8 @@ class TestXliteFrameManager(unittest.TestCase):
         self.manager.update_xlite_daemon_process_status()
         self.manager.daemon_process_status_checkbox_state.set.assert_called_with(True)
         self.manager.daemon_process_status_checkbox_string_var.set.assert_called_with(
-            widgets_strings.xlite_daemon_running_string)
+            widgets_strings.xlite_daemon_running_string
+        )
 
         # Reset mocks
         self.manager.daemon_process_status_checkbox_state.set.reset_mock()
@@ -133,7 +136,8 @@ class TestXliteFrameManager(unittest.TestCase):
         self.manager.update_xlite_daemon_process_status()
         self.manager.daemon_process_status_checkbox_state.set.assert_called_with(False)
         self.manager.daemon_process_status_checkbox_string_var.set.assert_called_with(
-            widgets_strings.xlite_daemon_not_running_string)
+            widgets_strings.xlite_daemon_not_running_string
+        )
 
     def test_update_valid_config_checkbox(self):
         """Test update_xlite_valid_config_checkbox with valid and invalid configs"""
@@ -152,7 +156,8 @@ class TestXliteFrameManager(unittest.TestCase):
         self.manager.update_xlite_valid_config_checkbox()
         self.manager.valid_config_checkbox_state.set.assert_called_with(False)
         self.manager.valid_config_checkbox_string_var.set.assert_called_with(
-            widgets_strings.xlite_not_valid_config_string)
+            widgets_strings.xlite_not_valid_config_string
+        )
 
     def test_update_daemon_valid_config_checkbox(self):
         """Test update_xlite_daemon_valid_config_checkbox with various config states"""
@@ -161,7 +166,8 @@ class TestXliteFrameManager(unittest.TestCase):
         self.manager.update_xlite_daemon_valid_config_checkbox()
         self.manager.daemon_valid_config_checkbox_state.set.assert_called_with(True)
         self.manager.daemon_valid_config_checkbox_string_var.set.assert_called_with(
-            widgets_strings.xlite_daemon_valid_config_string)
+            widgets_strings.xlite_daemon_valid_config_string
+        )
 
         # Reset mocks
         self.manager.daemon_valid_config_checkbox_state.set.reset_mock()
@@ -172,7 +178,8 @@ class TestXliteFrameManager(unittest.TestCase):
         self.manager.update_xlite_daemon_valid_config_checkbox()
         self.manager.daemon_valid_config_checkbox_state.set.assert_called_with(False)
         self.manager.daemon_valid_config_checkbox_string_var.set.assert_called_with(
-            widgets_strings.xlite_daemon_not_valid_config_string)
+            widgets_strings.xlite_daemon_not_valid_config_string
+        )
 
         # Reset mocks
         self.manager.daemon_valid_config_checkbox_state.set.reset_mock()
@@ -183,7 +190,8 @@ class TestXliteFrameManager(unittest.TestCase):
         self.manager.update_xlite_daemon_valid_config_checkbox()
         self.manager.daemon_valid_config_checkbox_state.set.assert_called_with(False)
         self.manager.daemon_valid_config_checkbox_string_var.set.assert_called_with(
-            widgets_strings.xlite_daemon_not_valid_config_string)
+            widgets_strings.xlite_daemon_not_valid_config_string
+        )
 
     def test_update_reverse_proxy_process_status(self):
         """Test update_xlite_reverse_proxy_process_status with both running states"""
@@ -201,11 +209,12 @@ class TestXliteFrameManager(unittest.TestCase):
         self.mock_parent.reverse_proxy_running = False
         self.manager.update_xlite_reverse_proxy_process_status()
         self.manager.reverse_proxy_status_str.set.assert_called_with(
-            widgets_strings.xlite_reverse_proxy_not_running_string)
+            widgets_strings.xlite_reverse_proxy_not_running_string
+        )
         self.manager.reverse_proxy_process_status_checkbox_state.set.assert_called_with(False)
 
-    @patch('gui.xlite_frame_manager.utils.remove_cfg_json_key')
-    @patch('gui.xlite_frame_manager.os.environ')
+    @patch("gui.xlite_frame_manager.utils.remove_cfg_json_key")
+    @patch("gui.xlite_frame_manager.os.environ")
     def test_xlite_store_password_button_mouse_click_right_click(self, mock_environ, mock_remove_cfg_json_key):
         """Test xlite_store_password_button_mouse_click with right click (wipe password)"""
         # Set up stored password
@@ -228,10 +237,11 @@ class TestXliteFrameManager(unittest.TestCase):
         mock_environ.pop.assert_any_call("CC_WALLET_AUTOLOGIN")
         self.assertEqual(result, "break")
 
-    @patch('gui.xlite_frame_manager.utils.remove_cfg_json_key')
-    @patch('gui.xlite_frame_manager.os.environ')
-    def test_xlite_store_password_button_mouse_click_right_click_no_env_vars(self, mock_environ,
-                                                                             mock_remove_cfg_json_key):
+    @patch("gui.xlite_frame_manager.utils.remove_cfg_json_key")
+    @patch("gui.xlite_frame_manager.os.environ")
+    def test_xlite_store_password_button_mouse_click_right_click_no_env_vars(
+        self, mock_environ, mock_remove_cfg_json_key
+    ):
         """Test xlite_store_password_button_mouse_click with right click when env vars don't exist"""
         # Set up stored password
         self.mock_root_gui.stored_password = "test_password"
@@ -252,13 +262,13 @@ class TestXliteFrameManager(unittest.TestCase):
         mock_environ.pop.assert_not_called()
         self.assertEqual(result, "break")
 
-    @patch('gui.xlite_frame_manager.ctkInputDialogMod.CTkInputDialog')
-    @patch('gui.xlite_frame_manager.utils.save_cfg_json')
-    @patch('gui.xlite_frame_manager.utils.encrypt_password')
-    @patch('gui.xlite_frame_manager.utils.generate_key')
-    def test_xlite_store_password_button_mouse_click_left_click_with_password(self, mock_generate_key,
-                                                                              mock_encrypt_password, mock_save_cfg_json,
-                                                                              mock_ctk_input_dialog):
+    @patch("gui.xlite_frame_manager.ctkInputDialogMod.CTkInputDialog")
+    @patch("gui.xlite_frame_manager.utils.save_cfg_json")
+    @patch("gui.xlite_frame_manager.utils.encrypt_password")
+    @patch("gui.xlite_frame_manager.utils.generate_key")
+    def test_xlite_store_password_button_mouse_click_left_click_with_password(
+        self, mock_generate_key, mock_encrypt_password, mock_save_cfg_json, mock_ctk_input_dialog
+    ):
         """Test xlite_store_password_button_mouse_click with left click (store password)"""
         # Mock event with left click (button 1)
         mock_event = MagicMock()
@@ -284,7 +294,7 @@ class TestXliteFrameManager(unittest.TestCase):
         self.assertEqual(self.mock_root_gui.stored_password, "test_password")
         self.assertEqual(result, "break")
 
-    @patch('gui.xlite_frame_manager.ctkInputDialogMod.CTkInputDialog')
+    @patch("gui.xlite_frame_manager.ctkInputDialogMod.CTkInputDialog")
     def test_xlite_store_password_button_mouse_click_left_click_no_password(self, mock_ctk_input_dialog):
         """Test xlite_store_password_button_mouse_click with left click (no password entered)"""
         # Mock event with left click (button 1)
@@ -305,5 +315,5 @@ class TestXliteFrameManager(unittest.TestCase):
         self.assertEqual(result, "break")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

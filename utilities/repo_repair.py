@@ -5,6 +5,7 @@ blockers, backs up user data, restores runtime configs verbatim and
 produces a repair report. All operations use /tmp-style staging;
 never touches host data outside the target worktree + aio backup dir.
 """
+
 import json
 import logging
 import shutil
@@ -45,7 +46,7 @@ def _regenerate_config_from_templates(target: Path) -> int:
     config_dir.mkdir(parents=True, exist_ok=True)
     count = 0
     for tmpl in templates_dir.glob("*.template"):
-        dest_name = tmpl.name[:-len(".template")] if tmpl.name.endswith(".template") else tmpl.name
+        dest_name = tmpl.name[: -len(".template")] if tmpl.name.endswith(".template") else tmpl.name
         dest = config_dir / dest_name
         if not dest.exists():
             try:

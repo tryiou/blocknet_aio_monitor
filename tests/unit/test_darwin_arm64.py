@@ -1,4 +1,5 @@
 """Tests for Apple Silicon (Darwin arm64) handling — issue #27."""
+
 import os
 import sys
 import tempfile
@@ -6,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from utilities.app_container import AppContainer, _get_value_from_config, get_container
 from utilities.config_manager import ConfigManager
@@ -14,37 +15,37 @@ from utilities.config_manager import ConfigManager
 
 class TestDarwinArm64Config(unittest.TestCase):
     def test_blocknet_release_url_arm64(self):
-        with patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'):
+        with patch("platform.system", return_value="Darwin"), patch("platform.machine", return_value="arm64"):
             tmp = tempfile.mkdtemp()
             cfg = ConfigManager(aio_folder=tmp)
-            url = cfg._get_system_value('blocknet_releases_urls')
+            url = cfg._get_system_value("blocknet_releases_urls")
             self.assertIsNotNone(url)
-            self.assertIn('blocknet', url)
+            self.assertIn("blocknet", url)
             self.assertNotEqual(url, None)
 
     def test_blockdx_release_url_arm64(self):
-        with patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'):
+        with patch("platform.system", return_value="Darwin"), patch("platform.machine", return_value="arm64"):
             tmp = tempfile.mkdtemp()
             cfg = ConfigManager(aio_folder=tmp)
-            url = cfg._get_system_value('blockdx_releases_urls')
+            url = cfg._get_system_value("blockdx_releases_urls")
             self.assertIsNotNone(url)
-            self.assertIn('BLOCK-DX', url)
+            self.assertIn("BLOCK-DX", url)
 
     def test_xlite_release_url_arm64(self):
-        with patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'):
+        with patch("platform.system", return_value="Darwin"), patch("platform.machine", return_value="arm64"):
             tmp = tempfile.mkdtemp()
             cfg = ConfigManager(aio_folder=tmp)
-            url = cfg._get_system_value('xlite_releases_urls')
+            url = cfg._get_system_value("xlite_releases_urls")
             self.assertIsNotNone(url)
-            self.assertIn('XLite', url)
+            self.assertIn("XLite", url)
 
     def test_xlite_daemon_arm64(self):
-        with patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'):
+        with patch("platform.system", return_value="Darwin"), patch("platform.machine", return_value="arm64"):
             tmp = tempfile.mkdtemp()
             cfg = ConfigManager(aio_folder=tmp)
-            val = cfg._get_system_value('xlite_daemon_bin_name')
+            val = cfg._get_system_value("xlite_daemon_bin_name")
             self.assertIsNotNone(val)
-            self.assertIn('xlite-daemon', val)
+            self.assertIn("xlite-daemon", val)
 
     def test_app_container_fallback(self):
         # Direct test of _get_value_from_config fallback
@@ -65,26 +66,27 @@ class TestDarwinArm64Config(unittest.TestCase):
 
     def test_not_persist_null(self):
         # Simulate old aio_config.yaml with null for arm64 URLs
-        with patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'):
+        with patch("platform.system", return_value="Darwin"), patch("platform.machine", return_value="arm64"):
             tmp = tempfile.mkdtemp()
             cfg_file = Path(tmp) / "aio_config.yaml"
             # Write a config with null for blockdx (simulating old bug)
             import yaml
+
             with open(cfg_file, "w") as f:
                 yaml.dump({"blockdx_releases_urls": None, "xlite_releases_urls": None}, f)
             cfg = ConfigManager(aio_folder=tmp)
             # After load, should have repaired to non-None (Rosetta fallback)
-            url = cfg._get_system_value('blockdx_releases_urls')
+            url = cfg._get_system_value("blockdx_releases_urls")
             self.assertIsNotNone(url)
             self.assertNotEqual(url, None)
             # Save should not persist null
             filtered = cfg._filter_config_for_saving()
-            self.assertIsNotNone(filtered.get('blockdx_releases_urls'))
-            self.assertNotEqual(filtered.get('blockdx_releases_urls'), None)
+            self.assertIsNotNone(filtered.get("blockdx_releases_urls"))
+            self.assertNotEqual(filtered.get("blockdx_releases_urls"), None)
 
     def test_blockdx_handler_no_crash_arm64(self):
         # Ensure BlockDXHandler doesn't crash on arm64 with new config
-        with patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'):
+        with patch("platform.system", return_value="Darwin"), patch("platform.machine", return_value="arm64"):
             tmp = tempfile.mkdtemp()
             # Mock container
             mock_container = MagicMock()
@@ -102,16 +104,20 @@ class TestDarwinArm64Config(unittest.TestCase):
             mock_container.conf_data.blockdx_default_paths = {"Darwin": "/tmp/blockdx"}
             mock_container.conf_data.blockdx_base_conf = {}
             mock_container.conf_data.blockdx_selectedWallets_blocknet = "blocknet--v4.2.0"
-            mock_container.conf_data.blockdx_releases_urls = {("Darwin", "arm64"): "https://example.com/BLOCK-DX-1.9.5-mac.dmg"}
+            mock_container.conf_data.blockdx_releases_urls = {
+                ("Darwin", "arm64"): "https://example.com/BLOCK-DX-1.9.5-mac.dmg"
+            }
 
             from utilities.bin_handlers.blockdx_handler import BlockDXHandler
 
-            with patch('utilities.bin_handlers.blockdx_handler.get_container', return_value=mock_container), \
-                 patch('os.path.exists', return_value=True), \
-                 patch('os.makedirs'), \
-                 patch('builtins.open', mock_open(read_data='{}')), \
-                 patch('json.load', return_value={}), \
-                 patch('os.path.ismount', return_value=False):
+            with (
+                patch("utilities.bin_handlers.blockdx_handler.get_container", return_value=mock_container),
+                patch("os.path.exists", return_value=True),
+                patch("os.makedirs"),
+                patch("builtins.open", mock_open(read_data="{}")),
+                patch("json.load", return_value={}),
+                patch("os.path.ismount", return_value=False),
+            ):
                 handler = BlockDXHandler(container=mock_container)
                 # Should not crash, executable_path should be set via Rosetta url
                 self.assertIsNotNone(handler.executable_path)
@@ -135,7 +141,7 @@ class TestDarwinArm64Config(unittest.TestCase):
         mock_root = MagicMock()
         mock_root.tooltip_manager = MagicMock()
         mock_root.time_disable_button = 3000
-        for mgr in ['blocknet_manager', 'blockdx_manager', 'xlite_manager']:
+        for mgr in ["blocknet_manager", "blockdx_manager", "xlite_manager"]:
             m = MagicMock()
             m.utility = MagicMock()
             m.version = ["v1.9.5"] if "blockdx" in mgr else ["v1.0.7"] if "xlite" in mgr else ["v4.4.1"]
@@ -143,13 +149,15 @@ class TestDarwinArm64Config(unittest.TestCase):
             m.process_running = False
             setattr(mock_root, mgr, m)
 
-        with patch('gui.binary_manager.get_container', return_value=mock_container), \
-             patch('gui.binary_manager.Observer'), \
-             patch('os.path.exists', return_value=True), \
-             patch('os.listdir', return_value=["BLOCK-DX-1.9.5-mac.dmg", "XLite-1.0.7-mac.dmg"]), \
-             patch('os.path.isdir', return_value=False), \
-             patch('os.path.isfile', return_value=True), \
-             patch('os.stat') as mock_stat:
+        with (
+            patch("gui.binary_manager.get_container", return_value=mock_container),
+            patch("gui.binary_manager.Observer"),
+            patch("os.path.exists", return_value=True),
+            patch("os.listdir", return_value=["BLOCK-DX-1.9.5-mac.dmg", "XLite-1.0.7-mac.dmg"]),
+            patch("os.path.isdir", return_value=False),
+            patch("os.path.isfile", return_value=True),
+            patch("os.stat") as mock_stat,
+        ):
             mock_stat.return_value.st_mtime_ns = 123
             mock_stat.return_value.st_mtime = 123
             mgr = BinaryManager(mock_root)
@@ -163,6 +171,7 @@ class TestDarwinArm64Config(unittest.TestCase):
             # If bug existed, darwin_file would be "" and _is_item_match would incorrectly match every file
             # We test that scan doesn't mark everything as found when file is empty
             from gui.binary_manager import BinaryManager as BM
+
             # Ensure _is_item_match with empty darwin_file would be bug, but we have correct file
             app_info = {"is_dir": False, "darwin_file": "BLOCK-DX-1.9.5-mac.dmg", "dir_prefix": "BLOCK-DX-"}
             self.assertTrue(mgr._is_item_match(app_info, "BLOCK-DX-1.9.5-mac.dmg", "/tmp/BLOCK-DX-1.9.5-mac.dmg"))

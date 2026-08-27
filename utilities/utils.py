@@ -46,7 +46,7 @@ def load_cfg_json():
             success, new_cfg_data, message, old_key = migration.migrate_from_old_format(cfg_data)
             if success:
                 # Save the migrated config (may or may not include salt depending on keyring availability)
-                with open(full_new_path, 'w') as file:
+                with open(full_new_path, "w") as file:
                     json.dump(new_cfg_data, file, indent=2)
                 logger.info(f"Migration successful: {message}")
                 cfg_data = new_cfg_data
@@ -87,7 +87,7 @@ def remove_cfg_json_key(key):
     if key in cfg_data:
         # Remove the key from the dictionary
         del cfg_data[key]
-        with open(filename, 'w') as file:
+        with open(filename, "w") as file:
             json.dump(cfg_data, file)
         logger.info(f"Key '{key}' was removed from configuration file: [{filename}]")
 
@@ -115,7 +115,7 @@ def save_cfg_json(key, data):
     cfg_data.update({key: data})
 
     # Save to file
-    with open(filename, 'w') as file:
+    with open(filename, "w") as file:
         json.dump(cfg_data, file)
     logger.info(f"{key} {data} was saved to configuration file: [{filename}]")
 
@@ -141,7 +141,7 @@ def load_encryption_key():
     key, message = keyring_manager.retrieve_key()
     if key:
         logger.info(f"Encryption key loaded: {message}")
-        return key.encode('utf-8') if isinstance(key, str) else key
+        return key.encode("utf-8") if isinstance(key, str) else key
     else:
         logger.error(f"Failed to load encryption key: {message}")
         return None
@@ -164,7 +164,7 @@ def generate_key():
     """Generate a new encryption key and store it in keyring."""
     key = Fernet.generate_key()
     # Store the key in keyring
-    if save_encryption_key(key.decode('utf-8')):
+    if save_encryption_key(key.decode("utf-8")):
         return key
     else:
         logger.error("Failed to store encryption key in keyring")
@@ -215,24 +215,17 @@ def processes_check():
     """Check for running processes related to Blocknet, BlockDX, and Xlite."""
     container = get_container()
     blocknet_bin = container.blocknet_bin
-    blockdx_bin = container.blockdx_bin[-1] if container.system == "Darwin" \
-        else container.blockdx_bin
-    xlite_bin = container.xlite_bin[-1] if container.system == "Darwin" \
-        else container.xlite_bin
+    blockdx_bin = container.blockdx_bin[-1] if container.system == "Darwin" else container.blockdx_bin
+    xlite_bin = container.xlite_bin[-1] if container.system == "Darwin" else container.xlite_bin
     xlite_daemon_bin = container.xlite_daemon_bin
     # Initialize process lists
-    process_lists: dict = {
-        blocknet_bin: [],
-        blockdx_bin: [],
-        xlite_bin: [],
-        xlite_daemon_bin: []
-    }
+    process_lists: dict = {blocknet_bin: [], blockdx_bin: [], xlite_bin: [], xlite_daemon_bin: []}
 
     # Process all running processes
-    for proc in psutil.process_iter(['pid', 'name', 'status']):
-        pid = proc.info['pid']
-        name = proc.info['name']
-        status = proc.info['status']
+    for proc in psutil.process_iter(["pid", "name", "status"]):
+        pid = proc.info["pid"]
+        name = proc.info["name"]
+        status = proc.info["status"]
 
         # Check against each target process type
         for target_name, process_list in process_lists.items():
@@ -245,7 +238,7 @@ def processes_check():
         process_lists[blocknet_bin],
         process_lists[blockdx_bin],
         process_lists[xlite_bin],
-        process_lists[xlite_daemon_bin]
+        process_lists[xlite_daemon_bin],
     )
 
 

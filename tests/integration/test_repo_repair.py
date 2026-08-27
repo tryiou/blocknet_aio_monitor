@@ -1,4 +1,5 @@
 """Repair end-to-end test: config_bak_* archived, user configs restored verbatim, switch succeeds."""
+
 import shutil
 import subprocess
 import tempfile
@@ -52,6 +53,7 @@ def test_repair_archives_config_bak_and_restores(tmp_path: Path):
         aio.mkdir()
         target = aio / "xbridge_trading_bots"
         from utilities.git_repo_management import GitRepoManagement
+
         mgr = GitRepoManagement(str(origin), str(target), branch="dev", workdir=str(aio))
         mgr.portable_python_dir = None
         mgr.portable_python_path = None

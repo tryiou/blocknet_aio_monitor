@@ -58,13 +58,9 @@ class TestRPCNetworkWorkflow:
         # Mock requests.Session.post
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "result": {"balance": 100.0},
-            "error": None,
-            "id": 1
-        }
+        mock_response.json.return_value = {"result": {"balance": 100.0}, "error": None, "id": 1}
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             # Send RPC request
             result = rpc_client.send_rpc_request("getbalance")
 
@@ -82,13 +78,9 @@ class TestRPCNetworkWorkflow:
         # Mock getbalance response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "result": 150.5,
-            "error": None,
-            "id": 1
-        }
+        mock_response.json.return_value = {"result": 150.5, "error": None, "id": 1}
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             # Get balance
             balance = rpc_client.send_rpc_request("getbalance")
 
@@ -116,13 +108,13 @@ class TestRPCNetworkWorkflow:
                 "moneysupply": 1000000.0,
                 "balance": 100.0,
                 "newmint": 0.0,
-                "stake": 0.0
+                "stake": 0.0,
             },
             "error": None,
-            "id": 1
+            "id": 1,
         }
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             # Get info
             info = rpc_client.send_rpc_request("getinfo")
 
@@ -139,13 +131,9 @@ class TestRPCNetworkWorkflow:
         # Mock getblockcount response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "result": 1500,
-            "error": None,
-            "id": 1
-        }
+        mock_response.json.return_value = {"result": 1500, "error": None, "id": 1}
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             # Get block count
             block_count = rpc_client.send_rpc_request("getblockcount")
 
@@ -163,17 +151,17 @@ class TestRPCNetworkWorkflow:
         mock_response = MagicMock()
         mock_response.status_code = 500
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             result = rpc_client.send_rpc_request("getbalance")
             assert result is None
 
         # 2. Connection error
-        with patch('requests.Session.post', side_effect=requests.ConnectionError("Connection refused")):
+        with patch("requests.Session.post", side_effect=requests.ConnectionError("Connection refused")):
             result = rpc_client.send_rpc_request("getbalance")
             assert result is None
 
         # 3. Timeout error
-        with patch('requests.Session.post', side_effect=requests.Timeout("Request timeout")):
+        with patch("requests.Session.post", side_effect=requests.Timeout("Request timeout")):
             result = rpc_client.send_rpc_request("getbalance")
             assert result is None
 
@@ -182,7 +170,7 @@ class TestRPCNetworkWorkflow:
         mock_response.status_code = 200
         mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             result = rpc_client.send_rpc_request("getbalance")
             assert result is None
 
@@ -194,19 +182,15 @@ class TestRPCNetworkWorkflow:
         # Mock response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "result": {"balance": 100.0},
-            "error": None,
-            "id": 1
-        }
+        mock_response.json.return_value = {"result": {"balance": 100.0}, "error": None, "id": 1}
 
-        with patch('requests.Session.post', return_value=mock_response) as mock_post:
+        with patch("requests.Session.post", return_value=mock_response) as mock_post:
             # Send request
             rpc_client.send_rpc_request("getbalance")
 
             # Verify authentication was included
             call_args = mock_post.call_args
-            assert call_args[1]['auth'] == (self.rpc_user, self.rpc_password)
+            assert call_args[1]["auth"] == (self.rpc_user, self.rpc_password)
 
     def test_rpc_session_management_workflow(self):
         """Test RPC session management workflow."""
@@ -218,7 +202,7 @@ class TestRPCNetworkWorkflow:
         assert isinstance(rpc_client.session, requests.Session)
 
         # Test session close
-        with patch.object(rpc_client.session, 'close') as mock_close:
+        with patch.object(rpc_client.session, "close") as mock_close:
             rpc_client.close()
             mock_close.assert_called_once()
 
@@ -230,53 +214,50 @@ class TestRPCNetworkWorkflow:
         # Mock response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "result": {"balance": 100.0},
-            "error": None,
-            "id": 1
-        }
+        mock_response.json.return_value = {"result": {"balance": 100.0}, "error": None, "id": 1}
 
-        with patch('requests.Session.post', return_value=mock_response) as mock_post:
+        with patch("requests.Session.post", return_value=mock_response) as mock_post:
             # Send request with parameters
             rpc_client.send_rpc_request("getbalance", ["account1"])
 
             # Verify request format
             call_args = mock_post.call_args
-            json_data = call_args[1]['json']
+            json_data = call_args[1]["json"]
 
-            assert json_data['method'] == 'getbalance'
-            assert json_data['params'] == ["account1"]
-            assert json_data['jsonrpc'] == '2.0'
-            assert 'id' in json_data
+            assert json_data["method"] == "getbalance"
+            assert json_data["params"] == ["account1"]
+            assert json_data["jsonrpc"] == "2.0"
+            assert "id" in json_data
 
     def test_network_request_workflow(self):
         """Test network request workflow."""
         # Mock network response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.headers = {'Content-Length': '1024'}
-        mock_response.iter_content = lambda chunk_size: [b'x' * chunk_size]
+        mock_response.headers = {"Content-Length": "1024"}
+        mock_response.iter_content = lambda chunk_size: [b"x" * chunk_size]
 
-        with patch('requests.get', return_value=mock_response):
+        with patch("requests.get", return_value=mock_response):
             # Make network request
             response = requests.get(
-                "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-linux.tar.gz")
+                "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-linux.tar.gz"
+            )
 
             # Verify response
             assert response.status_code == 200
-            assert response.headers['Content-Length'] == '1024'
+            assert response.headers["Content-Length"] == "1024"
 
     def test_network_error_handling_workflow(self):
         """Test network error handling workflow."""
         # Test various network errors
 
         # 1. Connection error
-        with patch('requests.get', side_effect=requests.ConnectionError("Connection refused")):
+        with patch("requests.get", side_effect=requests.ConnectionError("Connection refused")):
             with pytest.raises(requests.ConnectionError):
                 requests.get("https://example.com")
 
         # 2. Timeout error
-        with patch('requests.get', side_effect=requests.Timeout("Request timeout")):
+        with patch("requests.get", side_effect=requests.Timeout("Request timeout")):
             with pytest.raises(requests.Timeout):
                 requests.get("https://example.com")
 
@@ -285,7 +266,7 @@ class TestRPCNetworkWorkflow:
         mock_response.status_code = 404
         mock_response.raise_for_status = MagicMock(side_effect=requests.HTTPError("404 Not Found"))
 
-        with patch('requests.get', return_value=mock_response):
+        with patch("requests.get", return_value=mock_response):
             response = requests.get("https://example.com")
             with pytest.raises(requests.HTTPError):
                 response.raise_for_status()
@@ -295,17 +276,17 @@ class TestRPCNetworkWorkflow:
         # Mock download response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.headers = {'Content-Length': '1024'}
-        mock_response.iter_content = lambda chunk_size: [b'x' * chunk_size]
+        mock_response.headers = {"Content-Length": "1024"}
+        mock_response.iter_content = lambda chunk_size: [b"x" * chunk_size]
 
         download_path = self.workspace / "downloaded_file.tar.gz"
 
-        with patch('requests.get', return_value=mock_response):
+        with patch("requests.get", return_value=mock_response):
             # Simulate download
             response = requests.get("https://example.com/file.tar.gz")
 
             # Write to file
-            with open(download_path, 'wb') as f:
+            with open(download_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
 
@@ -323,14 +304,14 @@ class TestRPCNetworkWorkflow:
         responses = [
             {"result": {"balance": 100.0}, "error": None, "id": 1},
             {"result": {"version": 1000000}, "error": None, "id": 2},
-            {"result": 1500, "error": None, "id": 3}
+            {"result": 1500, "error": None, "id": 3},
         ]
 
         mock_post = MagicMock()
         mock_post.return_value.status_code = 200
         mock_post.return_value.json.side_effect = responses
 
-        with patch('requests.Session.post', mock_post):
+        with patch("requests.Session.post", mock_post):
             # Make multiple calls
             balance = rpc_client.send_rpc_request("getbalance")
             version = rpc_client.send_rpc_request("getinfo")
@@ -352,13 +333,9 @@ class TestRPCNetworkWorkflow:
         # Mock response for getbalance with account
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "result": 200.0,
-            "error": None,
-            "id": 1
-        }
+        mock_response.json.return_value = {"result": 200.0, "error": None, "id": 1}
 
-        with patch('requests.Session.post', return_value=mock_response) as mock_post:
+        with patch("requests.Session.post", return_value=mock_response) as mock_post:
             # Call with parameters
             balance = rpc_client.send_rpc_request("getbalance", ["account1"])
 
@@ -367,7 +344,7 @@ class TestRPCNetworkWorkflow:
 
             # Verify parameters were included
             call_args = mock_post.call_args
-            assert call_args[1]['json']['params'] == ["account1"]
+            assert call_args[1]["json"]["params"] == ["account1"]
 
     def test_rpc_response_parsing_workflow(self):
         """Test RPC response parsing workflow."""
@@ -379,13 +356,9 @@ class TestRPCNetworkWorkflow:
         # 1. Success response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "result": {"balance": 100.0},
-            "error": None,
-            "id": 1
-        }
+        mock_response.json.return_value = {"result": {"balance": 100.0}, "error": None, "id": 1}
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             result = rpc_client.send_rpc_request("getbalance")
             assert result == {"balance": 100.0}
 
@@ -395,10 +368,10 @@ class TestRPCNetworkWorkflow:
         mock_response.json.return_value = {
             "result": None,
             "error": {"code": -32601, "message": "Method not found"},
-            "id": 1
+            "id": 1,
         }
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             result = rpc_client.send_rpc_request("invalid_method")
             # Error responses still return the result (which is None)
             assert result is None
@@ -406,12 +379,8 @@ class TestRPCNetworkWorkflow:
         # 3. Empty result
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "result": None,
-            "error": None,
-            "id": 1
-        }
+        mock_response.json.return_value = {"result": None, "error": None, "id": 1}
 
-        with patch('requests.Session.post', return_value=mock_response):
+        with patch("requests.Session.post", return_value=mock_response):
             result = rpc_client.send_rpc_request("getinfo")
             assert result is None

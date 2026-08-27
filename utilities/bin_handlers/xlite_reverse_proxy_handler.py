@@ -4,11 +4,11 @@ import re
 import socket
 import subprocess
 
-
 from utilities.app_container import AppContainer
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 logger = logging.getLogger(__name__)
+
 
 class XliteReverseProxyHandler(BaseBinUtil):
     PORT = 11111
@@ -27,18 +27,14 @@ class XliteReverseProxyHandler(BaseBinUtil):
         # Extract version from URL (expecting format: .../vX.Y.Z/...)
         version = None
         if self.release_url:
-            match = re.search(r'/v(\d+\.\d+\.\d+)/', self.release_url)
+            match = re.search(r"/v(\d+\.\d+\.\d+)/", self.release_url)
             if match:
                 version = match.group(1)
 
         folder_name = f"xlite-reverse-proxy-{version}" if version else "xlite-reverse-proxy-unknown"
         aio_folder = self.container.aio_folder
         if aio_folder:
-            self.executable_path = os.path.join(
-                aio_folder,
-                folder_name,
-                self.bin_name
-            )
+            self.executable_path = os.path.join(aio_folder, folder_name, self.bin_name)
         else:
             self.executable_path = None
         self.process = None
@@ -48,7 +44,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
         """Verify if proxy port is available"""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(1)
-            return s.connect_ex(('localhost', self.PORT)) == 0
+            return s.connect_ex(("localhost", self.PORT)) == 0
 
     def start(self):
         if not self.release_url or not self.bin_name:
@@ -81,11 +77,11 @@ class XliteReverseProxyHandler(BaseBinUtil):
 
             # Start proxy with dynlist=true argument
             self.process = subprocess.Popen(
-                [exe_path, '-dynlist=true'],
+                [exe_path, "-dynlist=true"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
-                cwd=bin_dir
+                cwd=bin_dir,
             )
             self.running_locally = True
             logger.info(f"Proxy started (PID: {self.process.pid} in {bin_dir}) with dynlist=true")
@@ -119,6 +115,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
                 # Kill the entire process group to ensure cleanup
                 try:
                     import signal
+
                     os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
                 except (ProcessLookupError, AttributeError):
                     # Process already dead or pgid not available
@@ -133,6 +130,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
                 # Final attempt to kill
                 try:
                     import signal
+
                     os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
                 except (ProcessLookupError, AttributeError):
                     pass
@@ -143,6 +141,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
             try:
                 if self.process and self.process.poll() is None:
                     import signal
+
                     os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
             except (ProcessLookupError, AttributeError):
                 pass

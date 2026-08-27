@@ -1,12 +1,14 @@
 # Define the gui strings
 app_title_string = "Blocknet AIO monitor"
-tooltip_howtouse = (f"\n{app_title_string}\n"
-                    "HOW TO USE:\n"
-                    "1/ (Optional) Set a custom path for the Blocknet core chain directory, or use the default path.\n"
-                    "2/ (Optional) Obtain the bootstrap for a faster initial synchronization of the Core wallet.\n"
-                    "3/ Start Blocknet Core, wait for it to synchronize with the network, and unlock it.\n"
-                    "4/ Start Block-DX.\n"
-                    "5/ Start Xlite, create a wallet, and carefully backup the mnemonic.\n")
+tooltip_howtouse = (
+    f"\n{app_title_string}\n"
+    "HOW TO USE:\n"
+    "1/ (Optional) Set a custom path for the Blocknet core chain directory, or use the default path.\n"
+    "2/ (Optional) Obtain the bootstrap for a faster initial synchronization of the Core wallet.\n"
+    "3/ Start Blocknet Core, wait for it to synchronize with the network, and unlock it.\n"
+    "4/ Start Block-DX.\n"
+    "5/ Start Xlite, create a wallet, and carefully backup the mnemonic.\n"
+)
 
 tooltip_blocknet_core_label_msg = "Blocknet Core is used to connect Xbridge to P2P network and expose it locally"
 tooltip_blockdx_label_msg = "Block-DX is a GUI for Xbridge API"
@@ -14,7 +16,8 @@ tooltip_xlite_label_msg = "The XLite wallet allows you to manage a variety of di
 tooltip_bins_title_msg = (
     "Control every Blocknet application from this panel, including managing downloads, deletions, starting, and closing.\n"
     "Configuration for each application is automatically adjusted before it starts.\n"
-    "Consult https://docs.blocknet.org/ for more information on each application.")
+    "Consult https://docs.blocknet.org/ for more information on each application."
+)
 
 blocknet_frame_title_string = "Blocknet Core Management:"
 blockdx_frame_title_string = " Block-DX Management:"
@@ -51,5 +54,7 @@ xlite_stored_password_string = "Password Stored"
 xlite_reverse_proxy_running_string = "XLite-reverse-proxy: running"
 xlite_reverse_proxy_not_running_string = "XLite-reverse-proxy: not running"
 launch_failed_title = "Launch failed"
-launch_failed_hint = "Copy the report below and paste it into a GitHub issue. Include return code and details for debugging."
+launch_failed_hint = (
+    "Copy the report below and paste it into a GitHub issue. Include return code and details for debugging."
+)
 github_issue_url = "https://github.com/tryiou/blocknet_aio_monitor/issues/new"

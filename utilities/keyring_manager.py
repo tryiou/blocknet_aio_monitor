@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import keyring
+
     KEYRING_AVAILABLE = True
 except ImportError:
     KEYRING_AVAILABLE = False
@@ -34,7 +35,7 @@ class KeyringManager:
     def __init__(self, config_path: str | None = None):
         """
         Initialize KeyringManager.
-        
+
         Args:
             config_path: Path to configuration directory for fallback storage
         """
@@ -87,7 +88,7 @@ class KeyringManager:
 
             # Save to temporary file first (atomic operation)
             temp_path = fallback_path + ".tmp"
-            with open(temp_path, 'w') as f:
+            with open(temp_path, "w") as f:
                 json.dump(data, f, indent=2)
 
             # Rename temporary file to actual file (atomic)
@@ -113,7 +114,7 @@ class KeyringManager:
                     del data[self.FALLBACK_KEY_NAME]
 
                 # Save back to file
-                with open(fallback_path, 'w') as f:
+                with open(fallback_path, "w") as f:
                     json.dump(data, f, indent=2)
 
                 logger.info("Encryption key removed from fallback storage")
@@ -125,17 +126,17 @@ class KeyringManager:
     def store_key(self, key: str | bytes) -> tuple[bool, str]:
         """
         Store encryption key in keyring (or fallback).
-        
+
         Args:
             key: Encryption key as string or bytes
-            
+
         Returns:
             Tuple of (success: bool, message: str)
         """
         try:
             # Convert key to string if bytes
             if isinstance(key, bytes):
-                key_str = key.decode('utf-8')
+                key_str = key.decode("utf-8")
             else:
                 key_str = key
 
@@ -167,7 +168,7 @@ class KeyringManager:
     def retrieve_key(self) -> tuple[str | None, str]:
         """
         Retrieve encryption key from keyring (or fallback).
-        
+
         Returns:
             Tuple of (key: str | None, message: str)
         """
@@ -196,7 +197,7 @@ class KeyringManager:
     def delete_key(self) -> tuple[bool, str]:
         """
         Delete encryption key from keyring and fallback.
-        
+
         Returns:
             Tuple of (success: bool, message: str)
         """
@@ -253,7 +254,7 @@ class KeyringManager:
             "keyring_key": self.KEY_NAME,
             "fallback_path": self._get_fallback_path(),
             "fallback_exists": os.path.exists(self._get_fallback_path()),
-            "key_exists": self.key_exists()
+            "key_exists": self.key_exists(),
         }
 
         # Check which storage is active
@@ -292,10 +293,10 @@ class KeyringMigration:
     def migrate_from_old_format(self, config_data: dict) -> tuple[bool, dict, str, str | None]:
         """
         Migrate from old format to new format.
-        
+
         Args:
             config_data: Current configuration data
-            
+
         Returns:
             Tuple of (success: bool, new_config: dict, message: str, key: str | None)
         """
@@ -336,10 +337,10 @@ class KeyringMigration:
     def migrate_config_file(self, config_file_path: str) -> tuple[bool, str]:
         """
         Migrate a configuration file from old to new format.
-        
+
         Args:
             config_file_path: Path to aio_settings.json
-            
+
         Returns:
             Tuple of (success: bool, message: str)
         """
@@ -358,7 +359,7 @@ class KeyringMigration:
                 return False, message
 
             # Write new config (may or may not include salt depending on keyring availability)
-            with open(config_file_path, 'w') as f:
+            with open(config_file_path, "w") as f:
                 json.dump(new_config, f, indent=2)
 
             return True, message

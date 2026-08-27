@@ -1,4 +1,5 @@
 """Tests for TooltipManager class."""
+
 from unittest.mock import MagicMock, patch
 
 import CTkToolTip
@@ -26,8 +27,10 @@ def mock_widget():
 @pytest.fixture
 def tooltip_manager(mock_parent):
     """Create a TooltipManager instance with mocked dependencies."""
-    with patch('gui.tooltip_manager.CTkToolTip.CTkToolTip', autospec=True) as mock_ctktooltip, \
-            patch('gui.tooltip_manager.configure_tooltip_text', autospec=True) as mock_configure:
+    with (
+        patch("gui.tooltip_manager.CTkToolTip.CTkToolTip", autospec=True) as mock_ctktooltip,
+        patch("gui.tooltip_manager.configure_tooltip_text", autospec=True) as mock_configure,
+    ):
         manager = TooltipManager(mock_parent)
         yield manager, mock_ctktooltip, mock_configure
 

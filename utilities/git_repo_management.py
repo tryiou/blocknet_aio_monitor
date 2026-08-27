@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class ExecutionError(Exception):
     """Custom exception for Git execution failures."""
+
     pass
 
 
@@ -34,9 +35,7 @@ class BranchSwitchBlockedError(Exception):
         self.blocked_paths = blocked_paths or []
 
 
-def run_command(cmd_list: list[str],
-               cwd: Path | None = None,
-               timeout: int = 300) -> tuple[int, str, str]:
+def run_command(cmd_list: list[str], cwd: Path | None = None, timeout: int = 300) -> tuple[int, str, str]:
     """
     Execute a command and capture its output.
 
@@ -53,13 +52,7 @@ def run_command(cmd_list: list[str],
     """
     try:
         process = subprocess.run(
-            cmd_list,
-            check=False,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout
+            cmd_list, check=False, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout
         )
         return process.returncode, process.stdout, process.stderr
     except subprocess.TimeoutExpired as e:
@@ -76,7 +69,7 @@ class VirtualEnvironment:
     def __init__(self, target_dir: Path, portable_python_path: str = None, venv_dir: Path | None = None):
         """
         Initialize virtual environment manager.
-        
+
         Args:
             target_dir: Base directory for environment
             portable_python_path: Path to portable Python binary
@@ -125,10 +118,7 @@ class VirtualEnvironment:
                 logger.debug(f"pip shebang check skipped: {e}")
         # Verify pip is actually runnable via venv python (cheap)
         try:
-            rc, _, _ = run_command(
-                [str(venv_python), "-m", "pip", "--version"],
-                timeout=10
-            )
+            rc, _, _ = run_command([str(venv_python), "-m", "pip", "--version"], timeout=10)
             if rc != 0:
                 return True, "pip not runnable"
         except Exception as e:
@@ -181,8 +171,7 @@ class VirtualEnvironment:
         real_python_path = self._resolve_python()
         try:
             returncode, stdout, stderr = run_command(
-                [str(real_python_path), "-m", "venv", str(self.venv_dir)],
-                timeout=300
+                [str(real_python_path), "-m", "venv", str(self.venv_dir)], timeout=300
             )
             if returncode != 0:
                 logger.error(f"venv creation failed: {stderr}")
@@ -223,7 +212,7 @@ class VirtualEnvironment:
     def install_requirements(self, requirements_path: Path) -> None:
         """
         Install packages from requirements file.
-        
+
         Args:
             requirements_path: Path to requirements.txt
         """
@@ -271,10 +260,10 @@ class VirtualEnvironment:
     def get_python_path(self) -> str:
         """
         Get path to virtual environment's Python binary.
-        
+
         Returns:
             Path to Python interpreter as string
-            
+
         Raises:
             FileNotFoundError: When binary not found
         """
@@ -287,10 +276,10 @@ class VirtualEnvironment:
     def get_pip_path(self) -> str:
         """
         Get path to virtual environment's pip binary.
-        
+
         Returns:
             Path to pip as string
-            
+
         Raises:
             FileNotFoundError: When binary not found
         """
@@ -304,8 +293,7 @@ class VirtualEnvironment:
 class GitRepository:
     """Manages Git operations using pygit2."""
 
-    def __init__(self, repo_url: str, target_dir: Path, remote_branch: str = "main",
-                 backup_base: Path | None = None):
+    def __init__(self, repo_url: str, target_dir: Path, remote_branch: str = "main", backup_base: Path | None = None):
         self.repo_url = repo_url
         self.target_dir = target_dir
         self.remote_branch = remote_branch
@@ -397,7 +385,9 @@ class GitRepository:
             remaining = self.repo.status()
             detail = ", ".join(list(remaining.keys())[:10]) if remaining else str(e)
             logger.error(f"Checkout still blocked after backup: {detail}")
-            raise BranchSwitchBlockedError(f"Checkout blocked: {e}", blocked_paths=list(remaining.keys()) if remaining else []) from e
+            raise BranchSwitchBlockedError(
+                f"Checkout blocked: {e}", blocked_paths=list(remaining.keys()) if remaining else []
+            ) from e
 
     def clone_or_update(self) -> None:
         """Clone a new repository or update an existing one."""
@@ -424,11 +414,7 @@ class GitRepository:
         try:
             callbacks = pygit2.RemoteCallbacks()
             start_time = time.time()
-            self.repo = pygit2.clone_repository(
-                self.repo_url,
-                str(self.target_dir),
-                callbacks=callbacks
-            )
+            self.repo = pygit2.clone_repository(self.repo_url, str(self.target_dir), callbacks=callbacks)
             elapsed_time = time.time() - start_time
             logger.info(f"Clone completed in {elapsed_time:.2f} seconds")
             self._checkout_branch()
@@ -507,9 +493,7 @@ class GitRepository:
                 logger.info(f"Fetch completed in {elapsed_time:.2f} seconds")
 
                 try:
-                    remote_master_id = self.repo.lookup_reference(
-                        f"refs/remotes/{remote_name}/{branch}"
-                    ).target
+                    remote_master_id = self.repo.lookup_reference(f"refs/remotes/{remote_name}/{branch}").target
                 except KeyError:
                     logger.error(f"Remote branch '{branch}' not found in '{remote_name}'")
                     return
@@ -555,7 +539,7 @@ class GitRepository:
                         remaining = self.repo.status()
                         raise BranchSwitchBlockedError(
                             f"Fast-forward checkout blocked: {e}",
-                            blocked_paths=list(remaining.keys()) if remaining else []
+                            blocked_paths=list(remaining.keys()) if remaining else [],
                         ) from e
                     # Update branch ref and ensure HEAD symbolic
                     branch_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
@@ -576,7 +560,9 @@ class GitRepository:
 
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
                     logger.error("Pulling remote changes leads to a conflict")
-                    raise BranchSwitchBlockedError("Git conflicts detected during pull operation - branches have diverged")
+                    raise BranchSwitchBlockedError(
+                        "Git conflicts detected during pull operation - branches have diverged"
+                    )
 
                 else:
                     logger.error(f"Unexpected merge result: {merge_result}")
@@ -591,23 +577,20 @@ class GitRepository:
         Returns None if API request fails (caller should not invalidate saved branch).
         """
         try:
-            url_parts = self.repo_url.rstrip('/').split('/')
-            if self.repo_url.startswith('http'):
+            url_parts = self.repo_url.rstrip("/").split("/")
+            if self.repo_url.startswith("http"):
                 owner = url_parts[-2]
                 repo_name = url_parts[-1]
-                if repo_name.endswith('.git'):
+                if repo_name.endswith(".git"):
                     repo_name = repo_name[:-4]
             else:
                 first_part = url_parts[0]
-                owner = first_part.split(':')[-1]
+                owner = first_part.split(":")[-1]
                 repo_name = url_parts[-1]
-                if repo_name.endswith('.git'):
+                if repo_name.endswith(".git"):
                     repo_name = repo_name[:-4]
 
-            response = requests.get(
-                f"https://api.github.com/repos/{owner}/{repo_name}/branches",
-                timeout=10
-            )
+            response = requests.get(f"https://api.github.com/repos/{owner}/{repo_name}/branches", timeout=10)
             response.raise_for_status()
             branches = [branch["name"] for branch in response.json()]
             logger.info(f"Found {len(branches)} remote branches")
@@ -658,7 +641,11 @@ class GitRepoManagement:
                 logger.info("Legacy venv migrated successfully")
                 # venv is not relocatable due to absolute pip shebangs — heal inline
                 try:
-                    tmp_venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path) if self.portable_python_path else None, venv_dir=self.venv_dir)
+                    tmp_venv = VirtualEnvironment(
+                        self.target_dir,
+                        str(self.portable_python_path) if self.portable_python_path else None,
+                        venv_dir=self.venv_dir,
+                    )
                     if tmp_venv.ensure_healthy():
                         logger.info("Migrated venv healed after relocation")
                 except Exception as heal_e:
@@ -692,8 +679,11 @@ class GitRepoManagement:
 
             if self.portable_python_dir:
                 container = get_container()
-                self.portable_python_path = self.portable_python_dir / "miniforge" / (
-                        "python.exe" if container.system == "Windows" else "bin/python")
+                self.portable_python_path = (
+                    self.portable_python_dir
+                    / "miniforge"
+                    / ("python.exe" if container.system == "Windows" else "bin/python")
+                )
 
             self._migrate_legacy_venv()
 
@@ -701,9 +691,15 @@ class GitRepoManagement:
 
             # Setup the virtual environment (relocated if available)
             if self.venv_dir:
-                self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path) if self.portable_python_path else None, venv_dir=self.venv_dir)
+                self.venv = VirtualEnvironment(
+                    self.target_dir,
+                    str(self.portable_python_path) if self.portable_python_path else None,
+                    venv_dir=self.venv_dir,
+                )
             else:
-                self.venv = VirtualEnvironment(self.target_dir, str(self.portable_python_path) if self.portable_python_path else None)
+                self.venv = VirtualEnvironment(
+                    self.target_dir, str(self.portable_python_path) if self.portable_python_path else None
+                )
             self.venv.create()
             self.venv.install_requirements(self.target_dir / "requirements.txt")
 
@@ -714,8 +710,9 @@ class GitRepoManagement:
         except Exception as e:
             raise Exception(f"Repository setup failed: {e}")
 
-    def run_script(self, script_path: str, script_args: list[str] | None = None,
-                   timeout: int | None = None) -> subprocess.Popen | None:
+    def run_script(
+        self, script_path: str, script_args: list[str] | None = None, timeout: int | None = None
+    ) -> subprocess.Popen | None:
         """
         Execute a Python script using the virtual environment's Python interpreter.
 
@@ -742,33 +739,25 @@ class GitRepoManagement:
 
         try:
             process = subprocess.Popen(
-                cmd,
-                cwd=self.target_dir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1
+                cmd, cwd=self.target_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
             )
 
             def stream_reader(stream, prefix):
                 try:
-                    for line in iter(stream.readline, ''):
+                    for line in iter(stream.readline, ""):
                         if line:
                             print(f"{prefix}: {line.strip()}")
                 except (OSError, ValueError) as e:
                     logger.debug(f"Stream reader stopped: {e}")
 
-            stdout_thread = threading.Thread(target=stream_reader,
-                                             args=(process.stdout, "STDOUT"),
-                                             daemon=True)
-            stderr_thread = threading.Thread(target=stream_reader,
-                                             args=(process.stderr, "STDERR"),
-                                             daemon=True)
+            stdout_thread = threading.Thread(target=stream_reader, args=(process.stdout, "STDOUT"), daemon=True)
+            stderr_thread = threading.Thread(target=stream_reader, args=(process.stderr, "STDERR"), daemon=True)
 
             stdout_thread.start()
             stderr_thread.start()
 
             if timeout:
+
                 def timeout_watcher():
                     start_time = time.time()
                     while process.poll() is None:

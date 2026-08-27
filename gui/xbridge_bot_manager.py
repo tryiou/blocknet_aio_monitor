@@ -102,10 +102,7 @@ class XBridgeBotManager:
         try:
             if self.repo_management is None:
                 self.repo_management = GitRepoManagement(
-                    self.repo_url,
-                    self.target_dir,
-                    branch=self.current_branch,
-                    workdir=self.aio_folder
+                    self.repo_url, self.target_dir, branch=self.current_branch, workdir=self.aio_folder
                 )
             result = self.repo_management.get_remote_branches()
             if result is None:
@@ -129,10 +126,7 @@ class XBridgeBotManager:
 
         logger.info(f"Starting install/update for branch: {branch}")
         self.installer_thread = threading.Thread(
-            target=self._do_install_update,
-            args=(branch,),
-            name=f"XBridgeBotInstaller-{branch}",
-            daemon=True
+            target=self._do_install_update, args=(branch,), name=f"XBridgeBotInstaller-{branch}", daemon=True
         )
         self.installer_thread.start()
         logger.info(f"Started installer thread: {self.installer_thread.name}")
@@ -142,6 +136,7 @@ class XBridgeBotManager:
         # Detect broken state before switch (for post-repair)
         try:
             from utilities.repo_repair import detect_broken_state, repair_broken_worktree
+
             broken_info = detect_broken_state(self.target_dir_path)
             has_broken = broken_info.get("broken", False)
         except Exception:
@@ -151,10 +146,7 @@ class XBridgeBotManager:
         try:
             logger.info(f"Starting install/update for {branch}")
             self.repo_management = GitRepoManagement(
-                self.repo_url,
-                self.target_dir,
-                branch=branch,
-                workdir=self.aio_folder
+                self.repo_url, self.target_dir, branch=branch, workdir=self.aio_folder
             )
 
             if not self.target_dir_path.exists():
@@ -168,6 +160,7 @@ class XBridgeBotManager:
             if has_broken:
                 try:
                     from utilities.repo_repair import repair_broken_worktree
+
                     report = repair_broken_worktree(
                         self.target_dir_path,
                         aio_folder=Path(self.aio_folder),
@@ -212,6 +205,7 @@ class XBridgeBotManager:
 
         try:
             import shutil
+
             logger.info(f"Deleting repository at: {self.target_dir}")
             shutil.rmtree(self.target_dir)
             self.repo_management = None
@@ -231,11 +225,7 @@ class XBridgeBotManager:
             self.deferred_start = True
             return
 
-        needs_install = (
-            not self.repo_exists() or
-            self.repo_management is None or
-            branch != self.current_branch
-        )
+        needs_install = not self.repo_exists() or self.repo_management is None or branch != self.current_branch
 
         if needs_install:
             logger.info("Starting installation before execution")

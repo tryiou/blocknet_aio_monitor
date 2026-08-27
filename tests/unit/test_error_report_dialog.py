@@ -3,7 +3,7 @@ import platform
 import sys
 from unittest.mock import MagicMock, call, mock_open, patch
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from gui.error_report_dialog import ErrorReportDialog, build_report, show_error_report
 
@@ -118,9 +118,11 @@ def test_binary_manager_check_launch_failure_shows_dialog():
     mock_container.xlite_curpath = "XLite"
     mock_container.conf_data.blocknet_bin_path = ["blocknet"]
 
-    with patch("gui.binary_manager.get_container", return_value=mock_container), \
-         patch("gui.binary_manager.Observer"), \
-         patch("gui.binary_manager.BinaryFileHandler"):
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_container),
+        patch("gui.binary_manager.Observer"),
+        patch("gui.binary_manager.BinaryFileHandler"),
+    ):
         mgr = BinaryManager(mock_root)
         mgr.frame_manager = MagicMock()
         mgr.root_gui = mock_root
@@ -159,9 +161,11 @@ def test_binary_manager_check_launch_failure_no_dialog_when_running():
     mock_container.xlite_curpath = "XLite"
     mock_container.conf_data.blocknet_bin_path = ["blocknet"]
 
-    with patch("gui.binary_manager.get_container", return_value=mock_container), \
-         patch("gui.binary_manager.Observer"), \
-         patch("gui.binary_manager.BinaryFileHandler"):
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_container),
+        patch("gui.binary_manager.Observer"),
+        patch("gui.binary_manager.BinaryFileHandler"),
+    ):
         mgr = BinaryManager(mock_root)
         mgr.root_gui = mock_root
         handler = MagicMock()
@@ -188,9 +192,11 @@ def test_binary_manager_check_launch_failure_zero_exit_no_dialog():
     mock_container.xlite_curpath = "XLite"
     mock_container.conf_data.blocknet_bin_path = ["blocknet"]
 
-    with patch("gui.binary_manager.get_container", return_value=mock_container), \
-         patch("gui.binary_manager.Observer"), \
-         patch("gui.binary_manager.BinaryFileHandler"):
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_container),
+        patch("gui.binary_manager.Observer"),
+        patch("gui.binary_manager.BinaryFileHandler"),
+    ):
         mgr = BinaryManager(mock_root)
         mgr.root_gui = mock_root
         handler = MagicMock()

@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import customtkinter as ctk
 
@@ -30,8 +30,8 @@ class TestBlockDXManager(unittest.TestCase):
         self.mock_root_gui.children = {}
 
         # Create BlockDXManager instance with mocked dependencies
-        with patch('gui.blockdx_manager.get_container', return_value=self.mock_container):
-            with patch('gui.blockdx_manager.BlockDXHandler') as MockBlockDXHandler:
+        with patch("gui.blockdx_manager.get_container", return_value=self.mock_container):
+            with patch("gui.blockdx_manager.BlockDXHandler") as MockBlockDXHandler:
                 self.mock_blockdx_handler = MockBlockDXHandler.return_value
                 self.blockdx_manager = BlockDXManager(self.mock_root_gui)
                 self.blockdx_manager.utility = self.mock_blockdx_handler
@@ -49,16 +49,14 @@ class TestBlockDXManager(unittest.TestCase):
         """Test BlockDXManager setup creates frame manager and schedules status update."""
         import asyncio
 
-        with patch('gui.blockdx_manager.BlockDxFrameManager') as MockBlockDxFrameManager:
+        with patch("gui.blockdx_manager.BlockDxFrameManager") as MockBlockDxFrameManager:
             asyncio.run(self.blockdx_manager.setup())
 
             # Verify frame manager was created
             MockBlockDxFrameManager.assert_called_once_with(self.blockdx_manager)
 
             # Verify status update was scheduled
-            self.mock_root_gui.after.assert_called_once_with(
-                0, self.blockdx_manager.update_status_blockdx
-            )
+            self.mock_root_gui.after.assert_called_once_with(0, self.blockdx_manager.update_status_blockdx)
 
     def test_blockdx_check_config_blocknet_not_available(self):
         """Test blockdx_check_config returns early when Blocknet is not available."""
@@ -76,20 +74,15 @@ class TestBlockDXManager(unittest.TestCase):
         # Simulate Blocknet being available
         self.mock_root_gui.blocknet_manager.utility.data_folder = "/mock/blocknet_data"
         self.mock_root_gui.blocknet_manager.utility.blocknet_conf_local = {
-            'global': {
-                'rpcuser': 'testuser',
-                'rpcpassword': 'testpassword'
-            }
+            "global": {"rpcuser": "testuser", "rpcpassword": "testpassword"}
         }
 
         self.blockdx_manager.blockdx_check_config()
 
         # Verify compare_and_update_local_conf was called with correct parameters
-        expected_xbridge_conf_path = os.path.normpath(
-            os.path.join("/mock/blocknet_data", "xbridge.conf")
-        )
+        expected_xbridge_conf_path = os.path.normpath(os.path.join("/mock/blocknet_data", "xbridge.conf"))
         self.mock_blockdx_handler.compare_and_update_local_conf.assert_called_once_with(
-            expected_xbridge_conf_path, 'testuser', 'testpassword'
+            expected_xbridge_conf_path, "testuser", "testpassword"
         )
 
     def test_update_status_blockdx(self):
@@ -101,6 +94,4 @@ class TestBlockDXManager(unittest.TestCase):
         self.blockdx_manager.frame_manager.update_blockdx_config_button_checkbox.assert_called_once()
 
         # Verify next status update was scheduled
-        self.mock_root_gui.after.assert_called_once_with(
-            2000, self.blockdx_manager.update_status_blockdx
-        )
+        self.mock_root_gui.after.assert_called_once_with(2000, self.blockdx_manager.update_status_blockdx)

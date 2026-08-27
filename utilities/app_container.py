@@ -1,7 +1,7 @@
 """
 Centralized application container for managing shared state and configuration.
 
-This module provides a thread-safe singleton container offering better 
+This module provides a thread-safe singleton container offering better
 encapsulation, dependency injection, and testability.
 """
 
@@ -23,16 +23,16 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SystemInfo:
     """System information container."""
+
     system: str = field(default_factory=lambda: platform.system())
     machine: str = field(default_factory=lambda: platform.machine())
-    dirpath: str = field(default_factory=lambda: os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..")
-    ))
+    dirpath: str = field(default_factory=lambda: os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 @dataclass
 class PathConfig:
     """Path configuration container."""
+
     aio_folder: str | None = None
     theme_path: str | None = None
 
@@ -43,16 +43,14 @@ class PathConfig:
             )
         if self.theme_path is None:
             self.theme_path = os.path.join(
-                os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
-                "theme",
-                "aio.json"
+                os.path.abspath(os.path.join(os.path.dirname(__file__), "..")), "theme", "aio.json"
             )
 
 
 def _get_value_from_config(config_dict, system: str, machine: str) -> Any | None:
     """
     Get a value from a system-specific config dict.
-    
+
     For dict configs, returns value for (system, machine) or system key.
     For non-dict configs (lists, strings), returns the value directly.
     Returns None if value not found or config is corrupted.
@@ -92,6 +90,7 @@ def _get_value_from_config(config_dict, system: str, machine: str) -> Any | None
 @dataclass
 class BinaryConfig:
     """Binary configuration container."""
+
     blocknet_bin: str | None = None
     xlite_daemon_bin: str | None = None
     blockdx_bin: str | None = None
@@ -111,12 +110,15 @@ class BinaryConfig:
         if self.xlite_bin is None:
             self.xlite_bin = _get_value_from_config(conf_data.xlite_bin_name, system, machine)
         if self.xlite_reverse_proxy_bin is None:
-            self.xlite_reverse_proxy_bin = _get_value_from_config(conf_data.xlite_reverse_proxy_bin_name, system, machine)
+            self.xlite_reverse_proxy_bin = _get_value_from_config(
+                conf_data.xlite_reverse_proxy_bin_name, system, machine
+            )
 
 
 @dataclass
 class ReleaseConfig:
     """Release URL configuration container."""
+
     blocknet_release_url: str | None = None
     blockdx_release_url: str | None = None
     xlite_release_url: str | None = None
@@ -127,17 +129,11 @@ class ReleaseConfig:
         machine = platform.machine()
 
         if self.blocknet_release_url is None:
-            self.blocknet_release_url = _get_value_from_config(
-                conf_data.blocknet_releases_urls, system, machine
-            )
+            self.blocknet_release_url = _get_value_from_config(conf_data.blocknet_releases_urls, system, machine)
         if self.blockdx_release_url is None:
-            self.blockdx_release_url = _get_value_from_config(
-                conf_data.blockdx_releases_urls, system, machine
-            )
+            self.blockdx_release_url = _get_value_from_config(conf_data.blockdx_releases_urls, system, machine)
         if self.xlite_release_url is None:
-            self.xlite_release_url = _get_value_from_config(
-                conf_data.xlite_releases_urls, system, machine
-            )
+            self.xlite_release_url = _get_value_from_config(conf_data.xlite_releases_urls, system, machine)
         if self.xlite_reverse_proxy_release_url is None:
             self.xlite_reverse_proxy_release_url = _get_value_from_config(
                 conf_data.xlite_reverse_proxy_releases_urls, system, machine
@@ -147,6 +143,7 @@ class ReleaseConfig:
 @dataclass
 class PathInfo:
     """Additional path information."""
+
     blockdx_curpath: str | None = None
     xlite_curpath: str | None = None
 
@@ -162,6 +159,7 @@ class PathInfo:
 @dataclass
 class VolumeInfo:
     """macOS volume information for DMG files."""
+
     blockdx_volume_name: str | None = None
     xlite_volume_name: str | None = None
 
@@ -171,21 +169,17 @@ class VolumeInfo:
         if system == "Darwin":
             blockdx_url = _get_value_from_config(conf_data.blockdx_releases_urls, system, machine)
             if blockdx_url:
-                self.blockdx_volume_name = ' '.join(
-                    os.path.splitext(os.path.basename(blockdx_url))[0].split('-')[:-1]
-                )
+                self.blockdx_volume_name = " ".join(os.path.splitext(os.path.basename(blockdx_url))[0].split("-")[:-1])
 
             xlite_url = _get_value_from_config(conf_data.xlite_releases_urls, system, machine)
             if xlite_url:
-                self.xlite_volume_name = ' '.join(
-                    os.path.splitext(os.path.basename(xlite_url))[0].split('-')[:-1]
-                )
+                self.xlite_volume_name = " ".join(os.path.splitext(os.path.basename(xlite_url))[0].split("-")[:-1])
 
 
 class AppContainer:
     """
     Thread-safe singleton container for managing application state and configuration.
-    
+
     This class provides proper encapsulation, dependency injection capabilities,
     and thread safety for application state management.
     """
@@ -194,7 +188,7 @@ class AppContainer:
     _lock = threading.Lock()
     _initialized = False
 
-    def __new__(cls) -> 'AppContainer':
+    def __new__(cls) -> "AppContainer":
         """Ensure singleton pattern with thread safety."""
         if cls._instance is None:
             with cls._lock:
@@ -414,102 +408,74 @@ class AppContainer:
     def get_blocknet_executable_path(self) -> str:
         """
         Get the full path to the Blocknet executable.
-        
+
         Returns:
             Full path to the Blocknet binary.
-        
+
         Raises:
             ValueError: If required configuration is missing.
         """
-        cache_key = 'blocknet_executable_path'
+        cache_key = "blocknet_executable_path"
         if cache_key not in self._computed_cache:
             if not self.blocknet_bin or not self.aio_folder:
                 raise ValueError("Blocknet binary not configured for this platform")
 
             # Get blocknet_bin_path, handling corrupted config
-            blocknet_bin_path = _get_value_from_config(
-                conf_data.blocknet_bin_path, self.system, self.machine
-            )
+            blocknet_bin_path = _get_value_from_config(conf_data.blocknet_bin_path, self.system, self.machine)
             if not blocknet_bin_path:
                 raise ValueError(f"Blocknet binary path not configured for {self.system} {self.machine}")
 
-            self._computed_cache[cache_key] = os.path.join(
-                self.aio_folder,
-                *blocknet_bin_path,
-                self.blocknet_bin
-            )
+            self._computed_cache[cache_key] = os.path.join(self.aio_folder, *blocknet_bin_path, self.blocknet_bin)
         return self._computed_cache[cache_key]
 
     def get_blockdx_executable_path(self) -> str:
         """
         Get the full path to the Block-DX executable.
-        
+
         Returns:
             Full path to the Block-DX binary.
-            
+
         Raises:
             ValueError: If required configuration is missing.
         """
         if self.system == "Darwin":
             if not self.blockdx_release_url or not self.aio_folder:
                 raise ValueError("Block-DX release URL not configured for this platform")
-            return os.path.join(
-                self.aio_folder,
-                os.path.basename(self.blockdx_release_url)
-            )
+            return os.path.join(self.aio_folder, os.path.basename(self.blockdx_release_url))
         else:
-            blockdx_bin_path = _get_value_from_config(
-                conf_data.blockdx_bin_path, self.system, self.machine
-            )
-            blockdx_bin_name = _get_value_from_config(
-                conf_data.blockdx_bin_name, self.system, self.machine
-            )
+            blockdx_bin_path = _get_value_from_config(conf_data.blockdx_bin_path, self.system, self.machine)
+            blockdx_bin_name = _get_value_from_config(conf_data.blockdx_bin_name, self.system, self.machine)
 
             if not blockdx_bin_path or not blockdx_bin_name or not self.aio_folder:
                 raise ValueError(f"Block-DX configuration not available for {self.system} {self.machine}")
-            return os.path.join(
-                self.aio_folder,
-                blockdx_bin_path,
-                blockdx_bin_name
-            )
+            return os.path.join(self.aio_folder, blockdx_bin_path, blockdx_bin_name)
 
     def get_xlite_executable_path(self) -> str:
         """
         Get the full path to the XLite executable.
-        
+
         Returns:
             Full path to the XLite binary.
-            
+
         Raises:
             ValueError: If required configuration is missing.
         """
         if self.system == "Darwin":
             if not self.xlite_release_url or not self.aio_folder:
                 raise ValueError("XLite release URL not configured for this platform")
-            return os.path.join(
-                self.aio_folder,
-                os.path.basename(self.xlite_release_url)
-            )
+            return os.path.join(self.aio_folder, os.path.basename(self.xlite_release_url))
         else:
-            xlite_bin_path = _get_value_from_config(
-                conf_data.xlite_bin_path, self.system, self.machine
-            )
-            xlite_bin_name = _get_value_from_config(
-                conf_data.xlite_bin_name, self.system, self.machine
-            )
+            xlite_bin_path = _get_value_from_config(conf_data.xlite_bin_path, self.system, self.machine)
+            xlite_bin_name = _get_value_from_config(conf_data.xlite_bin_name, self.system, self.machine)
 
             if not xlite_bin_path or not xlite_bin_name or not self.aio_folder:
                 raise ValueError(f"XLite configuration not available for {self.system} {self.machine}")
-            return os.path.join(
-                self.aio_folder,
-                xlite_bin_path,
-                xlite_bin_name
-            )
+            return os.path.join(self.aio_folder, xlite_bin_path, xlite_bin_name)
 
     def validate_configuration(self) -> tuple[bool, list]:
         """
         Validate the current configuration.
-        
+
         Returns:
             Tuple of (is_valid, error_messages)
         """
@@ -554,19 +520,17 @@ class AppContainer:
 
     def __repr__(self) -> str:
         """String representation of the container."""
-        return (
-            f"AppContainer(system={self.system}, machine={self.machine}, "
-            f"aio_folder={self.aio_folder})"
-        )
+        return f"AppContainer(system={self.system}, machine={self.machine}, aio_folder={self.aio_folder})"
 
 
 # Global container instance
 _container = None
 
+
 def get_container() -> AppContainer:
     """
     Get the singleton AppContainer instance.
-    
+
     Returns:
         The global AppContainer instance.
     """

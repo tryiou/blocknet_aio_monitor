@@ -17,7 +17,20 @@ def _extract_commands(text: str) -> list[str]:
         return []
     cmds: list[str] = []
     # patterns for commands we want to make copyable
-    prefixes = ("brew ", "sudo ", "pip ", "pip3 ", "python", "python3", "py ", "apt ", "dnf ", "sudo apt", "sudo dnf", "xcode-select")
+    prefixes = (
+        "brew ",
+        "sudo ",
+        "pip ",
+        "pip3 ",
+        "python",
+        "python3",
+        "py ",
+        "apt ",
+        "dnf ",
+        "sudo apt",
+        "sudo dnf",
+        "xcode-select",
+    )
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped:
@@ -32,7 +45,12 @@ def _extract_commands(text: str) -> list[str]:
             continue
         # Heuristic: line that looks like a shell command
         lower = cleaned.lower()
-        if any(lower.startswith(p) for p in prefixes) or cleaned.startswith("brew install") or " -m venv" in cleaned or " -m pip install" in cleaned:
+        if (
+            any(lower.startswith(p) for p in prefixes)
+            or cleaned.startswith("brew install")
+            or " -m venv" in cleaned
+            or " -m pip install" in cleaned
+        ):
             # Strip inline comment after # not in quotes (keep quoted #)
             # Simple: split on " # " with space hash space
             if " # " in cleaned:
@@ -177,7 +195,9 @@ class ErrorReportDialog(ctk.CTkToplevel):
         self.textbox.insert("0.0", self.report_text)
         # Make readonly but keep selectable: normal state with key block except copy/select
         self.textbox.configure(state="normal")
-        self.textbox.bind("<Key>", lambda e: "break" if not (e.state & 0x4 and e.keysym.lower() in ("c", "a", "x")) else None)
+        self.textbox.bind(
+            "<Key>", lambda e: "break" if not (e.state & 0x4 and e.keysym.lower() in ("c", "a", "x")) else None
+        )
         self.textbox.bind("<Control-c>", lambda e: self._copy_selection())
         self.textbox.bind("<Control-a>", lambda e: self._select_all())
         # Also allow clicking to focus for selection
@@ -208,9 +228,7 @@ class ErrorReportDialog(ctk.CTkToplevel):
         )
         self.copy_btn.grid(row=0, column=0, padx=5, sticky="ew")
 
-        self.save_btn = ctk.CTkButton(
-            master=btn_frame, text="Save to File", command=self._save_to_file, width=140
-        )
+        self.save_btn = ctk.CTkButton(master=btn_frame, text="Save to File", command=self._save_to_file, width=140)
         self.save_btn.grid(row=0, column=1, padx=5, sticky="ew")
 
         self.github_btn = ctk.CTkButton(
@@ -433,7 +451,9 @@ class StartupErrorDialog(ctk.CTkToplevel):
         self.textbox.insert("0.0", full_details)
         self.textbox.configure(state="normal")
         # Readonly: allow select/copy but block typing
-        self.textbox.bind("<Key>", lambda e: "break" if not (e.state & 0x4 and e.keysym.lower() in ("c", "a", "x")) else None)
+        self.textbox.bind(
+            "<Key>", lambda e: "break" if not (e.state & 0x4 and e.keysym.lower() in ("c", "a", "x")) else None
+        )
         self.textbox.bind("<Control-c>", lambda e: self._copy_selection())
         self.textbox.bind("<Control-a>", lambda e: self._select_all())
         self.textbox.bind("<Button-1>", lambda e: self.after(10, lambda: self.textbox.focus_set()))
@@ -461,10 +481,14 @@ class StartupErrorDialog(ctk.CTkToplevel):
         self.copy_btn = ctk.CTkButton(master=btn_frame, text="Copy Details", command=self._copy_details, width=140)
         self.copy_btn.grid(row=0, column=0, padx=5, sticky="ew")
 
-        self.github_btn = ctk.CTkButton(master=btn_frame, text="Open GitHub Issues", command=self._open_github, width=140)
+        self.github_btn = ctk.CTkButton(
+            master=btn_frame, text="Open GitHub Issues", command=self._open_github, width=140
+        )
         self.github_btn.grid(row=0, column=1, padx=5, sticky="ew")
 
-        self.close_btn = ctk.CTkButton(master=btn_frame, text="Close / Exit", command=self._on_close, width=140, fg_color="gray")
+        self.close_btn = ctk.CTkButton(
+            master=btn_frame, text="Close / Exit", command=self._on_close, width=140, fg_color="gray"
+        )
         self.close_btn.grid(row=0, column=2, padx=5, sticky="ew")
 
         self.status_label = ctk.CTkLabel(master=self, text="", text_color="green")
@@ -516,6 +540,7 @@ class StartupErrorDialog(ctk.CTkToplevel):
 
 def show_startup_error_report(title: str, message: str, details: str = "", parent=None) -> None:
     """Show startup error with copyable commands. Creates hidden root if needed and blocks until closed."""
+
     def _show_blocking(p):
         try:
             dialog = StartupErrorDialog(p, title=title, message=message, details=details)

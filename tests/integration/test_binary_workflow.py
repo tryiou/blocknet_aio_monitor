@@ -48,10 +48,7 @@ class TestBinaryDownloadWorkflow:
 
         # Mock AppContainer
         patches = self.helper.patch_app_container(
-            self.workspace,
-            aio_folder=str(aio_folder),
-            system="Linux",
-            machine="x86_64"
+            self.workspace, aio_folder=str(aio_folder), system="Linux", machine="x86_64"
         )
 
         try:
@@ -59,20 +56,20 @@ class TestBinaryDownloadWorkflow:
             workflow_result = self.simulator.simulate_blocknet_install_workflow()
 
             # Verify workflow steps
-            assert self.helper.verify_directory_exists(workflow_result['download_dir'], "Download directory")
-            assert self.helper.verify_file_exists(workflow_result['archive'], "Archive file")
-            assert self.helper.verify_directory_exists(workflow_result['binary'].parent, "Extract directory")
-            assert self.helper.verify_file_exists(workflow_result['binary'], "Binary file")
-            assert self.helper.verify_executable(workflow_result['binary'], "Blocknet binary")
-            assert self.helper.verify_directory_exists(workflow_result['config_dir'], "Config directory")
-            assert self.helper.verify_file_exists(workflow_result['config'], "Config file")
+            assert self.helper.verify_directory_exists(workflow_result["download_dir"], "Download directory")
+            assert self.helper.verify_file_exists(workflow_result["archive"], "Archive file")
+            assert self.helper.verify_directory_exists(workflow_result["binary"].parent, "Extract directory")
+            assert self.helper.verify_file_exists(workflow_result["binary"], "Binary file")
+            assert self.helper.verify_executable(workflow_result["binary"], "Blocknet binary")
+            assert self.helper.verify_directory_exists(workflow_result["config_dir"], "Config directory")
+            assert self.helper.verify_file_exists(workflow_result["config"], "Config file")
 
             # Verify binary content
-            binary_content = workflow_result['binary'].read_text()
+            binary_content = workflow_result["binary"].read_text()
             assert "Blocknet Qt" in binary_content
 
             # Verify config content
-            config_content = workflow_result['config'].read_text()
+            config_content = workflow_result["config"].read_text()
             assert "rpcuser=testuser" in config_content
             assert "addnode=node1.example.com:41412" in config_content
 
@@ -88,10 +85,7 @@ class TestBinaryDownloadWorkflow:
 
         # Mock AppContainer
         patches = self.helper.patch_app_container(
-            self.workspace,
-            aio_folder=str(aio_folder),
-            system="Linux",
-            machine="x86_64"
+            self.workspace, aio_folder=str(aio_folder), system="Linux", machine="x86_64"
         )
 
         try:
@@ -99,20 +93,20 @@ class TestBinaryDownloadWorkflow:
             workflow_result = self.simulator.simulate_blockdx_install_workflow()
 
             # Verify workflow steps
-            assert self.helper.verify_directory_exists(workflow_result['download_dir'], "Download directory")
-            assert self.helper.verify_file_exists(workflow_result['archive'], "Archive file")
-            assert self.helper.verify_directory_exists(workflow_result['binary'].parent, "Extract directory")
-            assert self.helper.verify_file_exists(workflow_result['binary'], "Binary file")
-            assert self.helper.verify_executable(workflow_result['binary'], "Block-DX binary")
-            assert self.helper.verify_directory_exists(workflow_result['config_dir'], "Config directory")
-            assert self.helper.verify_file_exists(workflow_result['config'], "Config file")
+            assert self.helper.verify_directory_exists(workflow_result["download_dir"], "Download directory")
+            assert self.helper.verify_file_exists(workflow_result["archive"], "Archive file")
+            assert self.helper.verify_directory_exists(workflow_result["binary"].parent, "Extract directory")
+            assert self.helper.verify_file_exists(workflow_result["binary"], "Binary file")
+            assert self.helper.verify_executable(workflow_result["binary"], "Block-DX binary")
+            assert self.helper.verify_directory_exists(workflow_result["config_dir"], "Config directory")
+            assert self.helper.verify_file_exists(workflow_result["config"], "Config file")
 
             # Verify binary content
-            binary_content = workflow_result['binary'].read_text()
+            binary_content = workflow_result["binary"].read_text()
             assert "Block-DX" in binary_content
 
             # Verify config content
-            config_content = workflow_result['config'].read_text()
+            config_content = workflow_result["config"].read_text()
             assert "rpcuser=testuser" in config_content
             assert "selectedWallets_blocknet=BLOCK" in config_content
 
@@ -128,10 +122,7 @@ class TestBinaryDownloadWorkflow:
 
         # Mock AppContainer
         patches = self.helper.patch_app_container(
-            self.workspace,
-            aio_folder=str(aio_folder),
-            system="Linux",
-            machine="x86_64"
+            self.workspace, aio_folder=str(aio_folder), system="Linux", machine="x86_64"
         )
 
         try:
@@ -139,20 +130,20 @@ class TestBinaryDownloadWorkflow:
             workflow_result = self.simulator.simulate_xlite_install_workflow()
 
             # Verify workflow steps
-            assert self.helper.verify_directory_exists(workflow_result['download_dir'], "Download directory")
-            assert self.helper.verify_file_exists(workflow_result['archive'], "Archive file")
-            assert self.helper.verify_directory_exists(workflow_result['binary'].parent, "Extract directory")
-            assert self.helper.verify_file_exists(workflow_result['binary'], "Binary file")
-            assert self.helper.verify_executable(workflow_result['binary'], "XLite binary")
-            assert self.helper.verify_directory_exists(workflow_result['config_dir'], "Config directory")
-            assert self.helper.verify_file_exists(workflow_result['config'], "Config file")
+            assert self.helper.verify_directory_exists(workflow_result["download_dir"], "Download directory")
+            assert self.helper.verify_file_exists(workflow_result["archive"], "Archive file")
+            assert self.helper.verify_directory_exists(workflow_result["binary"].parent, "Extract directory")
+            assert self.helper.verify_file_exists(workflow_result["binary"], "Binary file")
+            assert self.helper.verify_executable(workflow_result["binary"], "XLite binary")
+            assert self.helper.verify_directory_exists(workflow_result["config_dir"], "Config directory")
+            assert self.helper.verify_file_exists(workflow_result["config"], "Config file")
 
             # Verify binary content
-            binary_content = workflow_result['binary'].read_text()
+            binary_content = workflow_result["binary"].read_text()
             assert "XLite" in binary_content
 
             # Verify config content
-            config_content = workflow_result['config'].read_text()
+            config_content = workflow_result["config"].read_text()
             assert "rpcuser=testuser" in config_content
 
         finally:
@@ -162,7 +153,7 @@ class TestBinaryDownloadWorkflow:
         """Test ZIP archive extraction workflow."""
         # Create a mock ZIP file
         zip_path = self.workspace / "test.zip"
-        with zipfile.ZipFile(zip_path, 'w') as zf:
+        with zipfile.ZipFile(zip_path, "w") as zf:
             zf.writestr("test/file1.txt", "content1")
             zf.writestr("test/file2.txt", "content2")
 
@@ -170,7 +161,7 @@ class TestBinaryDownloadWorkflow:
         extract_dir = self.workspace / "extracted"
         extract_dir.mkdir()
 
-        with zipfile.ZipFile(zip_path, 'r') as zf:
+        with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(extract_dir)
 
         # Verify extraction
@@ -182,7 +173,7 @@ class TestBinaryDownloadWorkflow:
         """Test TAR.GZ archive extraction workflow."""
         # Create a mock TAR.GZ file
         tar_path = self.workspace / "test.tar.gz"
-        with tarfile.open(tar_path, 'w:gz') as tf:
+        with tarfile.open(tar_path, "w:gz") as tf:
             # Create temporary files to add
             temp_file = self.workspace / "temp_file.txt"
             temp_file.write_text("test content")
@@ -194,7 +185,7 @@ class TestBinaryDownloadWorkflow:
         extract_dir = self.workspace / "extracted"
         extract_dir.mkdir()
 
-        with tarfile.open(tar_path, 'r:gz') as tf:
+        with tarfile.open(tar_path, "r:gz") as tf:
             tf.extractall(extract_dir)
 
         # Verify extraction
@@ -243,6 +234,7 @@ class TestBinaryDownloadWorkflow:
 
         # Test version comparison
         from packaging import version as pkg_version
+
         assert pkg_version.parse(version) >= pkg_version.parse("1.0.0")
 
     def test_error_handling_in_workflow(self):
@@ -256,7 +248,7 @@ class TestBinaryDownloadWorkflow:
         corrupted_zip.write_bytes(b"not a valid zip file")
 
         with pytest.raises(zipfile.BadZipFile):
-            with zipfile.ZipFile(corrupted_zip, 'r') as zf:
+            with zipfile.ZipFile(corrupted_zip, "r") as zf:
                 zf.extractall(self.workspace)
 
         # Test permission denied

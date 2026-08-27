@@ -1,4 +1,5 @@
 """Tests for utilities/utils.py"""
+
 import json
 import os
 import tempfile
@@ -13,6 +14,7 @@ from utilities.app_container import AppContainer
 # ============================================================================
 # FIXTURES
 # ============================================================================
+
 
 @pytest.fixture
 def mock_button():
@@ -40,16 +42,18 @@ def mock_container():
 @pytest.fixture
 def patched_container(mock_container):
     """Patch get_container to return mock_container"""
-    with patch('utilities.utils.get_container', return_value=mock_container):
+    with patch("utilities.utils.get_container", return_value=mock_container):
         yield mock_container
 
 
 @pytest.fixture
 def mock_file_operations():
     """Common file operation mocks for config tests"""
-    with patch('os.path.expanduser') as mock_expanduser, \
-            patch('os.path.expandvars') as mock_expandvars, \
-            patch('os.path.exists') as mock_exists:
+    with (
+        patch("os.path.expanduser") as mock_expanduser,
+        patch("os.path.expandvars") as mock_expandvars,
+        patch("os.path.exists") as mock_exists,
+    ):
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
         yield mock_expanduser, mock_expandvars, mock_exists
@@ -59,7 +63,7 @@ def mock_file_operations():
 def mock_json_file():
     """Create a mock JSON file context"""
 
-    def _mock_json_file(content='{}'):
+    def _mock_json_file(content="{}"):
         mock_file = Mock()
         mock_file.read.return_value = content
         mock_file.__enter__ = Mock(return_value=mock_file)
@@ -72,6 +76,7 @@ def mock_json_file():
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
 
 def create_mock_file(read_data=""):
     """Helper to create a mock open function"""
@@ -86,10 +91,10 @@ def create_real_file_mock(file_path):
     """Helper to create a mock open that reads from a real file"""
 
     def mock_open_impl(*args, **kwargs):
-        if 'r' in str(args) or 'r' in str(kwargs):
+        if "r" in str(args) or "r" in str(kwargs):
             return open(file_path)
         else:
-            return open(file_path, 'w')
+            return open(file_path, "w")
 
     return mock_open_impl
 
@@ -97,6 +102,7 @@ def create_real_file_mock(file_path):
 # ============================================================================
 # TESTS
 # ============================================================================
+
 
 class TestConfigureTooltipText:
     """Test configure_tooltip_text function"""
@@ -123,8 +129,8 @@ class TestConfigureTooltipText:
 class TestTerminateAllThreads:
     """Test terminate_all_threads function"""
 
-    @patch('utilities.utils.enumerate')
-    @patch('utilities.utils.current_thread')
+    @patch("utilities.utils.enumerate")
+    @patch("utilities.utils.current_thread")
     def test_terminate_all_threads(self, mock_current_thread, mock_enumerate):
         """Test terminating all threads except current"""
         # Mock threads
@@ -147,10 +153,10 @@ class TestTerminateAllThreads:
 class TestLoadCfgJson:
     """Test load_cfg_json function"""
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.exists')
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.exists")
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_load_cfg_json_new_file_exists(self, mock_expanduser, mock_expandvars, mock_exists, mock_container):
         """Test loading new config file when it exists"""
         mock_container.aio_folder = "/test/aio"
@@ -160,7 +166,7 @@ class TestLoadCfgJson:
 
         mock_file_content = '{"test_key": "test_value"}'
 
-        with patch('builtins.open') as mock_open:
+        with patch("builtins.open") as mock_open:
             mock_file = Mock()
             mock_file.read.return_value = mock_file_content
             mock_file.__enter__ = Mock(return_value=mock_file)
@@ -171,10 +177,10 @@ class TestLoadCfgJson:
 
             assert result == {"test_key": "test_value"}
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.exists')
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.exists")
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_load_cfg_json_old_file_migration(self, mock_expanduser, mock_expandvars, mock_exists, mock_container):
         """Test migration from old config file to new"""
         mock_container.aio_folder = "/test/aio"
@@ -184,23 +190,23 @@ class TestLoadCfgJson:
 
         mock_file_content = '{"old_key": "old_value"}'
 
-        with patch('builtins.open') as mock_open:
+        with patch("builtins.open") as mock_open:
             mock_file = Mock()
             mock_file.read.return_value = mock_file_content
             mock_file.__enter__ = Mock(return_value=mock_file)
             mock_file.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_file
 
-            with patch('os.rename') as mock_rename:
+            with patch("os.rename") as mock_rename:
                 result = utils.load_cfg_json()
 
             assert result == {"old_key": "old_value"}
             mock_rename.assert_called_once()
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.exists')
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.exists")
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_load_cfg_json_file_not_found(self, mock_expanduser, mock_expandvars, mock_exists, mock_container):
         """Test when config file doesn't exist"""
         mock_container.aio_folder = "/test/aio"
@@ -216,10 +222,10 @@ class TestLoadCfgJson:
 class TestRemoveCfgJsonKey:
     """Test remove_cfg_json_key function"""
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.exists')
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.exists")
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_remove_cfg_json_key_success(self, mock_expanduser, mock_expandvars, mock_exists, mock_container):
         """Test successful key removal"""
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
@@ -229,14 +235,14 @@ class TestRemoveCfgJsonKey:
 
         config_data = {"key1": "value1", "key2": "value2"}
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(config_data, f)
             temp_file = f.name
 
         try:
-            with patch('builtins.open', mock_open=create_real_file_mock(temp_file)):
-                with patch('json.load', return_value=config_data):
-                    with patch('json.dump') as mock_dump:
+            with patch("builtins.open", mock_open=create_real_file_mock(temp_file)):
+                with patch("json.load", return_value=config_data):
+                    with patch("json.dump") as mock_dump:
                         utils.remove_cfg_json_key("key1")
 
             assert mock_dump.call_count == 1
@@ -246,9 +252,9 @@ class TestRemoveCfgJsonKey:
         finally:
             os.unlink(temp_file)
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_remove_cfg_json_key_file_not_found(self, mock_expanduser, mock_expandvars, mock_container):
         """Test when config file doesn't exist"""
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
@@ -256,12 +262,12 @@ class TestRemoveCfgJsonKey:
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
-        with patch('builtins.open', side_effect=FileNotFoundError):
+        with patch("builtins.open", side_effect=FileNotFoundError):
             utils.remove_cfg_json_key("key1")
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_remove_cfg_json_key_key_not_found(self, mock_expanduser, mock_expandvars, mock_container):
         """Test when key doesn't exist in config"""
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
@@ -271,16 +277,16 @@ class TestRemoveCfgJsonKey:
 
         config_data = {"key1": "value1"}
 
-        with patch('builtins.open', mock_open=create_real_file_mock("/test/data/aio_settings.json")):
-            with patch('json.load', return_value=config_data):
-                with patch('json.dump') as mock_dump:
+        with patch("builtins.open", mock_open=create_real_file_mock("/test/data/aio_settings.json")):
+            with patch("json.load", return_value=config_data):
+                with patch("json.dump") as mock_dump:
                     utils.remove_cfg_json_key("nonexistent_key")
 
             mock_dump.assert_not_called()
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_remove_cfg_json_key_invalid_json(self, mock_expanduser, mock_expandvars, mock_container):
         """Test removing key from file with invalid JSON"""
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
@@ -288,14 +294,14 @@ class TestRemoveCfgJsonKey:
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
-        with patch('builtins.open') as mock_open:
+        with patch("builtins.open") as mock_open:
             mock_file = Mock()
-            mock_file.read.return_value = 'invalid json'
+            mock_file.read.return_value = "invalid json"
             mock_file.__enter__ = Mock(return_value=mock_file)
             mock_file.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_file
 
-            with patch('json.load', side_effect=json.JSONDecodeError("Invalid", "", 0)):
+            with patch("json.load", side_effect=json.JSONDecodeError("Invalid", "", 0)):
                 utils.remove_cfg_json_key("key1")
 
             mock_file.write.assert_not_called()
@@ -304,9 +310,9 @@ class TestRemoveCfgJsonKey:
 class TestSaveCfgJson:
     """Test save_cfg_json function"""
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_save_cfg_json_new_file(self, mock_expanduser, mock_expandvars, mock_container):
         """Test saving to new config file"""
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
@@ -314,23 +320,23 @@ class TestSaveCfgJson:
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
-        with patch('builtins.open') as mock_open:
+        with patch("builtins.open") as mock_open:
             mock_file = Mock()
             mock_file.__enter__ = Mock(return_value=mock_file)
             mock_file.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_file
 
-            with patch('json.load', side_effect=FileNotFoundError):
-                with patch('json.dump') as mock_dump:
+            with patch("json.load", side_effect=FileNotFoundError):
+                with patch("json.dump") as mock_dump:
                     utils.save_cfg_json("test_key", "test_value")
 
             assert mock_dump.call_count == 1
             saved_data = mock_dump.call_args[0][0]
             assert saved_data == {"test_key": "test_value"}
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_save_cfg_json_existing_file(self, mock_expanduser, mock_expandvars, mock_container):
         """Test saving to existing config file"""
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
@@ -340,18 +346,18 @@ class TestSaveCfgJson:
 
         existing_data = {"old_key": "old_value"}
 
-        with patch('builtins.open', mock_open=create_real_file_mock("/test/data/aio_settings.json")):
-            with patch('json.load', return_value=existing_data):
-                with patch('json.dump') as mock_dump:
+        with patch("builtins.open", mock_open=create_real_file_mock("/test/data/aio_settings.json")):
+            with patch("json.load", return_value=existing_data):
+                with patch("json.dump") as mock_dump:
                     utils.save_cfg_json("new_key", "new_value")
 
             assert mock_dump.call_count == 1
             saved_data = mock_dump.call_args[0][0]
             assert saved_data == {"old_key": "old_value", "new_key": "new_value"}
 
-    @patch('utilities.utils.get_container', return_value=MagicMock())
-    @patch('os.path.expandvars')
-    @patch('os.path.expanduser')
+    @patch("utilities.utils.get_container", return_value=MagicMock())
+    @patch("os.path.expandvars")
+    @patch("os.path.expanduser")
     def test_save_cfg_json_invalid_json(self, mock_expanduser, mock_expandvars, mock_container):
         """Test saving when existing file has invalid JSON"""
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
@@ -359,15 +365,15 @@ class TestSaveCfgJson:
         mock_expanduser.return_value = "/test/data"
         mock_expandvars.return_value = "/test/data"
 
-        with patch('builtins.open') as mock_open:
+        with patch("builtins.open") as mock_open:
             mock_file = Mock()
-            mock_file.read.return_value = 'invalid json'
+            mock_file.read.return_value = "invalid json"
             mock_file.__enter__ = Mock(return_value=mock_file)
             mock_file.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_file
 
-            with patch('json.load', side_effect=json.JSONDecodeError("Invalid", "", 0)):
-                with patch('json.dump') as mock_dump:
+            with patch("json.load", side_effect=json.JSONDecodeError("Invalid", "", 0)):
+                with patch("json.dump") as mock_dump:
                     utils.save_cfg_json("test_key", "test_value")
 
             assert mock_dump.call_count == 1
@@ -494,8 +500,8 @@ class TestEnableDisableButton:
 class TestProcessesCheck:
     """Test processes_check and handle_process functions"""
 
-    @patch('utilities.utils.psutil')
-    @patch('utilities.utils.get_container')
+    @patch("utilities.utils.psutil")
+    @patch("utilities.utils.get_container")
     def test_processes_check_all_processes_found(self, mock_get_container, mock_psutil):
         """Test when all target processes are found"""
         # Create mock container
@@ -529,8 +535,8 @@ class TestProcessesCheck:
         assert xlite_pids == [300]
         assert xlite_daemon_pids == [400]
 
-    @patch('utilities.utils.psutil')
-    @patch('utilities.utils.get_container')
+    @patch("utilities.utils.psutil")
+    @patch("utilities.utils.get_container")
     def test_processes_check_zombie_process(self, mock_get_container, mock_psutil):
         """Test handling of zombie processes"""
         # Create mock container
@@ -555,8 +561,8 @@ class TestProcessesCheck:
         assert blocknet_pids == []
         mock_proc.wait.assert_called_once()
 
-    @patch('utilities.utils.psutil')
-    @patch('utilities.utils.get_container')
+    @patch("utilities.utils.psutil")
+    @patch("utilities.utils.get_container")
     def test_processes_check_no_processes_found(self, mock_get_container, mock_psutil):
         """Test when no target processes are found"""
         # Create mock container
@@ -594,7 +600,7 @@ class TestHandleProcess:
         """Test when process is zombie"""
         mock_proc = Mock()
 
-        with patch('utilities.utils.psutil.Process', return_value=mock_proc):
+        with patch("utilities.utils.psutil.Process", return_value=mock_proc):
             result = utils.handle_process(100, "blocknet", "zombie", "blocknet")
 
         assert result is None
@@ -609,7 +615,7 @@ class TestHandleProcess:
 class TestKeyringBasedFunctions:
     """Test keyring-based encryption key functions"""
 
-    @patch('utilities.utils.KeyringManager')
+    @patch("utilities.utils.KeyringManager")
     def test_save_encryption_key_success(self, mock_keyring_manager_class):
         """Test saving encryption key to keyring"""
         mock_keyring_manager = Mock()
@@ -620,13 +626,13 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
+        with patch("utilities.utils.get_container", return_value=mock_container):
             result = utils.save_encryption_key("test_key")
 
             assert result is True
             mock_keyring_manager.store_key.assert_called_once_with("test_key")
 
-    @patch('utilities.utils.KeyringManager')
+    @patch("utilities.utils.KeyringManager")
     def test_save_encryption_key_failure(self, mock_keyring_manager_class):
         """Test saving encryption key when keyring fails"""
         mock_keyring_manager = Mock()
@@ -637,13 +643,13 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
+        with patch("utilities.utils.get_container", return_value=mock_container):
             result = utils.save_encryption_key("test_key")
 
             assert result is False
             mock_keyring_manager.store_key.assert_called_once_with("test_key")
 
-    @patch('utilities.utils.KeyringManager')
+    @patch("utilities.utils.KeyringManager")
     def test_load_encryption_key_success(self, mock_keyring_manager_class):
         """Test loading encryption key from keyring"""
         mock_keyring_manager = Mock()
@@ -654,13 +660,13 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
+        with patch("utilities.utils.get_container", return_value=mock_container):
             result = utils.load_encryption_key()
 
             assert result == b"test_key"
             mock_keyring_manager.retrieve_key.assert_called_once()
 
-    @patch('utilities.utils.KeyringManager')
+    @patch("utilities.utils.KeyringManager")
     def test_load_encryption_key_failure(self, mock_keyring_manager_class):
         """Test loading encryption key when not found"""
         mock_keyring_manager = Mock()
@@ -671,13 +677,13 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
+        with patch("utilities.utils.get_container", return_value=mock_container):
             result = utils.load_encryption_key()
 
             assert result is None
             mock_keyring_manager.retrieve_key.assert_called_once()
 
-    @patch('utilities.utils.KeyringManager')
+    @patch("utilities.utils.KeyringManager")
     def test_delete_encryption_key_success(self, mock_keyring_manager_class):
         """Test deleting encryption key from keyring"""
         mock_keyring_manager = Mock()
@@ -688,13 +694,13 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
+        with patch("utilities.utils.get_container", return_value=mock_container):
             result = utils.delete_encryption_key()
 
             assert result is True
             mock_keyring_manager.delete_key.assert_called_once()
 
-    @patch('utilities.utils.KeyringManager')
+    @patch("utilities.utils.KeyringManager")
     def test_generate_key_with_keyring(self, mock_keyring_manager_class):
         """Test generating key and storing in keyring"""
         mock_keyring_manager = Mock()
@@ -705,15 +711,15 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
-            with patch('utilities.utils.Fernet.generate_key') as mock_generate:
+        with patch("utilities.utils.get_container", return_value=mock_container):
+            with patch("utilities.utils.Fernet.generate_key") as mock_generate:
                 mock_generate.return_value = b"test_key_123"
                 result = utils.generate_key()
 
                 assert result == b"test_key_123"
                 mock_keyring_manager.store_key.assert_called_once_with("test_key_123")
 
-    @patch('utilities.utils.KeyringManager')
+    @patch("utilities.utils.KeyringManager")
     def test_generate_key_keyring_failure(self, mock_keyring_manager_class):
         """Test generating key when keyring storage fails"""
         mock_keyring_manager = Mock()
@@ -724,19 +730,20 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
-            with patch('utilities.utils.Fernet.generate_key') as mock_generate:
+        with patch("utilities.utils.get_container", return_value=mock_container):
+            with patch("utilities.utils.Fernet.generate_key") as mock_generate:
                 mock_generate.return_value = b"test_key_123"
                 result = utils.generate_key()
 
                 assert result is None
                 mock_keyring_manager.store_key.assert_called_once_with("test_key_123")
 
-    @patch('utilities.utils.load_encryption_key')
+    @patch("utilities.utils.load_encryption_key")
     def test_encrypt_password_with_keyring(self, mock_load_key):
         """Test encrypting password using key from keyring"""
         # Generate a valid Fernet key
         from cryptography.fernet import Fernet
+
         valid_key = Fernet.generate_key()
         mock_load_key.return_value = valid_key
 
@@ -748,11 +755,12 @@ class TestKeyringBasedFunctions:
         assert encrypted != password
         mock_load_key.assert_called_once()
 
-    @patch('utilities.utils.load_encryption_key')
+    @patch("utilities.utils.load_encryption_key")
     def test_encrypt_password_with_provided_key(self, mock_load_key):
         """Test encrypting password with provided key"""
         # Generate a valid Fernet key
         from cryptography.fernet import Fernet
+
         valid_key = Fernet.generate_key()
 
         password = "test_password"
@@ -763,7 +771,7 @@ class TestKeyringBasedFunctions:
         assert encrypted != password
         mock_load_key.assert_not_called()
 
-    @patch('utilities.utils.load_encryption_key')
+    @patch("utilities.utils.load_encryption_key")
     def test_encrypt_password_no_key_available(self, mock_load_key):
         """Test encrypting password when no key is available"""
         mock_load_key.return_value = None
@@ -774,13 +782,14 @@ class TestKeyringBasedFunctions:
         assert encrypted is None
         mock_load_key.assert_called_once()
 
-    @patch('utilities.utils.load_encryption_key')
+    @patch("utilities.utils.load_encryption_key")
     def test_decrypt_password_with_keyring(self, mock_load_key):
         """Test decrypting password using key from keyring"""
         password = "test_password"
 
         # Generate a valid Fernet key
         from cryptography.fernet import Fernet
+
         valid_key = Fernet.generate_key()
 
         # First encrypt
@@ -795,13 +804,14 @@ class TestKeyringBasedFunctions:
         assert decrypted == password
         mock_load_key.assert_called_once()
 
-    @patch('utilities.utils.load_encryption_key')
+    @patch("utilities.utils.load_encryption_key")
     def test_decrypt_password_with_provided_key(self, mock_load_key):
         """Test decrypting password with provided key"""
         password = "test_password"
 
         # Generate a valid Fernet key
         from cryptography.fernet import Fernet
+
         valid_key = Fernet.generate_key()
 
         # First encrypt
@@ -814,7 +824,7 @@ class TestKeyringBasedFunctions:
         assert decrypted == password
         mock_load_key.assert_not_called()
 
-    @patch('utilities.utils.load_encryption_key')
+    @patch("utilities.utils.load_encryption_key")
     def test_decrypt_password_no_key_available(self, mock_load_key):
         """Test decrypting password when no key is available"""
         mock_load_key.return_value = None
@@ -825,8 +835,8 @@ class TestKeyringBasedFunctions:
         assert decrypted is None
         mock_load_key.assert_called_once()
 
-    @patch('utilities.utils.KeyringManager')
-    @patch('utilities.utils.delete_encryption_key')
+    @patch("utilities.utils.KeyringManager")
+    @patch("utilities.utils.delete_encryption_key")
     def test_remove_cfg_json_key_with_password(self, mock_delete_key, mock_keyring_manager_class):
         """Test removing password-related keys also deletes encryption key"""
         mock_keyring_manager = Mock()
@@ -836,18 +846,17 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
-
+        with patch("utilities.utils.get_container", return_value=mock_container):
             config_data = {"xl_pass": "encrypted_password", "theme": "Dark"}
 
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 json.dump(config_data, f)
                 temp_file = f.name
 
             try:
-                with patch('builtins.open', mock_open=create_real_file_mock(temp_file)):
-                    with patch('json.load', return_value=config_data):
-                        with patch('json.dump') as mock_dump:
+                with patch("builtins.open", mock_open=create_real_file_mock(temp_file)):
+                    with patch("json.load", return_value=config_data):
+                        with patch("json.dump") as mock_dump:
                             utils.remove_cfg_json_key("xl_pass")
 
                 # Verify encryption key was deleted
@@ -855,8 +864,8 @@ class TestKeyringBasedFunctions:
             finally:
                 os.unlink(temp_file)
 
-    @patch('utilities.utils.KeyringManager')
-    @patch('utilities.utils.delete_encryption_key')
+    @patch("utilities.utils.KeyringManager")
+    @patch("utilities.utils.delete_encryption_key")
     def test_remove_cfg_json_key_non_password(self, mock_delete_key, mock_keyring_manager_class):
         """Test removing non-password keys doesn't delete encryption key"""
         mock_keyring_manager = Mock()
@@ -866,18 +875,17 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
-
+        with patch("utilities.utils.get_container", return_value=mock_container):
             config_data = {"theme": "Dark", "custom_path": "/path"}
 
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
                 json.dump(config_data, f)
                 temp_file = f.name
 
             try:
-                with patch('builtins.open', mock_open=create_real_file_mock(temp_file)):
-                    with patch('json.load', return_value=config_data):
-                        with patch('json.dump') as mock_dump:
+                with patch("builtins.open", mock_open=create_real_file_mock(temp_file)):
+                    with patch("json.load", return_value=config_data):
+                        with patch("json.dump") as mock_dump:
                             utils.remove_cfg_json_key("theme")
 
                 # Verify encryption key was NOT deleted
@@ -885,49 +893,42 @@ class TestKeyringBasedFunctions:
             finally:
                 os.unlink(temp_file)
 
-    @patch('utilities.utils.KeyringManager')
-    @patch('utilities.utils.KeyringMigration')
+    @patch("utilities.utils.KeyringManager")
+    @patch("utilities.utils.KeyringMigration")
     def test_load_cfg_json_with_migration(self, mock_migration_class, mock_keyring_manager_class):
         """Test loading config with migration from old format"""
         mock_keyring_manager = Mock()
         mock_keyring_manager_class.return_value = mock_keyring_manager
 
         mock_migration = Mock()
-        old_config = {
-            "theme": "Dark",
-            "salt": "old_key",
-            "xl_pass": "encrypted_password"
-        }
-        new_config = {
-            "theme": "Dark",
-            "xl_pass": "encrypted_password"
-        }
+        old_config = {"theme": "Dark", "salt": "old_key", "xl_pass": "encrypted_password"}
+        new_config = {"theme": "Dark", "xl_pass": "encrypted_password"}
         mock_migration.migrate_from_old_format.return_value = (True, new_config, "Migration successful", "old_key")
         mock_migration_class.return_value = mock_migration
 
         mock_container = MagicMock()
         mock_container.aio_folder = "/test/aio"
 
-        with patch('utilities.utils.get_container', return_value=mock_container):
-
-            with patch('os.path.exists') as mock_exists, \
-                 patch('os.path.expandvars') as mock_expandvars, \
-                 patch('os.path.expanduser') as mock_expanduser, \
-                 patch('os.rename') as mock_rename:
-
+        with patch("utilities.utils.get_container", return_value=mock_container):
+            with (
+                patch("os.path.exists") as mock_exists,
+                patch("os.path.expandvars") as mock_expandvars,
+                patch("os.path.expanduser") as mock_expanduser,
+                patch("os.rename") as mock_rename,
+            ):
                 mock_expanduser.return_value = "/test/aio"
                 mock_expandvars.return_value = "/test/aio"
                 mock_exists.return_value = True
 
-                with patch('builtins.open') as mock_open:
+                with patch("builtins.open") as mock_open:
                     mock_file = Mock()
                     mock_file.read.return_value = json.dumps(old_config)
                     mock_file.__enter__ = Mock(return_value=mock_file)
                     mock_file.__exit__ = Mock(return_value=False)
                     mock_open.return_value = mock_file
 
-                    with patch('json.load', return_value=old_config):
-                        with patch('json.dump') as mock_dump:
+                    with patch("json.load", return_value=old_config):
+                        with patch("json.dump") as mock_dump:
                             result = utils.load_cfg_json()
 
                             assert result == new_config

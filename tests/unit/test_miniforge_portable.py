@@ -1,4 +1,5 @@
 """Tests for utilities/miniforge_portable.py"""
+
 import subprocess
 from pathlib import Path
 from unittest.mock import Mock, call, patch
@@ -47,15 +48,18 @@ class TestPortablePythonInstaller:
     # INITIALIZATION TESTS
     # -------------------------------------------------------------------------
 
-    @pytest.mark.parametrize("system,arch,expected_system,expected_arch", [
-        ("Linux", "x86_64", "Linux", "x86_64"),
-        ("Windows", "x86_64", "Windows", "x86_64"),
-        ("Darwin", "arm64", "Darwin", "arm64"),
-    ])
+    @pytest.mark.parametrize(
+        "system,arch,expected_system,expected_arch",
+        [
+            ("Linux", "x86_64", "Linux", "x86_64"),
+            ("Windows", "x86_64", "Windows", "x86_64"),
+            ("Darwin", "arm64", "Darwin", "arm64"),
+        ],
+    )
     def test_init(self, target_dir, system, arch, expected_system, expected_arch):
         """Test initialization of PortablePythonInstaller"""
-        with patch('utilities.miniforge_portable.platform.system', return_value=system):
-            with patch('utilities.miniforge_portable.platform.machine', return_value=arch):
+        with patch("utilities.miniforge_portable.platform.system", return_value=system):
+            with patch("utilities.miniforge_portable.platform.machine", return_value=arch):
                 installer = PortablePythonInstaller(target_dir)
 
                 assert installer.target_dir == target_dir.resolve()
@@ -66,17 +70,20 @@ class TestPortablePythonInstaller:
     # INSTALLER FILENAME TESTS
     # -------------------------------------------------------------------------
 
-    @pytest.mark.parametrize("system,arch,expected_filename", [
-        ("Windows", "x86_64", "Miniforge3-25.3.0-3-Windows-x86_64.exe"),
-        ("Linux", "x86_64", "Miniforge3-25.3.0-3-Linux-x86_64.sh"),
-        ("Linux", "aarch64", "Miniforge3-25.3.0-3-Linux-aarch64.sh"),
-        ("Darwin", "arm64", "Miniforge3-25.3.0-3-MacOSX-arm64.sh"),
-        ("Darwin", "x86_64", "Miniforge3-25.3.0-3-MacOSX-x86_64.sh"),
-    ])
+    @pytest.mark.parametrize(
+        "system,arch,expected_filename",
+        [
+            ("Windows", "x86_64", "Miniforge3-25.3.0-3-Windows-x86_64.exe"),
+            ("Linux", "x86_64", "Miniforge3-25.3.0-3-Linux-x86_64.sh"),
+            ("Linux", "aarch64", "Miniforge3-25.3.0-3-Linux-aarch64.sh"),
+            ("Darwin", "arm64", "Miniforge3-25.3.0-3-MacOSX-arm64.sh"),
+            ("Darwin", "x86_64", "Miniforge3-25.3.0-3-MacOSX-x86_64.sh"),
+        ],
+    )
     def test_get_installer_filename(self, target_dir, system, arch, expected_filename):
         """Test installer filename generation for various platforms"""
-        with patch('utilities.miniforge_portable.platform.system', return_value=system):
-            with patch('utilities.miniforge_portable.platform.machine', return_value=arch):
+        with patch("utilities.miniforge_portable.platform.system", return_value=system):
+            with patch("utilities.miniforge_portable.platform.machine", return_value=arch):
                 installer = PortablePythonInstaller(target_dir)
                 filename = installer.get_installer_filename()
 
@@ -84,8 +91,8 @@ class TestPortablePythonInstaller:
 
     def test_get_installer_filename_unsupported_os(self, target_dir):
         """Test installer filename for unsupported OS"""
-        with patch('utilities.miniforge_portable.platform.system', return_value='FreeBSD'):
-            with patch('utilities.miniforge_portable.platform.machine', return_value='x86_64'):
+        with patch("utilities.miniforge_portable.platform.system", return_value="FreeBSD"):
+            with patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"):
                 installer = PortablePythonInstaller(target_dir)
 
                 with pytest.raises(RuntimeError, match="Unsupported OS: FreeBSD"):
@@ -95,27 +102,27 @@ class TestPortablePythonInstaller:
     # DOWNLOAD TESTS
     # -------------------------------------------------------------------------
 
-    @patch('utilities.miniforge_portable.requests.get')
+    @patch("utilities.miniforge_portable.requests.get")
     def test_download_success(self, mock_get, target_dir, mock_download_response):
         """Test successful download"""
-        with patch('utilities.miniforge_portable.platform.system', return_value='Linux'):
-            with patch('utilities.miniforge_portable.platform.machine', return_value='x86_64'):
+        with patch("utilities.miniforge_portable.platform.system", return_value="Linux"):
+            with patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"):
                 installer = PortablePythonInstaller(target_dir)
                 mock_get.return_value = mock_download_response
 
                 dest = Path("/test/download/installer.sh")
 
-                with patch('builtins.open', create=True):
+                with patch("builtins.open", create=True):
                     installer.download("http://example.com/installer.sh", dest)
 
                 mock_get.assert_called_once_with("http://example.com/installer.sh", stream=True)
                 mock_download_response.raise_for_status.assert_called_once()
 
-    @patch('utilities.miniforge_portable.requests.get')
+    @patch("utilities.miniforge_portable.requests.get")
     def test_download_with_error(self, mock_get, target_dir):
         """Test download with HTTP error"""
-        with patch('utilities.miniforge_portable.platform.system', return_value='Linux'):
-            with patch('utilities.miniforge_portable.platform.machine', return_value='x86_64'):
+        with patch("utilities.miniforge_portable.platform.system", return_value="Linux"):
+            with patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"):
                 installer = PortablePythonInstaller(target_dir)
 
                 mock_response = Mock()
@@ -132,20 +139,21 @@ class TestPortablePythonInstaller:
     # INSTALL TESTS - WINDOWS
     # -------------------------------------------------------------------------
 
-    @patch('utilities.miniforge_portable.subprocess.run')
-    @patch('utilities.miniforge_portable.requests.get')
-    @patch('utilities.miniforge_portable.shutil.rmtree')
-    @patch('utilities.miniforge_portable.Path.mkdir')
-    def test_install_windows(self, mock_mkdir, mock_rmtree, mock_get, mock_subprocess, target_dir,
-                             mock_download_response):
+    @patch("utilities.miniforge_portable.subprocess.run")
+    @patch("utilities.miniforge_portable.requests.get")
+    @patch("utilities.miniforge_portable.shutil.rmtree")
+    @patch("utilities.miniforge_portable.Path.mkdir")
+    def test_install_windows(
+        self, mock_mkdir, mock_rmtree, mock_get, mock_subprocess, target_dir, mock_download_response
+    ):
         """Test install on Windows"""
-        with patch('utilities.miniforge_portable.platform.system', return_value='Windows'):
-            with patch('utilities.miniforge_portable.platform.machine', return_value='x86_64'):
+        with patch("utilities.miniforge_portable.platform.system", return_value="Windows"):
+            with patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"):
                 installer = PortablePythonInstaller(target_dir)
                 mock_get.return_value = mock_download_response
                 mock_subprocess.return_value = None
 
-                with patch('builtins.open', create=True):
+                with patch("builtins.open", create=True):
                     result = installer.install()
 
                 # Verify mkdir was called
@@ -167,23 +175,33 @@ class TestPortablePythonInstaller:
     # INSTALL TESTS - LINUX
     # -------------------------------------------------------------------------
 
-    @patch('utilities.miniforge_portable.subprocess.run')
-    @patch('utilities.miniforge_portable.requests.get')
-    @patch('utilities.miniforge_portable.shutil.rmtree')
-    @patch('utilities.miniforge_portable.Path.mkdir')
-    @patch('utilities.miniforge_portable.Path.chmod')
-    @patch('utilities.miniforge_portable.Path.stat')
-    def test_install_linux(self, mock_stat, mock_chmod, mock_mkdir, mock_rmtree, mock_get, mock_subprocess,
-                           target_dir, mock_download_response, mock_stat_result):
+    @patch("utilities.miniforge_portable.subprocess.run")
+    @patch("utilities.miniforge_portable.requests.get")
+    @patch("utilities.miniforge_portable.shutil.rmtree")
+    @patch("utilities.miniforge_portable.Path.mkdir")
+    @patch("utilities.miniforge_portable.Path.chmod")
+    @patch("utilities.miniforge_portable.Path.stat")
+    def test_install_linux(
+        self,
+        mock_stat,
+        mock_chmod,
+        mock_mkdir,
+        mock_rmtree,
+        mock_get,
+        mock_subprocess,
+        target_dir,
+        mock_download_response,
+        mock_stat_result,
+    ):
         """Test install on Linux"""
-        with patch('utilities.miniforge_portable.platform.system', return_value='Linux'):
-            with patch('utilities.miniforge_portable.platform.machine', return_value='x86_64'):
+        with patch("utilities.miniforge_portable.platform.system", return_value="Linux"):
+            with patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"):
                 installer = PortablePythonInstaller(target_dir)
                 mock_get.return_value = mock_download_response
                 mock_subprocess.side_effect = [None, None]
                 mock_stat.return_value = mock_stat_result
 
-                with patch('builtins.open', create=True):
+                with patch("builtins.open", create=True):
                     result = installer.install()
 
                 # Verify mkdir was called
@@ -215,69 +233,97 @@ class TestPortablePythonInstaller:
     # INSTALL TESTS - EDGE CASES
     # -------------------------------------------------------------------------
 
-    @patch('utilities.miniforge_portable.subprocess.run')
-    @patch('utilities.miniforge_portable.requests.get')
-    @patch('utilities.miniforge_portable.shutil.rmtree')
-    @patch('utilities.miniforge_portable.Path.mkdir')
-    @patch('utilities.miniforge_portable.Path.chmod')
-    @patch('utilities.miniforge_portable.Path.stat')
-    def test_install_existing_install_dir(self, mock_stat, mock_chmod, mock_mkdir, mock_rmtree, mock_get,
-                                          mock_subprocess,
-                                          target_dir, mock_download_response, mock_stat_result):
+    @patch("utilities.miniforge_portable.subprocess.run")
+    @patch("utilities.miniforge_portable.requests.get")
+    @patch("utilities.miniforge_portable.shutil.rmtree")
+    @patch("utilities.miniforge_portable.Path.mkdir")
+    @patch("utilities.miniforge_portable.Path.chmod")
+    @patch("utilities.miniforge_portable.Path.stat")
+    def test_install_existing_install_dir(
+        self,
+        mock_stat,
+        mock_chmod,
+        mock_mkdir,
+        mock_rmtree,
+        mock_get,
+        mock_subprocess,
+        target_dir,
+        mock_download_response,
+        mock_stat_result,
+    ):
         """Test install when install directory already exists"""
-        with patch('utilities.miniforge_portable.platform.system', return_value='Linux'):
-            with patch('utilities.miniforge_portable.platform.machine', return_value='x86_64'):
+        with patch("utilities.miniforge_portable.platform.system", return_value="Linux"):
+            with patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"):
                 installer = PortablePythonInstaller(target_dir)
                 install_path = target_dir / "miniforge"
 
-                with patch.object(Path, 'exists', return_value=True):
+                with patch.object(Path, "exists", return_value=True):
                     mock_get.return_value = mock_download_response
                     mock_subprocess.side_effect = [None, None]
                     mock_stat.return_value = mock_stat_result
 
-                    with patch('builtins.open', create=True):
+                    with patch("builtins.open", create=True):
                         installer.install()
 
                     # Verify rmtree was called to remove existing install
                     mock_rmtree.assert_called_once_with(install_path)
 
-    @patch('utilities.miniforge_portable.subprocess.run')
-    @patch('utilities.miniforge_portable.requests.get')
-    @patch('utilities.miniforge_portable.shutil.rmtree')
-    @patch('utilities.miniforge_portable.Path.mkdir')
-    @patch('utilities.miniforge_portable.Path.chmod')
-    @patch('utilities.miniforge_portable.Path.stat')
-    def test_install_subprocess_error(self, mock_stat, mock_chmod, mock_mkdir, mock_rmtree, mock_get, mock_subprocess,
-                                      target_dir, mock_download_response, mock_stat_result):
+    @patch("utilities.miniforge_portable.subprocess.run")
+    @patch("utilities.miniforge_portable.requests.get")
+    @patch("utilities.miniforge_portable.shutil.rmtree")
+    @patch("utilities.miniforge_portable.Path.mkdir")
+    @patch("utilities.miniforge_portable.Path.chmod")
+    @patch("utilities.miniforge_portable.Path.stat")
+    def test_install_subprocess_error(
+        self,
+        mock_stat,
+        mock_chmod,
+        mock_mkdir,
+        mock_rmtree,
+        mock_get,
+        mock_subprocess,
+        target_dir,
+        mock_download_response,
+        mock_stat_result,
+    ):
         """Test install when subprocess fails"""
-        with patch('utilities.miniforge_portable.platform.system', return_value='Linux'):
-            with patch('utilities.miniforge_portable.platform.machine', return_value='x86_64'):
+        with patch("utilities.miniforge_portable.platform.system", return_value="Linux"):
+            with patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"):
                 installer = PortablePythonInstaller(target_dir)
                 mock_get.return_value = mock_download_response
                 mock_subprocess.side_effect = subprocess.CalledProcessError(1, "installer")
                 mock_stat.return_value = mock_stat_result
 
-                with patch('builtins.open', create=True):
+                with patch("builtins.open", create=True):
                     with pytest.raises(RuntimeError, match="Installer failed"):
                         installer.install()
 
-    @patch('utilities.miniforge_portable.subprocess.run')
-    @patch('utilities.miniforge_portable.requests.get')
-    @patch('utilities.miniforge_portable.shutil.rmtree')
-    @patch('utilities.miniforge_portable.Path.mkdir')
-    @patch('utilities.miniforge_portable.Path.chmod')
-    @patch('utilities.miniforge_portable.Path.stat')
-    def test_install_linux_conda_install_fails(self, mock_stat, mock_chmod, mock_mkdir, mock_rmtree, mock_get,
-                                               mock_subprocess,
-                                               target_dir, mock_download_response, mock_stat_result):
+    @patch("utilities.miniforge_portable.subprocess.run")
+    @patch("utilities.miniforge_portable.requests.get")
+    @patch("utilities.miniforge_portable.shutil.rmtree")
+    @patch("utilities.miniforge_portable.Path.mkdir")
+    @patch("utilities.miniforge_portable.Path.chmod")
+    @patch("utilities.miniforge_portable.Path.stat")
+    def test_install_linux_conda_install_fails(
+        self,
+        mock_stat,
+        mock_chmod,
+        mock_mkdir,
+        mock_rmtree,
+        mock_get,
+        mock_subprocess,
+        target_dir,
+        mock_download_response,
+        mock_stat_result,
+    ):
         """Test install on Linux when conda install fails"""
-        with patch('utilities.miniforge_portable.platform.system', return_value='Linux'):
-            with patch('utilities.miniforge_portable.platform.machine', return_value='x86_64'):
+        with patch("utilities.miniforge_portable.platform.system", return_value="Linux"):
+            with patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"):
                 installer = PortablePythonInstaller(target_dir)
                 mock_get.return_value = mock_download_response
                 mock_subprocess.side_effect = [None, Exception("Conda install failed")]
                 mock_stat.return_value = mock_stat_result
 
-                with patch('builtins.open', create=True):
+                with patch("builtins.open", create=True):
                     with pytest.raises(Exception, match="Conda install failed"):
                         installer.install()

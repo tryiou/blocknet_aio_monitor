@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from gui.blocknet_manager import BlocknetManager
 from utilities.app_container import AppContainer
@@ -29,13 +29,13 @@ class TestBlocknetManager(unittest.TestCase):
 
         # Patch dependencies
         self.patches = {
-            'get_container': patch('gui.blocknet_manager.get_container', return_value=self.mock_container),
-            'BlocknetHandler': patch('gui.blocknet_manager.BlocknetHandler'),
+            "get_container": patch("gui.blocknet_manager.get_container", return_value=self.mock_container),
+            "BlocknetHandler": patch("gui.blocknet_manager.BlocknetHandler"),
         }
 
         # Start all patches
         for name, patcher in self.patches.items():
-            setattr(self, f'mock_{name.lower()}', patcher.start())
+            setattr(self, f"mock_{name.lower()}", patcher.start())
 
         # Initialize BlocknetManager
         self.blocknet_manager = BlocknetManager(self.mock_root_gui)
@@ -58,7 +58,7 @@ class TestBlocknetManager(unittest.TestCase):
 
     def test_setup(self):
         """Test setup creates frame manager and schedules status update."""
-        with patch('gui.blocknet_manager.BlocknetCoreFrameManager') as MockBlocknetCoreFrameManager:
+        with patch("gui.blocknet_manager.BlocknetCoreFrameManager") as MockBlocknetCoreFrameManager:
             asyncio.run(self.blocknet_manager.setup())
             MockBlocknetCoreFrameManager.assert_called_once_with(self.blocknet_manager)
             self.mock_root_gui.after.assert_called_once_with(0, self.blocknet_manager.update_status_blocknet_core)
@@ -83,12 +83,12 @@ class TestBlocknetManager(unittest.TestCase):
 
         # Verify all frame manager methods are called
         frame_manager_methods = [
-            'update_blocknet_bootstrap_button',
-            'update_blocknet_process_status_checkbox',
-            'update_blocknet_custom_path_button',
-            'update_blocknet_conf_status_checkbox',
-            'update_blocknet_data_path_status_checkbox',
-            'update_blocknet_rpc_connection_checkbox',
+            "update_blocknet_bootstrap_button",
+            "update_blocknet_process_status_checkbox",
+            "update_blocknet_custom_path_button",
+            "update_blocknet_conf_status_checkbox",
+            "update_blocknet_data_path_status_checkbox",
+            "update_blocknet_rpc_connection_checkbox",
         ]
 
         for method in frame_manager_methods:

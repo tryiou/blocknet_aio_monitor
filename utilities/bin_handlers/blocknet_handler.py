@@ -54,7 +54,7 @@ class BlocknetHandler(BaseBinUtil):
         while self.running:
             valid = False
             if self.blocknet_rpc:
-                result = self.blocknet_rpc.send_rpc_request('getnetworkinfo')
+                result = self.blocknet_rpc.send_rpc_request("getnetworkinfo")
                 if result:
                     valid = True
             self.valid_rpc = valid
@@ -62,11 +62,11 @@ class BlocknetHandler(BaseBinUtil):
             time.sleep(1)
 
     def init_blocknet_rpc(self):
-        if self.blocknet_conf_local and 'global' in self.blocknet_conf_local:
-            global_conf = self.blocknet_conf_local['global']
-            rpc_user = global_conf.get('rpcuser')
-            rpc_password = global_conf.get('rpcpassword')
-            rpc_port = int(global_conf.get('rpcport', 0))
+        if self.blocknet_conf_local and "global" in self.blocknet_conf_local:
+            global_conf = self.blocknet_conf_local["global"]
+            rpc_user = global_conf.get("rpcuser")
+            rpc_password = global_conf.get("rpcpassword")
+            rpc_port = int(global_conf.get("rpcport", 0))
         else:
             rpc_user = None
             rpc_password = None
@@ -172,24 +172,25 @@ class BlocknetHandler(BaseBinUtil):
             logger.error("Local blocknet.conf not available.")
             return False
 
-        section_name = 'global'
+        section_name = "global"
         if section_name not in self.blocknet_conf_local:
             self.blocknet_conf_local[section_name] = {}
 
         # Process remote config options
         for section, options in self.blocknet_conf_remote.items():
             for key, value in options.items():
-                if key == 'rpcuser' or key == 'rpcpassword':
+                if key == "rpcuser" or key == "rpcpassword":
                     if key not in self.blocknet_conf_local[section]:
                         self.blocknet_conf_local[section][key] = generate_random_string(32)
                     else:
-                        if self.blocknet_conf_local[section][key] == '':
+                        if self.blocknet_conf_local[section][key] == "":
                             self.blocknet_conf_local[section][key] = generate_random_string(32)
                 else:
                     if key == "rpcallowip":
                         self.blocknet_conf_local[section][key] = "127.0.0.1"
-                    elif key not in self.blocknet_conf_local[section] or self.blocknet_conf_local[section][
-                        key] != value:
+                    elif (
+                        key not in self.blocknet_conf_local[section] or self.blocknet_conf_local[section][key] != value
+                    ):
                         self.blocknet_conf_local[section][key] = value
 
         # Handle extra options
@@ -202,9 +203,7 @@ class BlocknetHandler(BaseBinUtil):
 
                     # Initialize or convert to list if needed
                     if not isinstance(conf_value, list):
-                        self.blocknet_conf_local[section_name][key] = list(
-                            conf_value.split(',') if conf_value else []
-                        )
+                        self.blocknet_conf_local[section_name][key] = list(conf_value.split(",") if conf_value else [])
 
                     # Convert option value to string for comparison
                     str_value = str(value)
@@ -229,7 +228,7 @@ class BlocknetHandler(BaseBinUtil):
 
     def _update_extra_config_options(self):
         """Helper method to handle extra config options with list value handling"""
-        section_name = 'global'
+        section_name = "global"
         if not self.container.conf_data.extra_option_blocknet_core_conf:
             return
 
@@ -244,9 +243,7 @@ class BlocknetHandler(BaseBinUtil):
 
                 # Initialize or convert to list if needed
                 if not isinstance(conf_value, list):
-                    self.blocknet_conf_local[section_name][key] = list(
-                        conf_value.split(',') if conf_value else []
-                    )
+                    self.blocknet_conf_local[section_name][key] = list(conf_value.split(",") if conf_value else [])
 
                 # Convert option value to string for comparison
                 str_value = str(value)
@@ -265,17 +262,21 @@ class BlocknetHandler(BaseBinUtil):
         highest_version_id = None
 
         for entry in self.xb_manifest:
-            if 'ticker' in entry and entry['ticker'] == coin.upper():
-                ver_id = entry['ver_id']
+            if "ticker" in entry and entry["ticker"] == coin.upper():
+                ver_id = entry["ver_id"]
                 if latest_version is None or ver_id > highest_version_id:
                     latest_version = entry
                     highest_version_id = ver_id
 
         if latest_version:
-            xbridge_conf = latest_version['xbridge_conf']
-            xbridge_url = f"{self.container.conf_data.remote_blockchain_configuration_repo}/xbridge-confs/{xbridge_conf}"
-            wallet_conf = latest_version['wallet_conf']
-            wallet_conf_url = f"{self.container.conf_data.remote_blockchain_configuration_repo}/wallet-confs/{wallet_conf}"
+            xbridge_conf = latest_version["xbridge_conf"]
+            xbridge_url = (
+                f"{self.container.conf_data.remote_blockchain_configuration_repo}/xbridge-confs/{xbridge_conf}"
+            )
+            wallet_conf = latest_version["wallet_conf"]
+            wallet_conf_url = (
+                f"{self.container.conf_data.remote_blockchain_configuration_repo}/wallet-confs/{wallet_conf}"
+            )
             parsed_xbridge_conf = retrieve_remote_conf(xbridge_url, "xbridge-confs", xbridge_conf)
             parsed_wallet_conf = retrieve_remote_conf(wallet_conf_url, "wallet-confs", wallet_conf)
             self.parsed_xbridge_confs[coin] = parsed_xbridge_conf
@@ -290,8 +291,8 @@ class BlocknetHandler(BaseBinUtil):
         if self.xbridge_conf_local is None:
             self.xbridge_conf_local = {}
 
-        if 'Main' not in self.xbridge_conf_local:
-            self.xbridge_conf_local['Main'] = self.container.conf_data.base_xbridge_conf
+        if "Main" not in self.xbridge_conf_local:
+            self.xbridge_conf_local["Main"] = self.container.conf_data.base_xbridge_conf
 
         if self.blocknet_xbridge_conf_remote is None:
             logger.error("Remote xbridge.conf not available.")
@@ -308,15 +309,17 @@ class BlocknetHandler(BaseBinUtil):
                         if section not in self.xbridge_conf_local:
                             self.xbridge_conf_local[section] = {}
                         for key, value in options.items():
-                            if key == 'Username':
-                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]['rpcUsername'])
-                            elif key == 'Password':
-                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]['rpcPassword'])
-                            elif key == 'Port':
-                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]['rpcPort'])
+                            if key == "Username":
+                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]["rpcUsername"])
+                            elif key == "Password":
+                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]["rpcPassword"])
+                            elif key == "Port":
+                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]["rpcPort"])
                             else:
-                                if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][
-                                    key] != value:
+                                if (
+                                    key not in self.xbridge_conf_local[section]
+                                    or self.xbridge_conf_local[section][key] != value
+                                ):
                                     self.xbridge_conf_local[section][key] = str(value)
 
         if not (xlite_daemon_conf and "BLOCK" in xlite_daemon_conf):
@@ -325,34 +328,47 @@ class BlocknetHandler(BaseBinUtil):
                     self.xbridge_conf_local[section] = {}
                 logger.info(f"section: {section}, options: {options}")
                 for key, value in options.items():
-                    if key == 'Username':
-                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and
-                            'rpcuser' in self.blocknet_conf_local['global']):
-                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcuser'])
-                    elif key == 'Password':
-                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and
-                            'rpcpassword' in self.blocknet_conf_local['global']):
-                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcpassword'])
-                    elif key == 'Port':
-                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and
-                            'rpcport' in self.blocknet_conf_local['global']):
-                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcport'])
+                    if key == "Username":
+                        if (
+                            self.blocknet_conf_local
+                            and "global" in self.blocknet_conf_local
+                            and "rpcuser" in self.blocknet_conf_local["global"]
+                        ):
+                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local["global"]["rpcuser"])
+                    elif key == "Password":
+                        if (
+                            self.blocknet_conf_local
+                            and "global" in self.blocknet_conf_local
+                            and "rpcpassword" in self.blocknet_conf_local["global"]
+                        ):
+                            self.xbridge_conf_local[section][key] = str(
+                                self.blocknet_conf_local["global"]["rpcpassword"]
+                            )
+                    elif key == "Port":
+                        if (
+                            self.blocknet_conf_local
+                            and "global" in self.blocknet_conf_local
+                            and "rpcport" in self.blocknet_conf_local["global"]
+                        ):
+                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local["global"]["rpcport"])
                     else:
-                        if key not in self.xbridge_conf_local[section] or self.xbridge_conf_local[section][
-                            key] != value:
+                        if (
+                            key not in self.xbridge_conf_local[section]
+                            or self.xbridge_conf_local[section][key] != value
+                        ):
                             self.xbridge_conf_local[section][key] = str(value)
 
         if self.xbridge_conf_local is None:
             self.xbridge_conf_local = {}
-        sections_string = ','.join(section for section in self.xbridge_conf_local.keys() if section != 'Main')
+        sections_string = ",".join(section for section in self.xbridge_conf_local.keys() if section != "Main")
 
-        if 'Main' in self.xbridge_conf_local:
-            self.xbridge_conf_local['Main']['ExchangeWallets'] = sections_string
+        if "Main" in self.xbridge_conf_local:
+            self.xbridge_conf_local["Main"]["ExchangeWallets"] = sections_string
         else:
-            self.xbridge_conf_local['Main'] = {
-                'ExchangeWallets': sections_string,
-                'FullLog': self.container.conf_data.base_xbridge_conf['FullLog'],
-                'ShowAllOrders': self.container.conf_data.base_xbridge_conf['ShowAllOrders'],
+            self.xbridge_conf_local["Main"] = {
+                "ExchangeWallets": sections_string,
+                "FullLog": self.container.conf_data.base_xbridge_conf["FullLog"],
+                "ShowAllOrders": self.container.conf_data.base_xbridge_conf["ShowAllOrders"],
             }
 
         new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
@@ -400,13 +416,15 @@ class BlocknetHandler(BaseBinUtil):
                 os.remove(local_file_path)
         try:
             if need_to_download:
-                with open(local_file_path, 'wb') as f:
-                    response = requests.get(self.container.conf_data.blocknet_bootstrap_url, stream=True,
-                                            timeout=(10, 30))
+                with open(local_file_path, "wb") as f:
+                    response = requests.get(
+                        self.container.conf_data.blocknet_bootstrap_url, stream=True, timeout=(10, 30)
+                    )
                     response.raise_for_status()
                     if response.status_code == 200:
                         logger.info(
-                            f"Downloading {self.container.conf_data.blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb")
+                            f"Downloading {self.container.conf_data.blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb"
+                        )
                         bytes_downloaded = 0
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:
@@ -424,7 +442,7 @@ class BlocknetHandler(BaseBinUtil):
 
                 logger.info(f"{filename} Bootstrap downloaded successfully.")
 
-            to_delete = ['blocks', 'chainstate', 'indexes', 'peers.dat', 'banlist.dat']
+            to_delete = ["blocks", "chainstate", "indexes", "peers.dat", "banlist.dat"]
             if not self.data_folder:
                 logger.error("Data folder not configured for bootstrap cleanup")
                 return
@@ -461,30 +479,25 @@ class BlocknetHandler(BaseBinUtil):
         if aio_folder is None:
             raise ValueError("AIO folder not configured")
 
-        self.download_binary(
-            url,
-            os.path.basename(url),
-            self.blocknet_exe,
-            aio_folder
-        )
+        self.download_binary(url, os.path.basename(url), self.blocknet_exe, aio_folder)
 
 
 def get_remote_file_size(url):
     r = requests.head(url)
     r.raise_for_status()
-    return int(r.headers.get('content-length', 0))
+    return int(r.headers.get("content-length", 0))
 
 
 def generate_random_string(length):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
 
 
 def save_conf_to_file(conf_data, file_path):
     try:
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'w') as f:
+        with open(file_path, "w") as f:
             for section, options in conf_data.items():
-                if section != 'global':
+                if section != "global":
                     f.write(f"[{section}]\n")
                 for key, value in options.items():
                     if isinstance(value, list):
@@ -538,8 +551,7 @@ def download_remote_conf(url, filepath):
                 logger.error(f"Failed to parse {filepath} ")
                 return None
         else:
-            logger.error(
-                f"Failed to retrieve remote blocknet configuration file: {url} {response.status_code}")
+            logger.error(f"Failed to retrieve remote blocknet configuration file: {url} {response.status_code}")
             return None
     except requests.exceptions.RequestException as e:
         logger.error(f"Error retrieving remote blocknet configuration file: {e}")
@@ -560,13 +572,14 @@ def retrieve_xb_manifest():
         if response.status_code == 200:
             parsed_json = response.json()
             os.makedirs(os.path.dirname(local_manifest_file), exist_ok=True)
-            with open(local_manifest_file, 'w') as f:
+            with open(local_manifest_file, "w") as f:
                 f.write(json.dumps(parsed_json, indent=4))
             logger.info(f"REMOTE: Retrieved and parsed ok: [{local_manifest_file}]")
             return parsed_json
         else:
             logger.error(
-                f"Failed to retrieve remote configuration file: {container.conf_data.remote_manifest_url} {response.status_code}")
+                f"Failed to retrieve remote configuration file: {container.conf_data.remote_manifest_url} {response.status_code}"
+            )
             return None
     except requests.exceptions.RequestException as e:
         logger.error(f"Error retrieving remote configuration file: {e}")
@@ -587,40 +600,42 @@ def retrieve_remote_blocknet_xbridge_conf():
 
 def parse_conf_file(file_path=None, input_string=None):
     conf_data = {}
-    current_section = 'global'
+    current_section = "global"
 
     if file_path:
         with open(file_path) as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
-                if '=' in line:
-                    key, value = line.split('=', 1)
-                    if key.strip() == 'addnode':
-                        conf_data.setdefault(current_section.strip('[]'), {}).setdefault(key.strip(), []).append(
-                            value.strip())
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    if key.strip() == "addnode":
+                        conf_data.setdefault(current_section.strip("[]"), {}).setdefault(key.strip(), []).append(
+                            value.strip()
+                        )
                     else:
-                        conf_data.setdefault(current_section.strip('[]'), {})[key.strip()] = value.strip()
+                        conf_data.setdefault(current_section.strip("[]"), {})[key.strip()] = value.strip()
                 else:
                     current_section = line.strip()
-                    conf_data.setdefault(current_section.strip('[]'), {})
+                    conf_data.setdefault(current_section.strip("[]"), {})
 
     elif input_string:
-        for line in input_string.split('\n'):
+        for line in input_string.split("\n"):
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
-            if '=' in line:
-                key, value = line.split('=', 1)
-                if key.strip() == 'addnode':
-                    conf_data.setdefault(current_section.strip('[]'), {}).setdefault(key.strip(), []).append(
-                        value.strip())
+            if "=" in line:
+                key, value = line.split("=", 1)
+                if key.strip() == "addnode":
+                    conf_data.setdefault(current_section.strip("[]"), {}).setdefault(key.strip(), []).append(
+                        value.strip()
+                    )
                 else:
-                    conf_data.setdefault(current_section.strip('[]'), {})[key.strip()] = value.strip()
+                    conf_data.setdefault(current_section.strip("[]"), {})[key.strip()] = value.strip()
             else:
                 current_section = line.strip()
-                conf_data.setdefault(current_section.strip('[]'), {})
+                conf_data.setdefault(current_section.strip("[]"), {})
 
     return conf_data
 

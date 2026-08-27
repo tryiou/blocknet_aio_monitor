@@ -17,7 +17,7 @@ class XliteManager:
 
         container = get_container()
         if container.xlite_release_url:
-            self.version = [container.xlite_release_url.split('/')[7]]
+            self.version = [container.xlite_release_url.split("/")[7]]
         else:
             self.version = ["unknown"]
         self.process_running = False
@@ -40,7 +40,10 @@ class XliteManager:
     def detect_new_xlite_install_and_add_to_xbridge(self):
         if not self.root_gui.disable_daemons_conf_check and self.utility.valid_coins_rpc:
             self.root_gui.blocknet_manager.utility.check_xbridge_conf(self.utility.xlite_daemon_confs_local)
-            if self.root_gui.blocknet_manager.blocknet_process_running and self.root_gui.blocknet_manager.utility.valid_rpc:
+            if (
+                self.root_gui.blocknet_manager.blocknet_process_running
+                and self.root_gui.blocknet_manager.utility.valid_rpc
+            ):
                 logger.debug("dxloadxbridgeConf")
                 self.root_gui.blocknet_manager.utility.blocknet_rpc.send_rpc_request("dxloadxbridgeConf")
             self.root_gui.disable_daemons_conf_check = True
@@ -55,9 +58,6 @@ class XliteManager:
         self.frame_manager.update_xlite_valid_config_checkbox()
         self.frame_manager.update_xlite_daemon_valid_config_checkbox()
         # Update proxy status
-        self.reverse_proxy_running = (
-            self.reverse_proxy.port_occupied() or
-            self.reverse_proxy.running_locally
-        )
+        self.reverse_proxy_running = self.reverse_proxy.port_occupied() or self.reverse_proxy.running_locally
         self.frame_manager.update_xlite_reverse_proxy_process_status()
         self.root_gui.after(2000, self.update_status_xlite)

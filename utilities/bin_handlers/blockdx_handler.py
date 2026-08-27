@@ -20,8 +20,7 @@ class BlockDXHandler(BaseBinUtil):
                 self.dmg_mount_path = None
             blockdx_release_url = self.container.blockdx_release_url
             if blockdx_release_url and self.container.aio_folder:
-                self.executable_path = os.path.join(self.container.aio_folder,
-                                                    os.path.basename(blockdx_release_url))
+                self.executable_path = os.path.join(self.container.aio_folder, os.path.basename(blockdx_release_url))
             else:
                 self.executable_path = None
         else:
@@ -74,29 +73,30 @@ class BlockDXHandler(BaseBinUtil):
             meta_data = copy.deepcopy(self.blockdx_conf_local)
 
         # Update meta_data if changes are needed
-        if 'user' not in meta_data or meta_data['user'] != rpc_user:
-            meta_data['user'] = rpc_user
+        if "user" not in meta_data or meta_data["user"] != rpc_user:
+            meta_data["user"] = rpc_user
             logger.debug("Updated 'user' in meta_data")
-        if 'password' not in meta_data or meta_data['password'] != rpc_password:
-            meta_data['password'] = rpc_password
+        if "password" not in meta_data or meta_data["password"] != rpc_password:
+            meta_data["password"] = rpc_password
             logger.debug("Updated 'password' in meta_data")
-        if 'xbridgeConfPath' not in meta_data or meta_data['xbridgeConfPath'] != xbridgeconfpath:
-            meta_data['xbridgeConfPath'] = xbridgeconfpath
+        if "xbridgeConfPath" not in meta_data or meta_data["xbridgeConfPath"] != xbridgeconfpath:
+            meta_data["xbridgeConfPath"] = xbridgeconfpath
             logger.debug("Updated 'xbridgeConfPath' in meta_data")
 
         # Update 'selectedWallets' if needed
-        if 'selectedWallets' not in meta_data:
-            meta_data['selectedWallets'] = []
-            meta_data['selectedWallets'].append(self.container.conf_data.blockdx_selectedWallets_blocknet)
+        if "selectedWallets" not in meta_data:
+            meta_data["selectedWallets"] = []
+            meta_data["selectedWallets"].append(self.container.conf_data.blockdx_selectedWallets_blocknet)
             logger.info(
-                f"Initialized 'selectedWallets' with '{self.container.conf_data.blockdx_selectedWallets_blocknet}' in meta_data")
-        elif self.container.conf_data.blockdx_selectedWallets_blocknet not in meta_data['selectedWallets']:
-            meta_data['selectedWallets'] = [self.container.conf_data.blockdx_selectedWallets_blocknet]
+                f"Initialized 'selectedWallets' with '{self.container.conf_data.blockdx_selectedWallets_blocknet}' in meta_data"
+            )
+        elif self.container.conf_data.blockdx_selectedWallets_blocknet not in meta_data["selectedWallets"]:
+            meta_data["selectedWallets"] = [self.container.conf_data.blockdx_selectedWallets_blocknet]
             logger.debug("Updated 'selectedWallets' in meta_data")
 
         # Save file if changes were made
         if org_data != meta_data:
-            with open(file_path, 'w') as file:
+            with open(file_path, "w") as file:
                 json.dump(meta_data, file, indent=4)
             logger.info("Updated Blockdx config with new data.")
             self.blockdx_conf_local = meta_data
@@ -121,8 +121,7 @@ class BlockDXHandler(BaseBinUtil):
                     raise ValueError("Required configuration not available for macOS")
                 full_path = os.path.join(self.dmg_mount_path, bin_name)
                 volume_name = self.container.blockdx_volume_name
-                logger.info(
-                    f"volume_name: {volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
+                logger.info(f"volume_name: {volume_name}, mount_path: {self.dmg_mount_path}, full_path: {full_path}")
                 command = [full_path]
                 cwd = os.path.dirname(full_path)
             else:
@@ -163,12 +162,7 @@ class BlockDXHandler(BaseBinUtil):
 
         # Type assertion for mypy
         exe_path = self.executable_path  # type: ignore
-        self.download_binary(
-            url,
-            os.path.basename(url),
-            exe_path,
-            aio_folder
-        )
+        self.download_binary(url, os.path.basename(url), exe_path, aio_folder)
 
     def unmount_dmg(self):
         if self.container.system != "Darwin":
