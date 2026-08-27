@@ -350,17 +350,16 @@ class TestDownload(BaseBinUtilTestCase):
         mock = mock_open()
         mock.side_effect = PermissionError("Permission denied")
 
-        with patch("builtins.open", mock):
-            with self.assertRaises(PermissionError):
-                self.base_binutil.download_file(
-                    "http://example.com/test.zip",
-                    os.path.join(self.temp_dir, "test.zip"),
-                    os.path.join(self.temp_dir, "test.exe"),
-                    self.temp_dir,
-                    "nt",
-                    "progress_attr",
-                    self.base_binutil,
-                )
+        with patch("builtins.open", mock), self.assertRaises(PermissionError):
+            self.base_binutil.download_file(
+                "http://example.com/test.zip",
+                os.path.join(self.temp_dir, "test.zip"),
+                os.path.join(self.temp_dir, "test.exe"),
+                self.temp_dir,
+                "nt",
+                "progress_attr",
+                self.base_binutil,
+            )
         mock_log_error.assert_called_once_with("Permission error writing file: Permission denied")
 
     @patch("zipfile.ZipFile")

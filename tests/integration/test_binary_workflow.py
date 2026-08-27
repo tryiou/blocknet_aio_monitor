@@ -247,9 +247,8 @@ class TestBinaryDownloadWorkflow:
         corrupted_zip = self.workspace / "corrupted.zip"
         corrupted_zip.write_bytes(b"not a valid zip file")
 
-        with pytest.raises(zipfile.BadZipFile):
-            with zipfile.ZipFile(corrupted_zip, "r") as zf:
-                zf.extractall(self.workspace)  # noqa: S202 # test corrupted
+        with pytest.raises(zipfile.BadZipFile), zipfile.ZipFile(corrupted_zip, "r") as zf:
+            zf.extractall(self.workspace)  # noqa: S202 # test corrupted
 
         # Test permission denied
         restricted_dir = self.workspace / "restricted"

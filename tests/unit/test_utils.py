@@ -278,9 +278,8 @@ class TestRemoveCfgJsonKey:
         config_data = {"key1": "value1"}
 
         with patch("builtins.open", mock_open=create_real_file_mock("/test/data/aio_settings.json")):
-            with patch("json.load", return_value=config_data):
-                with patch("json.dump") as mock_dump:
-                    utils.remove_cfg_json_key("nonexistent_key")
+            with patch("json.load", return_value=config_data), patch("json.dump") as mock_dump:
+                utils.remove_cfg_json_key("nonexistent_key")
 
             mock_dump.assert_not_called()
 
@@ -326,9 +325,8 @@ class TestSaveCfgJson:
             mock_file.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_file
 
-            with patch("json.load", side_effect=FileNotFoundError):
-                with patch("json.dump") as mock_dump:
-                    utils.save_cfg_json("test_key", "test_value")
+            with patch("json.load", side_effect=FileNotFoundError), patch("json.dump") as mock_dump:
+                utils.save_cfg_json("test_key", "test_value")
 
             assert mock_dump.call_count == 1
             saved_data = mock_dump.call_args[0][0]
@@ -347,9 +345,8 @@ class TestSaveCfgJson:
         existing_data = {"old_key": "old_value"}
 
         with patch("builtins.open", mock_open=create_real_file_mock("/test/data/aio_settings.json")):
-            with patch("json.load", return_value=existing_data):
-                with patch("json.dump") as mock_dump:
-                    utils.save_cfg_json("new_key", "new_value")
+            with patch("json.load", return_value=existing_data), patch("json.dump") as mock_dump:
+                utils.save_cfg_json("new_key", "new_value")
 
             assert mock_dump.call_count == 1
             saved_data = mock_dump.call_args[0][0]
@@ -909,28 +906,26 @@ class TestKeyringBasedFunctions:
         mock_container = MagicMock()
         mock_container.aio_folder = "/test/aio"
 
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            with (
-                patch("os.path.exists") as mock_exists,
-                patch("os.path.expandvars") as mock_expandvars,
-                patch("os.path.expanduser") as mock_expanduser,
-                patch("os.rename") as mock_rename,
-            ):
-                mock_expanduser.return_value = "/test/aio"
-                mock_expandvars.return_value = "/test/aio"
-                mock_exists.return_value = True
+        with (
+            patch("utilities.utils.get_container", return_value=mock_container), patch("os.path.exists") as mock_exists,
+            patch("os.path.expandvars") as mock_expandvars,
+            patch("os.path.expanduser") as mock_expanduser,
+            patch("os.rename") as mock_rename,
+        ):
+            mock_expanduser.return_value = "/test/aio"
+            mock_expandvars.return_value = "/test/aio"
+            mock_exists.return_value = True
 
-                with patch("builtins.open") as mock_open:
-                    mock_file = Mock()
-                    mock_file.read.return_value = json.dumps(old_config)
-                    mock_file.__enter__ = Mock(return_value=mock_file)
-                    mock_file.__exit__ = Mock(return_value=False)
-                    mock_open.return_value = mock_file
+            with patch("builtins.open") as mock_open:
+                mock_file = Mock()
+                mock_file.read.return_value = json.dumps(old_config)
+                mock_file.__enter__ = Mock(return_value=mock_file)
+                mock_file.__exit__ = Mock(return_value=False)
+                mock_open.return_value = mock_file
 
-                    with patch("json.load", return_value=old_config):
-                        with patch("json.dump") as mock_dump:
-                            result = utils.load_cfg_json()
+                with patch("json.load", return_value=old_config), patch("json.dump") as mock_dump:
+                    result = utils.load_cfg_json()
 
-                            assert result == new_config
-                            mock_migration.migrate_from_old_format.assert_called_once_with(old_config)
-                            mock_dump.assert_called_once()
+                    assert result == new_config
+                    mock_migration.migrate_from_old_format.assert_called_once_with(old_config)
+                    mock_dump.assert_called_once()
