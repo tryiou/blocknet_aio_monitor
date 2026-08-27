@@ -20,9 +20,6 @@ permissions:
 
 jobs:
   lint:
-    # Warning-only initially: continue-on-error so CI does not block merges.
-    # After baseline is clean, remove continue-on-error to make it blocking.
-    continue-on-error: true
     runs-on: ubuntu-22.04
     timeout-minutes: 5
 
@@ -41,16 +38,13 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Ruff check
-        continue-on-error: true
         run: |
-          ruff check . --output-format concise || echo "Ruff found issues (warning-only, 1396 baseline)"
+          ruff check . --output-format concise
 
       - name: Ruff format (check only)
-        continue-on-error: true
         run: |
-          ruff format --check . --diff || echo "Format diff above (warning-only)"
+          ruff format --check . --diff
 
       - name: Vulture dead code (min-confidence 80)
-        continue-on-error: true
         run: |
-          vulture . vulture_whitelist.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size || echo "Vulture found dead code (warning-only)"
+          vulture . vulture_whitelist.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size
