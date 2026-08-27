@@ -49,7 +49,7 @@ class BlockDXHandler(BaseBinUtil):
 
         if os.path.exists(file_path):
             try:
-                with open(file_path, 'r') as file:
+                with open(file_path) as file:
                     meta_data = json.load(file)
                     logger.info(f"BLOCK-DX: Loaded JSON data ok: [{file_path}]")
             except Exception as e:

@@ -185,7 +185,7 @@ class BaseBinUtil:
                         pass
                 except Exception:
                     pass
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
                 if not content.strip():
                     return ""

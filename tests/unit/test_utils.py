@@ -87,7 +87,7 @@ def create_real_file_mock(file_path):
 
     def mock_open_impl(*args, **kwargs):
         if 'r' in str(args) or 'r' in str(kwargs):
-            return open(file_path, 'r')
+            return open(file_path)
         else:
             return open(file_path, 'w')
 

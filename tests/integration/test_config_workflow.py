@@ -57,7 +57,7 @@ class TestConfigManagementWorkflow:
         assert config_file.exists()
 
         # Read and verify config
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             loaded_config = json.load(f)
 
         assert loaded_config == config_data
@@ -70,7 +70,7 @@ class TestConfigManagementWorkflow:
         config_file = self.test_data['config_file']
 
         # Read config
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             config = json.load(f)
 
         # Verify config structure
@@ -112,7 +112,7 @@ class TestConfigManagementWorkflow:
         assert config_file.exists()
 
         # Read back and verify
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             loaded_config = json.load(f)
 
         assert loaded_config == new_config
@@ -123,7 +123,7 @@ class TestConfigManagementWorkflow:
         config_file = self.test_data['config_file']
 
         # Read current config
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             config = json.load(f)
 
         # Update config
@@ -135,7 +135,7 @@ class TestConfigManagementWorkflow:
             json.dump(config, f, indent=2)
 
         # Verify update
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             updated_config = json.load(f)
 
         assert updated_config["new_option"] == "new_value"
@@ -147,7 +147,7 @@ class TestConfigManagementWorkflow:
         blocknet_conf = self.test_data['blocknet_conf']
 
         # Read Blocknet config
-        with open(blocknet_conf, 'r') as f:
+        with open(blocknet_conf) as f:
             config_content = f.read()
 
         # Verify config content
@@ -184,7 +184,7 @@ class TestConfigManagementWorkflow:
         blockdx_conf = self.test_data['blockdx_conf']
 
         # Read Block-DX config
-        with open(blockdx_conf, 'r') as f:
+        with open(blockdx_conf) as f:
             config_content = f.read()
 
         # Verify config content
@@ -261,7 +261,7 @@ class TestConfigManagementWorkflow:
             json.dump(config_data, f, indent=2)
 
         # Read and process extra options
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             loaded_config = json.load(f)
 
         extra_options = loaded_config["extra_option_blocknet_core_conf"]
@@ -303,7 +303,7 @@ class TestConfigManagementWorkflow:
         assert backup_file.read_text() == backup_content
 
         # Modify original
-        with open(original_config, 'r') as f:
+        with open(original_config) as f:
             config = json.load(f)
 
         config["modified"] = True
@@ -312,7 +312,7 @@ class TestConfigManagementWorkflow:
             json.dump(config, f, indent=2)
 
         # Verify modification
-        with open(original_config, 'r') as f:
+        with open(original_config) as f:
             modified_config = json.load(f)
 
         assert modified_config.get("modified") is True
@@ -321,7 +321,7 @@ class TestConfigManagementWorkflow:
         original_config.write_text(backup_content)
 
         # Verify restoration
-        with open(original_config, 'r') as f:
+        with open(original_config) as f:
             restored_config = json.load(f)
 
         assert "modified" not in restored_config

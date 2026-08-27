@@ -153,7 +153,7 @@ class XliteHandler(BaseBinUtil):
 
         if os.path.exists(file_path):
             try:
-                with open(file_path, 'r') as file:
+                with open(file_path) as file:
                     meta_data = json.load(file)
                     logger.info(f"XLITE: Loaded JSON data from [{file_path}]")
             except Exception as e:
@@ -181,7 +181,7 @@ class XliteHandler(BaseBinUtil):
             json_file_path = os.path.join(confs_folder, json_file)
             coin = str(json_file).split("-")[1].split(".")[0]
             try:
-                with open(json_file_path, 'r') as file:
+                with open(json_file_path) as file:
                     data = json.load(file)
                 self.xlite_daemon_confs_local[coin] = data
             except Exception as e:

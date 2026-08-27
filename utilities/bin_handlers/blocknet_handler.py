@@ -511,7 +511,7 @@ def retrieve_remote_conf(remote_url: str, subfolder: str, expected_filename: str
 
     if os.path.exists(local_conf_file):
         try:
-            with open(local_conf_file, 'r') as f:
+            with open(local_conf_file) as f:
                 conf_data = f.read()
             parsed_conf = parse_conf_file(input_string=conf_data)
             if parsed_conf:
@@ -591,7 +591,7 @@ def parse_conf_file(file_path=None, input_string=None):
     current_section = 'global'
 
     if file_path:
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith('#'):

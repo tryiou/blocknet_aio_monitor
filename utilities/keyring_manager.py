@@ -59,7 +59,7 @@ class KeyringManager:
         try:
             fallback_path = self._get_fallback_path()
             if os.path.exists(fallback_path):
-                with open(fallback_path, 'r') as f:
+                with open(fallback_path) as f:
                     data = json.load(f)
                     key = data.get(self.FALLBACK_KEY_NAME)
                     if key:
@@ -78,7 +78,7 @@ class KeyringManager:
 
             # Load existing config if it exists
             if os.path.exists(fallback_path):
-                with open(fallback_path, 'r') as f:
+                with open(fallback_path) as f:
                     data = json.load(f)
             else:
                 data = {}
@@ -106,7 +106,7 @@ class KeyringManager:
             fallback_path = self._get_fallback_path()
             if os.path.exists(fallback_path):
                 # Load existing config
-                with open(fallback_path, 'r') as f:
+                with open(fallback_path) as f:
                     data = json.load(f)
 
                 # Remove encryption key (use "salt" for backward compatibility)
@@ -238,7 +238,7 @@ class KeyringManager:
         # Check if fallback file exists and contains the key (use "salt" for backward compatibility)
         if os.path.exists(self._get_fallback_path()):
             try:
-                with open(self._get_fallback_path(), 'r') as f:
+                with open(self._get_fallback_path()) as f:
                     data = json.load(f)
                     return self.FALLBACK_KEY_NAME in data
             except Exception:
@@ -346,7 +346,7 @@ class KeyringMigration:
         """
         try:
             # Read current config
-            with open(config_file_path, 'r') as f:
+            with open(config_file_path) as f:
                 config_data = json.load(f)
 
             # Check if migration is needed

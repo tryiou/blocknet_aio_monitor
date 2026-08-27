@@ -120,7 +120,7 @@ class TestKeyringManager:
                 fallback_path = manager.fallback_path
                 assert os.path.exists(fallback_path)
 
-                with open(fallback_path, 'r') as f:
+                with open(fallback_path) as f:
                     data = json.load(f)
                     assert data["salt"] == TEST_KEY
 
@@ -151,7 +151,7 @@ class TestKeyringManager:
             assert success is True
             # File should still exist but without salt
             assert os.path.exists(fallback_path)
-            with open(fallback_path, 'r') as f:
+            with open(fallback_path) as f:
                 data = json.load(f)
                 assert "salt" not in data
 
@@ -252,7 +252,7 @@ class TestKeyringManager:
 
                 # Verify key was saved as string
                 fallback_path = manager.fallback_path
-                with open(fallback_path, 'r') as f:
+                with open(fallback_path) as f:
                     data = json.load(f)
                     assert data["salt"] == test_key_bytes.decode('utf-8')
 
@@ -616,7 +616,7 @@ class TestKeyringMigration:
             assert "success" in message.lower()
 
             # Verify config file was updated (salt kept in fallback)
-            with open(config_file, 'r') as f:
+            with open(config_file) as f:
                 new_config = json.load(f)
                 assert "salt" in new_config  # Salt kept in fallback
                 assert "xl_pass" in new_config
@@ -791,7 +791,7 @@ class TestKeyringIntegration:
             assert success is True
 
             # Verify migration results (salt kept in fallback)
-            with open(config_file, 'r') as f:
+            with open(config_file) as f:
                 new_config = json.load(f)
                 assert "salt" in new_config  # Salt kept in fallback
                 assert "xl_pass" in new_config

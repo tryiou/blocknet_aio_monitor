@@ -209,7 +209,7 @@ class ConfigManager:
         self.config = self.config_template.copy()
 
         if config_file.exists():
-            with open(config_file, "r") as f:
+            with open(config_file) as f:
                 loaded_config = yaml.safe_load(f) or {}
             logger.info(f"Loaded existing config from {config_file}")
 

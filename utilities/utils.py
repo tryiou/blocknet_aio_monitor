@@ -34,7 +34,7 @@ def load_cfg_json():
 
     # Check if the file exists
     if os.path.exists(full_new_path):
-        with open(full_new_path, 'r') as file:
+        with open(full_new_path) as file:
             cfg_data = json.load(file)
 
         # Check if migration from old format (with salt) is needed
@@ -77,7 +77,7 @@ def remove_cfg_json_key(key):
 
     # Try loading the existing JSON file
     try:
-        with open(filename, 'r') as file:
+        with open(filename) as file:
             cfg_data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         logger.error(f"Failed to load JSON file: [{filename}]")
@@ -106,7 +106,7 @@ def save_cfg_json(key, data):
 
     # Try loading the existing JSON file
     try:
-        with open(filename, 'r') as file:
+        with open(filename) as file:
             cfg_data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
         # If file doesn't exist or JSON decoding error occurs, create a new empty dictionary

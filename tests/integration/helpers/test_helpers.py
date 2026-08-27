@@ -241,7 +241,7 @@ selectedWallets_blocknet=BLOCK
 
         # Check if file is readable
         try:
-            with open(path, 'r') as f:
+            with open(path) as f:
                 f.read()
         except Exception as e:
             print(f"ERROR: Cannot read {description}: {e}")
