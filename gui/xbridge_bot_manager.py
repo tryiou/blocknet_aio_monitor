@@ -5,7 +5,7 @@ import subprocess
 import threading
 from pathlib import Path
 from subprocess import TimeoutExpired
-from typing import List, Optional, cast
+from typing import cast
 
 from utilities.app_container import get_container
 from utilities.git_repo_management import BranchSwitchBlockedError, GitRepoManagement
@@ -161,7 +161,7 @@ class XBridgeBotManager:
                 logger.info(f"Creating repo directory: {self.target_dir}")
                 self.target_dir_path.mkdir(parents=True, exist_ok=True)
 
-            logger.info(f"Setting up repository...")
+            logger.info("Setting up repository...")
             self.repo_management.setup()
 
             # Post-repair: archive orphan config_bak_* and restore user configs verbatim

@@ -3,7 +3,6 @@ import os
 import platform
 import re
 import webbrowser
-from typing import List, Optional
 
 import customtkinter as ctk
 

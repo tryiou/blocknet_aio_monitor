@@ -1,6 +1,6 @@
 import sys
 import tkinter
-from typing import Any, Optional, Tuple, Union
+from typing import Any
 from collections.abc import Callable
 
 from customtkinter import CTkBaseClass, CTkCanvas, CTkFont, DrawEngine, ThemeManager

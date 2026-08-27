@@ -4,7 +4,6 @@ import subprocess
 import sys
 import tarfile
 import zipfile
-from typing import Optional
 
 import psutil
 import requests

@@ -1,4 +1,3 @@
-from typing import Optional, Tuple, Union
 
 from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel, ThemeManager
 

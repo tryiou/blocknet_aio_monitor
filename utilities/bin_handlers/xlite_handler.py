@@ -5,11 +5,10 @@ import subprocess
 import threading
 import time
 import traceback
-from typing import Optional
 
 import requests
 
-from utilities.app_container import AppContainer, get_container
+from utilities.app_container import AppContainer
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 from utilities.rpc_client import RPCClient
 
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 def check_vc_redist_installed(container: AppContainer):
-    import winreg
     base_key_path = r"SOFTWARE\Classes\Installer\Dependencies\Microsoft.VS.VC_RuntimeMinimumVSU_amd64,v14"
     value_name = "DisplayName"
 

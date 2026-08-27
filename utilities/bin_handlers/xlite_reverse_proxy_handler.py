@@ -3,11 +3,9 @@ import os
 import re
 import socket
 import subprocess
-from typing import Optional
 
-import requests
 
-from utilities.app_container import AppContainer, get_container
+from utilities.app_container import AppContainer
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 logger = logging.getLogger(__name__)

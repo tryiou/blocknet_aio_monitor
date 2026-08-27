@@ -2,7 +2,6 @@ import copy
 import json
 import logging
 import os
-from typing import Optional
 
 from utilities.app_container import AppContainer, get_container
 from utilities.bin_handlers.base_binutil import BaseBinUtil

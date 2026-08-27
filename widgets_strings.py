@@ -12,7 +12,7 @@ tooltip_blocknet_core_label_msg = "Blocknet Core is used to connect Xbridge to P
 tooltip_blockdx_label_msg = "Block-DX is a GUI for Xbridge API"
 tooltip_xlite_label_msg = "The XLite wallet allows you to manage a variety of digital assets in a single, noncustodial, lightweight, decentralized wallet. Compatible with Xbridge"
 tooltip_bins_title_msg = (
-    f"Control every Blocknet application from this panel, including managing downloads, deletions, starting, and closing.\n"
+    "Control every Blocknet application from this panel, including managing downloads, deletions, starting, and closing.\n"
     "Configuration for each application is automatically adjusted before it starts.\n"
     "Consult https://docs.blocknet.org/ for more information on each application.")
 

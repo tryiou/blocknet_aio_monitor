@@ -1,5 +1,4 @@
 import logging
-import os
 import shutil
 import subprocess
 import sys
@@ -7,7 +6,6 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 import requests
 
@@ -434,7 +432,7 @@ class GitRepository:
             elapsed_time = time.time() - start_time
             logger.info(f"Clone completed in {elapsed_time:.2f} seconds")
             self._checkout_branch()
-            logger.info(f"Repository cloned successfully")
+            logger.info("Repository cloned successfully")
         except pygit2.GitError as e:
             logger.error(f"Failed to clone repository: {e}")
             if self.target_dir.exists():
@@ -709,7 +707,7 @@ class GitRepoManagement:
             self.venv.create()
             self.venv.install_requirements(self.target_dir / "requirements.txt")
 
-            logger.info(f"Repository setup complete")
+            logger.info("Repository setup complete")
 
         except BranchSwitchBlockedError:
             raise

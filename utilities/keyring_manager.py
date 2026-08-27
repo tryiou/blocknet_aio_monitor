@@ -12,7 +12,6 @@ import base64
 import json
 import logging
 import os
-from typing import Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,6 @@ import string
 import threading
 import time
 import zipfile
-from typing import Optional
 
 import requests
 

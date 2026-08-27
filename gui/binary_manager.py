@@ -7,7 +7,6 @@ import threading
 import time
 from pathlib import Path
 from threading import Thread
-from typing import Optional
 
 import customtkinter as ctk
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
