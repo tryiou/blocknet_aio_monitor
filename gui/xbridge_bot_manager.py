@@ -4,11 +4,11 @@ import os
 import subprocess
 import threading
 from pathlib import Path
-from typing import List, Optional, cast
 from subprocess import TimeoutExpired
+from typing import List, Optional, cast
 
-from utilities.git_repo_management import BranchSwitchBlockedError, GitRepoManagement
 from utilities.app_container import get_container
+from utilities.git_repo_management import BranchSwitchBlockedError, GitRepoManagement
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ SETTINGS_KEY = "xbridge_bots_branch"
 
 class XBridgeBotManager:
     """Manages installation and execution of XBridge trading bots."""
-    
+
     def __init__(self, current_branch: Optional[str] = None) -> None:
         self.author = "tryiou"
         self.repo_name = "xbridge_trading_bots"
@@ -102,7 +102,7 @@ class XBridgeBotManager:
         try:
             if self.repo_management is None:
                 self.repo_management = GitRepoManagement(
-                    self.repo_url, 
+                    self.repo_url,
                     self.target_dir,
                     branch=self.current_branch,
                     workdir=self.aio_folder
@@ -151,12 +151,12 @@ class XBridgeBotManager:
         try:
             logger.info(f"Starting install/update for {branch}")
             self.repo_management = GitRepoManagement(
-                self.repo_url, 
+                self.repo_url,
                 self.target_dir,
                 branch=branch,
                 workdir=self.aio_folder
             )
-            
+
             if not self.target_dir_path.exists():
                 logger.info(f"Creating repo directory: {self.target_dir}")
                 self.target_dir_path.mkdir(parents=True, exist_ok=True)
@@ -225,18 +225,18 @@ class XBridgeBotManager:
         """Toggle trading bots execution state without blocking GUI."""
         logger.info("Toggling bot execution")
         use_branch = branch or self.current_branch
-        
+
         if self.installer_thread and self.installer_thread.is_alive():
             logger.info("Deferring execution until installation completes")
             self.deferred_start = True
             return
-            
+
         needs_install = (
-            not self.repo_exists() or 
+            not self.repo_exists() or
             self.repo_management is None or
             branch != self.current_branch
         )
-            
+
         if needs_install:
             logger.info("Starting installation before execution")
             self.deferred_start = True
@@ -272,7 +272,7 @@ class XBridgeBotManager:
         """Stop bots with timeout handling."""
         if not self.process:
             return
-            
+
         logger.info("Stopping bots execution")
         try:
             self.process.terminate()

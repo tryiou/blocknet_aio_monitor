@@ -2,13 +2,13 @@ import json
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utilities.bin_handlers.xlite_handler import XliteHandler
 from utilities.app_container import AppContainer
+from utilities.bin_handlers.xlite_handler import XliteHandler
 
 
 class TestXliteHandler(unittest.TestCase):
@@ -98,7 +98,7 @@ class TestXliteHandler(unittest.TestCase):
         self.mock_container.system = system
         if machine:
             self.mock_container.machine = machine
-        
+
         # Update the xlite_release_url based on the system
         if system == "Linux":
             self.mock_container.xlite_release_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz'
@@ -112,7 +112,7 @@ class TestXliteHandler(unittest.TestCase):
             self.mock_container.xlite_release_url = 'https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg'
             self.mock_container.xlite_curpath = 'XLite-1.0.7-mac.dmg'
             self.mock_container.xlite_bin = ['XLite.app', 'Contents', 'MacOS', 'XLite']
-        
+
         return XliteHandler(self.mock_container)
 
     # ============================================================================
@@ -471,7 +471,7 @@ class TestXliteHandler(unittest.TestCase):
 
             handler = self._create_handler_with_os("Darwin")
             handler.dmg_mount_path = '/Volumes/XliteVolume'
-            
+
             # Set executable_path for Darwin (it's set differently than other OS)
             handler.executable_path = '/mock/aio_folder/XLite-1.0.7-mac.dmg'
 
@@ -484,18 +484,18 @@ class TestXliteHandler(unittest.TestCase):
         """Test starting XLite triggers download when executable not found."""
         # Get the original executable_path before patching
         original_executable_path = self.handler.executable_path
-        
+
         with patch('utilities.bin_handlers.xlite_handler.os.path.exists') as mock_exists, \
                 patch.object(self.handler, 'download_xlite_bin') as mock_download, \
                 patch.object(self.handler, 'start_process') as mock_start:
             # First call returns False (executable not found)
             # After download, subsequent calls return True
             mock_exists.side_effect = lambda path: path != original_executable_path or mock_exists.call_count > 1
-            
+
             mock_process = MagicMock()
             mock_process.pid = 12345
             mock_start.return_value = mock_process
-            
+
             # Set executable_path after download to simulate successful download
             def set_executable_path():
                 self.handler.executable_path = original_executable_path

@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import yaml
 
-from utilities.config_manager import ConfigManager, SYSTEM_SPECIFIC_KEYS
+from utilities.config_manager import SYSTEM_SPECIFIC_KEYS, ConfigManager
 
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ class XliteManager:
 
         self.frame_manager = None
         self.utility = XliteHandler()
-        
+
         container = get_container()
         if container.xlite_release_url:
             self.version = [container.xlite_release_url.split('/')[7]]

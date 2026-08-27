@@ -1,12 +1,8 @@
 import sys
 import tkinter
-from typing import Union, Tuple, Callable, Optional, Any
+from typing import Any, Callable, Optional, Tuple, Union
 
-from customtkinter import CTkBaseClass
-from customtkinter import CTkCanvas
-from customtkinter import CTkFont
-from customtkinter import DrawEngine
-from customtkinter import ThemeManager
+from customtkinter import CTkBaseClass, CTkCanvas, CTkFont, DrawEngine, ThemeManager
 
 
 class CTkCheckBox(CTkBaseClass):

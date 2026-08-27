@@ -5,20 +5,21 @@ Tests the complete workflow of reading, writing, and managing
 configuration files across different components.
 """
 
+import json
 import os
 import sys
-import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
 import yaml
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from utilities.config_manager import ConfigManager
 from tests.integration.helpers.test_helpers import IntegrationTestHelper
+from utilities.config_manager import ConfigManager
 
 
 @pytest.mark.integration

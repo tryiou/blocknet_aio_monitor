@@ -26,12 +26,12 @@ except ImportError:
 
 class KeyringManager:
     """Manages encryption key storage using OS keyring with fallback mechanisms."""
-    
+
     SERVICE_NAME = "blocknet_aio"
     KEY_NAME = "encryption_key"
     FALLBACK_FILE = "aio_settings.json"
     FALLBACK_KEY_NAME = "salt"  # Use "salt" for backward compatibility
-    
+
     def __init__(self, config_path: Optional[str] = None):
         """
         Initialize KeyringManager.
@@ -42,18 +42,18 @@ class KeyringManager:
         self.config_path = config_path or os.getcwd()
         self.fallback_path = os.path.join(self.config_path, self.FALLBACK_FILE)
         self._ensure_config_dir()
-    
+
     def _ensure_config_dir(self):
         """Ensure configuration directory exists."""
         try:
             os.makedirs(self.config_path, exist_ok=True)
         except Exception as e:
             logger.error(f"Failed to create config directory: {e}")
-    
+
     def _get_fallback_path(self) -> str:
         """Get the full path to the fallback file."""
         return self.fallback_path
-    
+
     def _load_fallback(self) -> Optional[str]:
         """Load encryption key from fallback storage (aio_settings.json)."""
         try:
@@ -70,36 +70,36 @@ class KeyringManager:
         except Exception as e:
             logger.error(f"Failed to load from fallback: {e}")
         return None
-    
+
     def _save_fallback(self, key: str) -> bool:
         """Save encryption key to fallback storage (aio_settings.json)."""
         try:
             fallback_path = self._get_fallback_path()
-            
+
             # Load existing config if it exists
             if os.path.exists(fallback_path):
                 with open(fallback_path, 'r') as f:
                     data = json.load(f)
             else:
                 data = {}
-            
+
             # Update with encryption key (use "salt" for backward compatibility)
             data[self.FALLBACK_KEY_NAME] = key
-            
+
             # Save to temporary file first (atomic operation)
             temp_path = fallback_path + ".tmp"
             with open(temp_path, 'w') as f:
                 json.dump(data, f, indent=2)
-            
+
             # Rename temporary file to actual file (atomic)
             os.replace(temp_path, fallback_path)
-            
+
             logger.info("Encryption key saved to fallback storage")
             return True
         except Exception as e:
             logger.error(f"Failed to save to fallback: {e}")
             return False
-    
+
     def _delete_fallback(self) -> bool:
         """Delete encryption key from fallback storage (aio_settings.json)."""
         try:
@@ -108,21 +108,21 @@ class KeyringManager:
                 # Load existing config
                 with open(fallback_path, 'r') as f:
                     data = json.load(f)
-                
+
                 # Remove encryption key (use "salt" for backward compatibility)
                 if self.FALLBACK_KEY_NAME in data:
                     del data[self.FALLBACK_KEY_NAME]
-                
+
                 # Save back to file
                 with open(fallback_path, 'w') as f:
                     json.dump(data, f, indent=2)
-                
+
                 logger.info("Encryption key removed from fallback storage")
             return True
         except Exception as e:
             logger.error(f"Failed to delete from fallback: {e}")
             return False
-    
+
     def store_key(self, key: Union[str, bytes]) -> Tuple[bool, str]:
         """
         Store encryption key in keyring (or fallback).
@@ -139,13 +139,13 @@ class KeyringManager:
                 key_str = key.decode('utf-8')
             else:
                 key_str = key
-            
+
             # Validate key format (should be base64 encoded)
             try:
                 base64.b64decode(key_str)
             except Exception:
                 logger.warning(f"Key is not valid base64: {key_str[:20]}...")
-            
+
             # Try keyring first
             if KEYRING_AVAILABLE:
                 try:
@@ -154,17 +154,17 @@ class KeyringManager:
                     return True, "Key stored in OS keyring"
                 except Exception as e:
                     logger.warning(f"Keyring storage failed: {e}. Using fallback.")
-            
+
             # Fallback to file-based storage
             if self._save_fallback(key_str):
                 return True, "Key stored in fallback storage"
             else:
                 return False, "Failed to store key in any storage"
-                
+
         except Exception as e:
             logger.error(f"Error storing key: {e}")
             return False, f"Error: {str(e)}"
-    
+
     def retrieve_key(self) -> Tuple[Optional[str], str]:
         """
         Retrieve encryption key from keyring (or fallback).
@@ -182,18 +182,18 @@ class KeyringManager:
                         return key, "Key retrieved from OS keyring"
                 except Exception as e:
                     logger.warning(f"Keyring retrieval failed: {e}. Trying fallback.")
-            
+
             # Fallback to file-based storage
             key = self._load_fallback()
             if key:
                 return key, "Key retrieved from fallback storage"
-            
+
             return None, "No encryption key found"
-            
+
         except Exception as e:
             logger.error(f"Error retrieving key: {e}")
             return None, f"Error: {str(e)}"
-    
+
     def delete_key(self) -> Tuple[bool, str]:
         """
         Delete encryption key from keyring and fallback.
@@ -204,7 +204,7 @@ class KeyringManager:
         try:
             success = False
             messages = []
-            
+
             # Try to delete from keyring
             if KEYRING_AVAILABLE:
                 try:
@@ -213,19 +213,19 @@ class KeyringManager:
                     success = True
                 except Exception as e:
                     logger.warning(f"Keyring deletion failed: {e}")
-            
+
             # Delete from fallback
             if self._delete_fallback():
                 messages.append("Deleted from fallback storage")
                 success = True
-            
+
             message = "; ".join(messages) if messages else "No key found to delete"
             return success, message
-            
+
         except Exception as e:
             logger.error(f"Error deleting key: {e}")
             return False, f"Error: {str(e)}"
-    
+
     def key_exists(self) -> bool:
         """Check if encryption key exists in any storage."""
         if KEYRING_AVAILABLE:
@@ -234,7 +234,7 @@ class KeyringManager:
                     return True
             except Exception:
                 pass
-        
+
         # Check if fallback file exists and contains the key (use "salt" for backward compatibility)
         if os.path.exists(self._get_fallback_path()):
             try:
@@ -243,9 +243,9 @@ class KeyringManager:
                     return self.FALLBACK_KEY_NAME in data
             except Exception:
                 pass
-        
+
         return False
-    
+
     def get_storage_info(self) -> dict:
         """Get information about current storage method."""
         info = {
@@ -256,7 +256,7 @@ class KeyringManager:
             "fallback_exists": os.path.exists(self._get_fallback_path()),
             "key_exists": self.key_exists()
         }
-        
+
         # Check which storage is active
         if KEYRING_AVAILABLE:
             try:
@@ -274,22 +274,22 @@ class KeyringManager:
                     info["active_storage"] = "none"
         else:
             info["active_storage"] = "fallback" if os.path.exists(self._get_fallback_path()) else "none"
-        
+
         return info
 
 
 class KeyringMigration:
     """Handles migration from old format (JSON with salt) to new format (keyring)."""
-    
+
     def __init__(self, config_path: str, keyring_manager: KeyringManager):
         self.config_path = config_path
         self.keyring_manager = keyring_manager
         self.logger = logging.getLogger(__name__)
-    
+
     def detect_old_format(self, config_data: dict) -> bool:
         """Detect if config data is in old format with salt key."""
         return "salt" in config_data and "xl_pass" in config_data
-    
+
     def migrate_from_old_format(self, config_data: dict) -> Tuple[bool, dict, str, Optional[str]]:
         """
         Migrate from old format to new format.
@@ -303,17 +303,17 @@ class KeyringMigration:
         try:
             if not self.detect_old_format(config_data):
                 return True, config_data, "Already in new format", None
-            
+
             self.logger.info("Starting migration from old format...")
-            
+
             # Extract the old encryption key
             old_key = config_data.get("salt")
             if not old_key:
                 return False, config_data, "No salt key found in old format", None
-            
+
             # Try to store key in keyring
             success, message = self.keyring_manager.store_key(old_key)
-            
+
             if success:
                 # Check if key was stored in keyring or fallback
                 if "keyring" in message.lower():
@@ -329,11 +329,11 @@ class KeyringMigration:
                 # Storage failed
                 self.logger.error(f"Migration failed: {message}")
                 return False, config_data, f"Migration failed: {message}", None
-            
+
         except Exception as e:
             self.logger.error(f"Migration failed: {e}")
             return False, config_data, f"Migration error: {str(e)}", None
-    
+
     def migrate_config_file(self, config_file_path: str) -> Tuple[bool, str]:
         """
         Migrate a configuration file from old to new format.
@@ -348,22 +348,22 @@ class KeyringMigration:
             # Read current config
             with open(config_file_path, 'r') as f:
                 config_data = json.load(f)
-            
+
             # Check if migration is needed
             if not self.detect_old_format(config_data):
                 return True, "Config already in new format"
-            
+
             # Perform migration
             success, new_config, message, old_key = self.migrate_from_old_format(config_data)
             if not success:
                 return False, message
-            
+
             # Write new config (may or may not include salt depending on keyring availability)
             with open(config_file_path, 'w') as f:
                 json.dump(new_config, f, indent=2)
-            
+
             return True, message
-            
+
         except Exception as e:
             self.logger.error(f"Config file migration failed: {e}")
             return False, f"Error: {str(e)}"

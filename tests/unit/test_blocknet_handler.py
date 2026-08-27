@@ -1,28 +1,29 @@
 """Tests for BlocknetHandler extra configuration options handling."""
 import os
-import sys
-import unittest
-from unittest.mock import patch, MagicMock, mock_open
-import tempfile
 import shutil
+import sys
+import tempfile
+import unittest
+from unittest.mock import MagicMock, mock_open, patch
+
 import requests
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from utilities.app_container import get_container
 from utilities.bin_handlers.blocknet_handler import (
     BlocknetHandler,
-    parse_conf_file,
-    save_conf_to_file,
-    get_blocknet_data_folder,
+    download_remote_conf,
     generate_random_string,
-    retrieve_xb_manifest,
+    get_blocknet_data_folder,
+    get_remote_file_size,
+    parse_conf_file,
     retrieve_remote_blocknet_conf,
     retrieve_remote_blocknet_xbridge_conf,
     retrieve_remote_conf,
-    download_remote_conf,
-    get_remote_file_size
+    retrieve_xb_manifest,
+    save_conf_to_file,
 )
-from utilities.app_container import get_container
 
 
 class TestExtraConfigHandling(unittest.TestCase):
@@ -591,7 +592,7 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
             {"rpcallowip": "192.168.1.1"},
             {"addnode": "node3.example.com:41412"}
         ]
-        
+
         # Mock all external dependencies
         with patch('utilities.bin_handlers.blocknet_handler.retrieve_xb_manifest'), \
                 patch('utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_conf'), \

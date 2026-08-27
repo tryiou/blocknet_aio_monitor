@@ -7,7 +7,7 @@ import sys
 
 # Early environment validation before Tk imports (issue #26: no console debugging)
 try:
-    from utilities.environment import validate_or_exit, show_startup_error
+    from utilities.environment import show_startup_error, validate_or_exit
 
     validate_or_exit()
 except SystemExit:
@@ -22,7 +22,7 @@ try:
     from PIL import Image
 except Exception as e:
     try:
-        from utilities.environment import show_startup_error, _current_py_mm, _tk_fix_commands
+        from utilities.environment import _current_py_mm, _tk_fix_commands, show_startup_error
 
         py_mm = _current_py_mm()
         tk_cmds = _tk_fix_commands()
@@ -47,11 +47,11 @@ try:
     from gui.blocknet_manager import BlocknetManager
     from gui.tooltip_manager import TooltipManager
     from gui.xlite_manager import XliteManager
-    from utilities.app_container import get_container
     from utilities import utils
+    from utilities.app_container import get_container
 except Exception as e:
     try:
-        from utilities.environment import show_startup_error, _current_py_mm
+        from utilities.environment import _current_py_mm, show_startup_error
 
         py_mm = _current_py_mm()
         details = (
@@ -95,7 +95,7 @@ urllib3_logger.setLevel(logging.WARNING)
 urllib3_logger = logging.getLogger('watchdog')
 urllib3_logger.setLevel(logging.WARNING)
 
-from gui.constants import tooltip_bg_color, MAIN_FRAMES_STICKY, TITLE_FRAMES_STICKY
+from gui.constants import MAIN_FRAMES_STICKY, TITLE_FRAMES_STICKY, tooltip_bg_color
 
 container = get_container()
 theme_path = container.theme_path
@@ -335,7 +335,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
                 self.xlite_manager.reverse_proxy.stop()
         except Exception as e:
             logger.error(f"Proxy shutdown error: {e}")
-            
+
         utils.terminate_all_threads()
         logger.info("Threads terminated.")
         os._exit(0)

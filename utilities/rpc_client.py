@@ -1,4 +1,5 @@
 import logging
+
 import requests
 
 logger = logging.getLogger(__name__)
@@ -9,7 +10,7 @@ class RPCClient:
     Unified RPC client for Blocknet and Xlite handlers.
     Provides connection pooling and consistent error handling.
     """
-    
+
     def __init__(self, rpc_user, rpc_password, rpc_port):
         """
         Initialize the RPC client.
@@ -23,7 +24,7 @@ class RPCClient:
         self.rpc_password = rpc_password
         self.rpc_port = rpc_port
         self.session = requests.Session()
-        
+
         # Configure connection pooling for better performance
         adapter = requests.adapters.HTTPAdapter(
             pool_connections=10,
@@ -52,7 +53,7 @@ class RPCClient:
             "params": params if params is not None else [],
             "id": 1,
         }
-        
+
         try:
             response = self.session.post(url, json=data, headers=headers, auth=auth, timeout=10)
             if response.status_code != 200:
@@ -63,7 +64,7 @@ class RPCClient:
                 return json_answer['result']
             else:
                 return None
-                
+
         except requests.RequestException:
             # Connection refused/failed - daemon not running (expected behavior)
             return None

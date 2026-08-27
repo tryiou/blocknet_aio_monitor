@@ -5,11 +5,12 @@ Tests the interaction between GUI components, frame managers,
 and managers to ensure proper integration.
 """
 
+import asyncio
 import os
 import sys
-import asyncio
 from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 # Add project root to path
@@ -41,7 +42,7 @@ class TestGUIIntegrationWorkflow:
             mock_container = MagicMock()
             mock_container.theme_path = '/mock/theme.json'
             mock_container.dirpath = '/mock/dirpath'
-            
+
             # Patch get_container to return mock
             with patch('utilities.app_container.get_container', return_value=mock_container):
                 # Create mock root

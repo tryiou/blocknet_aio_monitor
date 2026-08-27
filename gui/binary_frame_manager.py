@@ -2,7 +2,7 @@ import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import utilities.utils
-from gui.constants import HEADER_FRAMES_STICKY, CORNER_RADIUS, BINS_BUTTONS_WIDTH, BINS_FRAME_WIDTH
+from gui.constants import BINS_BUTTONS_WIDTH, BINS_FRAME_WIDTH, CORNER_RADIUS, HEADER_FRAMES_STICKY
 from gui.xbridge_bot_manager import XBridgeBotManager
 
 

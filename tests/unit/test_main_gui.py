@@ -3,15 +3,16 @@ import os
 import signal
 import sys
 import unittest
-from unittest.mock import MagicMock, patch, call, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import customtkinter as ctk
+
+import widgets_strings
 from blocknet_aio_monitor import Blocknet_AIO_GUI, run_gui
 from utilities.app_container import AppContainer
-import customtkinter as ctk
-import widgets_strings
 
 
 class TestBlocknetAioGui(unittest.TestCase):

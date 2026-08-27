@@ -145,7 +145,7 @@ class XliteHandler(BaseBinUtil):
         if data_folder is None:
             self.xlite_conf_local = {}
             return
-        
+
         data_folder = os.path.expandvars(os.path.expanduser(data_folder))
         file = "app-settings.json"
         file_path = os.path.join(data_folder, file)
@@ -165,7 +165,7 @@ class XliteHandler(BaseBinUtil):
         if daemon_data_path is None:
             self.xlite_daemon_confs_local = {}
             return
-        
+
         daemon_data_path = os.path.expandvars(os.path.expanduser(daemon_data_path))
         confs_folder = os.path.join(daemon_data_path, "settings")
 
@@ -260,10 +260,10 @@ class XliteHandler(BaseBinUtil):
         aio_folder = self.container.aio_folder
         if not aio_folder:
             raise ValueError("AIO folder not configured")
-            
+
         if not self.executable_path:
             raise ValueError("Executable path not configured")
-            
+
         self.download_binary(
             url,
             tmp_filename,

@@ -127,8 +127,8 @@ def check_tkinter() -> Tuple[bool, str, str]:
     sys_info = f"System: {platform.system()} {platform.machine()}"
     py_info = f"Python: {py_ver} ({sys.executable})"
     try:
-        import tkinter  # noqa: F401
         import _tkinter  # noqa: F401
+        import tkinter  # noqa: F401
         try:
             import tkinter as tk
 

@@ -6,8 +6,14 @@ import customtkinter as ctk
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
 from custom_tk_mods import ctkInputDialogMod
-from gui.constants import BUTTON_WIDTH, PANEL_CHECKBOXES_WIDTH, CORNER_RADIUS, HEADER_FRAMES_STICKY, \
-    CHECK_BOXES_STICKY, XLITE_FRAME_WIDTH
+from gui.constants import (
+    BUTTON_WIDTH,
+    CHECK_BOXES_STICKY,
+    CORNER_RADIUS,
+    HEADER_FRAMES_STICKY,
+    PANEL_CHECKBOXES_WIDTH,
+    XLITE_FRAME_WIDTH,
+)
 from utilities import utils
 
 logger = logging.getLogger(__name__)
@@ -122,13 +128,13 @@ class XliteFrameManager:
                 if encryption_key is None:
                     logger.error("Failed to generate encryption key")
                     return "break"
-                
+
                 # Encrypt password using keyring
                 salted_pass = utils.encrypt_password(password)
                 if salted_pass is None:
                     logger.error("Failed to encrypt password")
                     return "break"
-                
+
                 # Store only encrypted password in JSON (key is in keyring)
                 utils.save_cfg_json(key="xl_pass", data=salted_pass)
                 # Store the password in a variable

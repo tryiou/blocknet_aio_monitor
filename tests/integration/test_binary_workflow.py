@@ -6,21 +6,22 @@ including file system operations, extraction, and configuration.
 """
 
 import os
-import sys
-import tempfile
 import shutil
-from pathlib import Path
-from unittest.mock import patch, MagicMock, mock_open
-import pytest
-import zipfile
+import sys
 import tarfile
+import tempfile
+import zipfile
+from pathlib import Path
+from unittest.mock import MagicMock, mock_open, patch
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from utilities.bin_handlers.base_binutil import BaseBinUtil
 from gui.binary_manager import BinaryManager
 from tests.integration.helpers.test_helpers import IntegrationTestHelper, WorkflowSimulator
+from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 
 @pytest.mark.integration

@@ -6,6 +6,7 @@ import subprocess
 from typing import Optional
 
 import requests
+
 from utilities.app_container import AppContainer, get_container
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
@@ -16,22 +17,22 @@ class XliteReverseProxyHandler(BaseBinUtil):
 
     def __init__(self, container: Optional[AppContainer] = None):
         super().__init__("XliteReverseProxy", container)
-        
+
         self.release_url = self.container.xlite_reverse_proxy_release_url
         self.bin_name = self.container.xlite_reverse_proxy_bin
-        
+
         if not self.release_url or not self.bin_name:
             logger.error("Reverse proxy not configured for current system")
             self.executable_path = None
             return
-        
+
         # Extract version from URL (expecting format: .../vX.Y.Z/...)
         version = None
         if self.release_url:
             match = re.search(r'/v(\d+\.\d+\.\d+)/', self.release_url)
             if match:
                 version = match.group(1)
-        
+
         folder_name = f"xlite-reverse-proxy-{version}" if version else "xlite-reverse-proxy-unknown"
         aio_folder = self.container.aio_folder
         if aio_folder:
@@ -55,31 +56,31 @@ class XliteReverseProxyHandler(BaseBinUtil):
         if not self.release_url or not self.bin_name:
             logger.error("Proxy config missing")
             return
-        
+
         if self.port_occupied():
             logger.info("Port 11111 occupied (external proxy detected)")
             self.running_locally = False
             return
-        
+
         try:
             if not self.executable_path:
                 logger.error("Executable path not configured")
                 return
-            
+
             # Type assertion for mypy
             exe_path = self.executable_path  # type: ignore
-                
+
             # Create directory if needed
             bin_dir = os.path.dirname(exe_path)
             if bin_dir and not os.path.exists(bin_dir):
                 os.makedirs(bin_dir, exist_ok=True)
-            
+
             # Download if missing
             if not os.path.exists(exe_path):
                 if not self.download_standalone_binary(self.release_url, exe_path):
                     logger.error("Proxy download failed")
                     return
-            
+
             # Start proxy with dynlist=true argument
             self.process = subprocess.Popen(
                 [exe_path, '-dynlist=true'],
@@ -90,7 +91,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
             )
             self.running_locally = True
             logger.info(f"Proxy started (PID: {self.process.pid} in {bin_dir}) with dynlist=true")
-            
+
         except Exception as e:
             logger.error(f"Proxy start failed: {e}")
             self.running_locally = False
@@ -98,7 +99,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
     def stop(self):
         if not self.running_locally or not self.process:
             return
-        
+
         try:
             # Check if process is still running
             if self.process.poll() is not None:
@@ -106,11 +107,11 @@ class XliteReverseProxyHandler(BaseBinUtil):
                 self.process = None
                 self.running_locally = False
                 return
-            
+
             # Try graceful termination first
             logger.info(f"Terminating proxy (PID: {self.process.pid})")
             self.process.terminate()
-            
+
             # Wait for process to exit
             try:
                 self.process.wait(timeout=5)
@@ -127,7 +128,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
                 self.process.kill()
                 self.process.wait(timeout=2)
                 logger.info("Proxy killed forcefully")
-            
+
             # Verify process is actually dead
             if self.process.poll() is None:
                 logger.error("Proxy process still running after stop attempt")
@@ -137,7 +138,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
                     os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
                 except (ProcessLookupError, AttributeError):
                     pass
-            
+
         except Exception as e:
             logger.error(f"Proxy stop error: {e}")
             # Try emergency cleanup

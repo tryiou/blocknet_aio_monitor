@@ -6,13 +6,13 @@ import os
 import subprocess
 import sys
 import unittest
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utilities.bin_handlers.xlite_reverse_proxy_handler import XliteReverseProxyHandler
 from utilities.app_container import AppContainer
+from utilities.bin_handlers.xlite_reverse_proxy_handler import XliteReverseProxyHandler
 
 
 class TestXliteReverseProxyHandler(unittest.TestCase):

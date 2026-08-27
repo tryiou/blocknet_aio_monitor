@@ -2,12 +2,13 @@
 import json
 import os
 import tempfile
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import MagicMock, Mock, patch
+
 import customtkinter as ctk
+import pytest
+
 from utilities import utils
 from utilities.app_container import AppContainer
-
 
 # ============================================================================
 # FIXTURES
@@ -505,24 +506,24 @@ class TestProcessesCheck:
         mock_container.xlite_daemon_bin = "xlite_daemon"
         mock_container.system = "Linux"
         mock_get_container.return_value = mock_container
-    
+
         # Mock process iteration
         mock_proc1 = Mock()
         mock_proc1.info = {"pid": 100, "name": "blocknet", "status": "running"}
-    
+
         mock_proc2 = Mock()
         mock_proc2.info = {"pid": 200, "name": "blockdx", "status": "running"}
-    
+
         mock_proc3 = Mock()
         mock_proc3.info = {"pid": 300, "name": "xlite", "status": "running"}
-    
+
         mock_proc4 = Mock()
         mock_proc4.info = {"pid": 400, "name": "xlite_daemon", "status": "running"}
-    
+
         mock_psutil.process_iter.return_value = [mock_proc1, mock_proc2, mock_proc3, mock_proc4]
-    
+
         blocknet_pids, blockdx_pids, xlite_pids, xlite_daemon_pids = utils.processes_check()
-    
+
         assert blocknet_pids == [100]
         assert blockdx_pids == [200]
         assert xlite_pids == [300]
@@ -753,7 +754,7 @@ class TestKeyringBasedFunctions:
         # Generate a valid Fernet key
         from cryptography.fernet import Fernet
         valid_key = Fernet.generate_key()
-        
+
         password = "test_password"
         encrypted = utils.encrypt_password(password, valid_key)
 
@@ -777,17 +778,17 @@ class TestKeyringBasedFunctions:
     def test_decrypt_password_with_keyring(self, mock_load_key):
         """Test decrypting password using key from keyring"""
         password = "test_password"
-        
+
         # Generate a valid Fernet key
         from cryptography.fernet import Fernet
         valid_key = Fernet.generate_key()
-        
+
         # First encrypt
         cipher = Fernet(valid_key)
         encrypted = cipher.encrypt(password.encode()).decode()
-        
+
         mock_load_key.return_value = valid_key
-        
+
         # Now decrypt
         decrypted = utils.decrypt_password(encrypted)
 
@@ -798,15 +799,15 @@ class TestKeyringBasedFunctions:
     def test_decrypt_password_with_provided_key(self, mock_load_key):
         """Test decrypting password with provided key"""
         password = "test_password"
-        
+
         # Generate a valid Fernet key
         from cryptography.fernet import Fernet
         valid_key = Fernet.generate_key()
-        
+
         # First encrypt
         cipher = Fernet(valid_key)
         encrypted = cipher.encrypt(password.encode()).decode()
-        
+
         # Now decrypt
         decrypted = utils.decrypt_password(encrypted, valid_key)
 
@@ -913,7 +914,7 @@ class TestKeyringBasedFunctions:
                  patch('os.path.expandvars') as mock_expandvars, \
                  patch('os.path.expanduser') as mock_expanduser, \
                  patch('os.rename') as mock_rename:
-                
+
                 mock_expanduser.return_value = "/test/aio"
                 mock_expandvars.return_value = "/test/aio"
                 mock_exists.return_value = True

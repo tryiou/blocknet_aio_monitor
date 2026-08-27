@@ -7,12 +7,11 @@ Tests keyring-based encryption key storage with fallback mechanisms.
 import json
 import os
 import tempfile
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
 from utilities.keyring_manager import KeyringManager, KeyringMigration
-
 
 # Constants for test data
 TEST_KEY = "test_encryption_key_123"
@@ -340,7 +339,7 @@ class TestKeyringManager:
             mock_keyring.get_password.side_effect = Exception("Keyring error")
             mock_keyring.set_password.side_effect = Exception("Keyring error")
             mock_keyring.delete_password.side_effect = Exception("Keyring error")
-            
+
             # Mock _save_fallback, _load_fallback, or _delete_fallback to raise exception
             with patch.object(manager, method_to_patch, side_effect=Exception("Outer error")):
                 result, message = setup_func(manager, TEST_KEY)

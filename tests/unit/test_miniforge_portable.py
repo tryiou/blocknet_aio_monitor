@@ -1,11 +1,12 @@
 """Tests for utilities/miniforge_portable.py"""
 import subprocess
 from pathlib import Path
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, call, patch
+
 import pytest
 import requests
-from utilities.miniforge_portable import PortablePythonInstaller
 
+from utilities.miniforge_portable import PortablePythonInstaller
 
 # ============================================================================
 # FIXTURES

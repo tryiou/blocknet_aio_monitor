@@ -6,20 +6,21 @@ unit and integration tests, ensuring proper isolation from the production
 environment (~/.AIO_Blocknet or ~/.config/...).
 """
 
-import os
-import tempfile
-import shutil
-import pytest
-from contextlib import AbstractContextManager, ExitStack, contextmanager
-from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Optional
-from unittest.mock import patch, MagicMock, Mock
 import json
-import yaml
-import customtkinter as ctk
+import os
+import shutil
 
 # Add project root to path
 import sys
+import tempfile
+from contextlib import AbstractContextManager, ExitStack, contextmanager
+from pathlib import Path
+from typing import Any, Callable, Iterable, Iterator, Optional
+from unittest.mock import MagicMock, Mock, patch
+
+import customtkinter as ctk
+import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -293,7 +294,7 @@ def mock_gui_environment():
     mock_container = MagicMock()
     mock_container.theme_path = '/mock/theme.json'
     mock_container.dirpath = '/mock/dirpath'
-    
+
     with patch('customtkinter.CTk') as mock_ctk, \
             patch('PIL.Image.open') as mock_image, \
             patch('utilities.app_container.get_container', return_value=mock_container):
@@ -413,7 +414,7 @@ def mock_targeted_file_ops():
     """Targeted file operation mocking - only for specific paths."""
     def mock_exists_side_effect(path):
         return str(path) in ['/test/aio', '/test/aio/blocknet', '/test/aio/blockdx', '/test/aio/xlite']
-    
+
     with patch('os.path.exists', side_effect=mock_exists_side_effect):
         yield
 
@@ -428,7 +429,7 @@ def unit_test_mocks():
         yield mock_popen, mock_psutil, mock_listdir
 
 
-@pytest.fixture 
+@pytest.fixture
 def integration_test_mocks():
     """Mocks suitable for integration tests - minimal mocking, real operations."""
     # Only essential mocking, use real file systems where possible
@@ -451,7 +452,7 @@ def binary_manager_test_setup(mock_app_container_base, mock_file_operations_safe
 def config_manager_test_setup(temp_workspace):
     """Setup for config manager tests using real file operations."""
     from unittest.mock import patch
-    
+
     # Allow real file operations but mock ConfigManager methods
     with patch('utilities.config_manager.ConfigManager._get_aio_path', return_value=temp_workspace):
         yield
@@ -546,7 +547,7 @@ def utils_test_container(temp_workspace):
     return container
 
 
-@pytest.fixture 
+@pytest.fixture
 def blocknet_handler_container(temp_workspace):
     """Container with extra options for BlocknetHandler tests"""
     container = MagicMock()
@@ -567,21 +568,21 @@ def gui_manager_root():
     root = MagicMock()
     root.time_disable_button = 3000
     root.tooltip_manager = MagicMock()
-    
+
     # Add all manager mocks with utility attribute
     managers = ['blocknet_manager', 'blockdx_manager', 'xlite_manager']
     for manager_name in managers:
         manager = MagicMock()
         manager.utility = MagicMock()
         setattr(root, manager_name, manager)
-    
+
     # Add common image mocks
-    image_attrs = ['install_greyed_img', 'install_img', 'delete_greyed_img', 
+    image_attrs = ['install_greyed_img', 'install_img', 'delete_greyed_img',
                    'delete_img', 'stop_greyed_img', 'stop_img',
                    'start_greyed_img', 'start_img']
     for img_attr in image_attrs:
         setattr(root, img_attr, MagicMock())
-    
+
     return root
 
 

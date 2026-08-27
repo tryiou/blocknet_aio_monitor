@@ -6,13 +6,14 @@ Blocknet Core, Block-DX, and XLite processes.
 """
 
 import os
+import signal
+import subprocess
 import sys
 import time
-import signal
 from pathlib import Path
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
+
 import pytest
-import subprocess
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

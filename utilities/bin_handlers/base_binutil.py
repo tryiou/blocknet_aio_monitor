@@ -9,7 +9,7 @@ from typing import Optional
 import psutil
 import requests
 
-from utilities.app_container import get_container, AppContainer
+from utilities.app_container import AppContainer, get_container
 
 # from utilities.helper_util import UtilityHelper
 logger = logging.getLogger(__name__)
@@ -270,7 +270,7 @@ class BaseBinUtil:
                     logger.warning(f"Process {name} PID {pid}: Timeout expired, killed process")
                 else:
                     logger.warning(f"Process {name} PID {pid}: {str(e)}")
-    
+
     def download_standalone_binary(self, url: str, target_path: str) -> bool:
         """Download non-archive binaries with security checks"""
         temp_path = f"{target_path}.tmp"

@@ -1,15 +1,15 @@
 import errno
 import logging
 import os
-import shutil
 import queue
+import shutil
 import threading
+import time
 from pathlib import Path
 from threading import Thread
-import time
 from typing import Optional
-import customtkinter as ctk
 
+import customtkinter as ctk
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -20,8 +20,8 @@ except ImportError:
 
 import widgets_strings
 from gui.binary_frame_manager import BinaryFrameManager
-from utilities.app_container import get_container
 from utilities import utils
+from utilities.app_container import get_container
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class BinaryFileHandler(FileSystemEventHandler):
         time_since_last = time.time() - self.last_run
         delay_seconds = max(0, self.max_delay - time_since_last)
         delay_ms = int(delay_seconds * 1000)
-        
+
         self.scheduled = True
         # Use thread-safe queue instead of direct after() call
         self.binary_manager.file_change_queue.put(("delayed_update", delay_ms))
@@ -248,8 +248,8 @@ class BinaryManager:
         self.root_gui.after(0, self.update_all_binary_buttons)
         self.root_gui.after(0, self.update_xbridge_bots_buttons)
 
-    def _start_or_close_binary(self, process_running: bool, stop_func: callable, 
-                              start_func: callable, button: ctk.CTkButton, 
+    def _start_or_close_binary(self, process_running: bool, stop_func: callable,
+                              start_func: callable, button: ctk.CTkButton,
                               disable_flag: str, app_name: str = "", handler=None) -> None:
         """
         Starts or stops a binary process and updates UI state accordingly.
@@ -581,10 +581,10 @@ class BinaryManager:
         current_mtime = self.get_directory_mtime()
         if current_mtime == self.last_directory_mtime:
             return
-            
+
         self.last_directory_mtime = current_mtime
         is_darwin = self.container.system == "Darwin"
-        
+
         apps_info = {
             "blocknet": {
                 "version": self._prune_version(self.root_gui.blocknet_manager.version),

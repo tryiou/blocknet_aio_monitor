@@ -6,9 +6,10 @@ from unittest.mock import MagicMock, patch
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import customtkinter as ctk
+
 from gui.xlite_manager import XliteManager
 from utilities.app_container import AppContainer
-import customtkinter as ctk
 
 
 class TestXliteManager:

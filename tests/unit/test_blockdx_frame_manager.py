@@ -2,13 +2,13 @@
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from gui.blockdx_frame_manager import BlockDxFrameManager
 import widgets_strings
+from gui.blockdx_frame_manager import BlockDxFrameManager
 from utilities.app_container import AppContainer
 
 

@@ -1,11 +1,12 @@
 """Tests for gui/blocknet_frame_manager.py"""
-from unittest.mock import Mock, patch, MagicMock
-import pytest
-import customtkinter as ctk
-from gui.blocknet_frame_manager import BlocknetCoreFrameManager
-from gui import constants
-import widgets_strings
+from unittest.mock import MagicMock, Mock, patch
 
+import customtkinter as ctk
+import pytest
+
+import widgets_strings
+from gui import constants
+from gui.blocknet_frame_manager import BlocknetCoreFrameManager
 
 # ============================================================================
 # FIXTURES
@@ -335,7 +336,7 @@ class TestBlocknetCoreFrameManager:
         mock_container.conf_data.blocknet_default_paths = blocknet_default_paths if blocknet_default_paths is not None else {}
         mock_container.system = system if system is not None else "Linux"
         mock_get_container.return_value = mock_container
-        
+
         mock_parent.root_gui.custom_path = custom_path
         if expanduser_return is not None:
             mock_expanduser.return_value = expanduser_return

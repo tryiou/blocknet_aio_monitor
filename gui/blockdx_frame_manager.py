@@ -4,8 +4,13 @@ import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
-from gui.constants import PANEL_CHECKBOXES_WIDTH, HEADER_FRAMES_STICKY, CORNER_RADIUS, CHECK_BOXES_STICKY, \
-    BLOCKDX_FRAME_WIDTH
+from gui.constants import (
+    BLOCKDX_FRAME_WIDTH,
+    CHECK_BOXES_STICKY,
+    CORNER_RADIUS,
+    HEADER_FRAMES_STICKY,
+    PANEL_CHECKBOXES_WIDTH,
+)
 from utilities.app_container import get_container
 
 

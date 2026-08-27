@@ -10,23 +10,23 @@ Key improvements:
 
 import os
 import sys
+import tarfile
 import tempfile
 import unittest
 import zipfile
-import tarfile
-from unittest.mock import patch, MagicMock, mock_open, call
+from unittest.mock import MagicMock, call, mock_open, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import pytest
-import requests
-import psutil
 import subprocess
 
-from utilities.bin_handlers.base_binutil import BaseBinUtil
-from utilities.app_container import AppContainer, get_container
+import psutil
+import pytest
+import requests
 
+from utilities.app_container import AppContainer, get_container
+from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 # =============================================================================
 # FIXTURES & TEST UTILITIES
@@ -75,38 +75,38 @@ class BaseBinUtilTestCase(unittest.TestCase):
 def mock_container():
     """Create a mock AppContainer for testing."""
     container = MagicMock()
-    
+
     # Set up common properties
     container.system = "Linux"
     container.machine = "x86_64"
     container.aio_folder = "/test/aio_folder"
     container.theme_path = "/test/theme.json"
     container.dirpath = "/test/app_dir"
-    
+
     # Binary configurations
     container.blocknet_bin = "blocknetd"
     container.blockdx_bin = "blockdx"
     container.xlite_bin = "xlite"
     container.xlite_daemon_bin = "xlited"
     container.xlite_reverse_proxy_bin = "xlite-reverse-proxy"
-    
+
     # Release URLs
     container.blocknet_release_url = "http://test.com/blocknet.tar.gz"
     container.blockdx_release_url = "http://test.com/blockdx.tar.gz"
     container.xlite_release_url = "http://test.com/xlite.tar.gz"
     container.xlite_reverse_proxy_release_url = "http://test.com/xlite-reverse-proxy.tar.gz"
-    
+
     # Current paths
     container.blockdx_curpath = "BLOCK-DX-1.0.0"
     container.xlite_curpath = "XLite-1.0.0"
-    
+
     # Volume names (macOS specific)
     container.blockdx_volume_name = None
     container.xlite_volume_name = None
-    
+
     # Mock conf_data access
     container.conf_data = MagicMock()
-    
+
     return container
 
 
@@ -114,38 +114,38 @@ def mock_container():
 def mock_container_darwin():
     """Create a mock AppContainer for Darwin."""
     container = MagicMock()
-    
+
     # macOS-specific configuration
     container.system = "Darwin"
     container.machine = "arm64"
     container.aio_folder = "/test/aio_folder"
     container.theme_path = "/test/theme.json"
     container.dirpath = "/test/app_dir"
-    
+
     # Binary configurations
     container.blocknet_bin = "Blocknet"
     container.blockdx_bin = "Block DX"
     container.xlite_bin = "XLite"
     container.xlite_daemon_bin = "XLite Daemon"
     container.xlite_reverse_proxy_bin = "xlite-reverse-proxy"
-    
+
     # Release URLs
     container.blocknet_release_url = "http://test.com/Blocknet.dmg"
     container.blockdx_release_url = "http://test.com/Block-DX-1.0.0.dmg"
     container.xlite_release_url = "http://test.com/XLite-1.0.0.dmg"
     container.xlite_reverse_proxy_release_url = "http://test.com/xlite-reverse-proxy.dmg"
-    
+
     # Current paths
     container.blockdx_curpath = "BLOCK-DX-1.0.0"
     container.xlite_curpath = "XLite-1.0.0"
-    
+
     # Volume names
     container.blockdx_volume_name = "Block DX 1.0.0"
     container.xlite_volume_name = "XLite 1.0.0"
-    
+
     # Mock conf_data access
     container.conf_data = MagicMock()
-    
+
     return container
 
 
@@ -247,10 +247,10 @@ class TestDownload(BaseBinUtilTestCase):
         mock_container.machine = "arm64"
         mock_container.aio_folder = "/test/aio_folder"
         mock_container.conf_data = MagicMock()
-        
+
         # Create a base_binutil with Darwin container
         darwin_binutil = BaseBinUtil("test_app", mock_container)
-        
+
         mock_get.return_value = self.create_mock_response()
         mock_getsize.return_value = 1000
 
@@ -770,7 +770,7 @@ class TestDmgHandling(BaseBinUtilTestCase):
         mock_container = MagicMock()
         mock_container.system = "Darwin"
         darwin_binutil = BaseBinUtil("test_app", mock_container)
-        
+
         mock_ismount.return_value = True
         darwin_binutil.dmg_mount_path = "/Volumes/test"
         darwin_binutil.handle_dmg("mount")
@@ -785,7 +785,7 @@ class TestDmgHandling(BaseBinUtilTestCase):
         mock_container = MagicMock()
         mock_container.system = "Darwin"
         darwin_binutil = BaseBinUtil("test_app", mock_container)
-        
+
         mock_ismount.return_value = False
         darwin_binutil.dmg_mount_path = "/Volumes/test"
         darwin_binutil.executable_path = "/path/to/app.dmg"
@@ -805,7 +805,7 @@ class TestDmgHandling(BaseBinUtilTestCase):
         mock_container = MagicMock()
         mock_container.system = "Darwin"
         darwin_binutil = BaseBinUtil("test_app", mock_container)
-        
+
         mock_ismount.return_value = True
         darwin_binutil.dmg_mount_path = "/Volumes/test"
 
@@ -823,7 +823,7 @@ class TestDmgHandling(BaseBinUtilTestCase):
         mock_container = MagicMock()
         mock_container.system = "Darwin"
         darwin_binutil = BaseBinUtil("test_app", mock_container)
-        
+
         mock_ismount.return_value = False
         darwin_binutil.dmg_mount_path = "/Volumes/test"
 

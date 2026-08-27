@@ -4,12 +4,12 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+from utilities.app_container import AppContainer, _get_value_from_config, get_container
 from utilities.config_manager import ConfigManager
-from utilities.app_container import _get_value_from_config, AppContainer, get_container
 
 
 class TestDarwinArm64Config(unittest.TestCase):

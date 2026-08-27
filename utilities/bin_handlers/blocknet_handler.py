@@ -7,11 +7,11 @@ import string
 import threading
 import time
 import zipfile
-
-import requests
 from typing import Optional
 
-from utilities.app_container import get_container, AppContainer
+import requests
+
+from utilities.app_container import AppContainer, get_container
 from utilities.rpc_client import RPCClient
 
 logger = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ class BlocknetHandler(BaseBinUtil):
             logger.error("Data folder not configured")
             self.blocknet_conf_local = {}
             return
-            
+
         file = "blocknet.conf"
         conf_file_path = os.path.join(self.data_folder, file)
         if os.path.exists(conf_file_path):
@@ -138,7 +138,7 @@ class BlocknetHandler(BaseBinUtil):
             logger.error("Data folder not configured")
             self.xbridge_conf_local = {}
             return
-            
+
         conf_file_path = os.path.join(self.data_folder, "xbridge.conf")
         if os.path.exists(conf_file_path):
             self.xbridge_conf_local = parse_conf_file(file_path=conf_file_path)
@@ -261,7 +261,7 @@ class BlocknetHandler(BaseBinUtil):
         if not self.xb_manifest:
             logger.error("XB manifest not available")
             return
-            
+
         latest_version = None
         highest_version_id = None
 
@@ -290,7 +290,7 @@ class BlocknetHandler(BaseBinUtil):
 
         if self.xbridge_conf_local is None:
             self.xbridge_conf_local = {}
-        
+
         if 'Main' not in self.xbridge_conf_local:
             self.xbridge_conf_local['Main'] = self.container.conf_data.base_xbridge_conf
 
@@ -327,15 +327,15 @@ class BlocknetHandler(BaseBinUtil):
                 logger.info(f"section: {section}, options: {options}")
                 for key, value in options.items():
                     if key == 'Username':
-                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and 
+                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and
                             'rpcuser' in self.blocknet_conf_local['global']):
                             self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcuser'])
                     elif key == 'Password':
-                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and 
+                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and
                             'rpcpassword' in self.blocknet_conf_local['global']):
                             self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcpassword'])
                     elif key == 'Port':
-                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and 
+                        if (self.blocknet_conf_local and 'global' in self.blocknet_conf_local and
                             'rpcport' in self.blocknet_conf_local['global']):
                             self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local['global']['rpcport'])
                     else:

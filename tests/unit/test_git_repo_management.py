@@ -13,13 +13,12 @@ import pygit2
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utilities.git_repo_management import (
+    ExecutionError,
+    GitRepoManagement,
     GitRepository,
     VirtualEnvironment,
-    GitRepoManagement,
-    ExecutionError,
-    run_command
+    run_command,
 )
-
 
 # ==================== FIXTURES & UTILITIES ====================
 

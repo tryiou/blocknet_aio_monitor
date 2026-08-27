@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Optional
 
-from utilities.app_container import get_container, AppContainer
+from utilities.app_container import AppContainer, get_container
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 logger = logging.getLogger(__name__)
@@ -158,10 +158,10 @@ class BlockDXHandler(BaseBinUtil):
         aio_folder = self.container.aio_folder
         if not aio_folder:
             raise ValueError("AIO folder not configured")
-            
+
         if not self.executable_path:
             raise ValueError("Executable path not configured")
-            
+
         # Type assertion for mypy
         exe_path = self.executable_path  # type: ignore
         self.download_binary(

@@ -1,8 +1,8 @@
+import asyncio
 import os
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
-import asyncio
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

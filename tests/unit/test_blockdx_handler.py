@@ -3,13 +3,13 @@ import os
 import subprocess
 import sys
 import unittest
-from unittest.mock import MagicMock, patch, call, mock_open
+from unittest.mock import MagicMock, call, mock_open, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utilities.bin_handlers.blockdx_handler import BlockDXHandler
 from utilities.app_container import AppContainer
+from utilities.bin_handlers.blockdx_handler import BlockDXHandler
 
 
 class TestBlockDXHandler(unittest.TestCase):
@@ -22,13 +22,13 @@ class TestBlockDXHandler(unittest.TestCase):
         self.mock_container.system = "Linux"
         self.mock_container.machine = "x86_64"
         self.mock_container.aio_folder = "/mock/aio_folder"
-        
+
         # BlockDX specific configurations
         self.mock_container.blockdx_volume_name = "Block DX"
         self.mock_container.blockdx_release_url = "http://mock.com/blockdx/v1.0.0/blockdx.dmg"
         self.mock_container.blockdx_curpath = "BLOCK-DX-1.0.0"
         self.mock_container.blockdx_bin = "block-dx"
-        
+
         # Binary path configurations
         self.mock_container.conf_data = MagicMock()
         self.mock_container.conf_data.blockdx_bin_path = {
@@ -89,7 +89,7 @@ class TestBlockDXHandler(unittest.TestCase):
             'utilities.bin_handlers.blockdx_handler.get_container',
             return_value=self.mock_container
         )
-        
+
         # BaseBinUtil methods
         self.patcher_base_binutil_subprocess_Popen = patch(
             'utilities.bin_handlers.base_binutil.subprocess.Popen'
@@ -146,7 +146,7 @@ class TestBlockDXHandler(unittest.TestCase):
         self.mock_base_binutil_handle_dmg = self.patcher_base_binutil_handle_dmg.start()
         self.mock_base_binutil_sys = self.patcher_base_binutil_sys.start()
         self.mock_base_binutil_sys.platform = "linux"
-        
+
         # Start the get_container patcher
         self.mock_get_container = self.patcher_get_container.start()
 
@@ -157,7 +157,7 @@ class TestBlockDXHandler(unittest.TestCase):
             self.patcher_os_path_exists, self.patcher_os_makedirs, self.patcher_os_chmod,
             self.patcher_os_path_join, self.patcher_os_path_normpath,
             self.patcher_os_path_expanduser, self.patcher_os_path_expandvars,
-            self.patcher_open, 
+            self.patcher_open,
             self.patcher_os_path_getsize, self.patcher_os_name, self.patcher_sys_platform,
             self.patcher_requests_get, self.patcher_json_load, self.patcher_psutil_process,
             self.patcher_os_ismount, self.patcher_get_container, self.patcher_base_binutil_subprocess_Popen,

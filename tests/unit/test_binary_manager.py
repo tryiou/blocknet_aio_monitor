@@ -4,17 +4,18 @@ import queue
 import sys
 import time
 import unittest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
 
 from watchdog.events import FileSystemEvent
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from gui.binary_manager import BinaryManager, BinaryFileHandler
-from utilities import utils
-import widgets_strings
 import customtkinter as ctk
+
+import widgets_strings
+from gui.binary_manager import BinaryFileHandler, BinaryManager
+from utilities import utils
 
 
 class TestBinaryManager(unittest.TestCase):

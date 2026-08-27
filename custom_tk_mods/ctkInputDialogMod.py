@@ -1,10 +1,6 @@
-from typing import Union, Tuple, Optional
+from typing import Optional, Tuple, Union
 
-from customtkinter import CTkButton
-from customtkinter import CTkEntry
-from customtkinter import CTkLabel
-from customtkinter import CTkToplevel
-from customtkinter import ThemeManager
+from customtkinter import CTkButton, CTkEntry, CTkLabel, CTkToplevel, ThemeManager
 
 
 class CTkInputDialog(CTkToplevel):

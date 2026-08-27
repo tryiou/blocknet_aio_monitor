@@ -5,19 +5,20 @@ Tests the complete workflow of RPC communication between
 Blocknet Core, Block-DX, and XLite.
 """
 
+import json
 import os
 import sys
-import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
 import requests
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from utilities.rpc_client import RPCClient
 from tests.integration.helpers.test_helpers import IntegrationTestHelper
+from utilities.rpc_client import RPCClient
 
 
 @pytest.mark.integration

@@ -205,7 +205,7 @@ class ConfigManager:
             self.aio_folder = self._get_aio_path()
         config_file = Path(self.aio_folder) / "aio_config.yaml"
 
-        # Start with template as base config                                                                                                                                                 
+        # Start with template as base config
         self.config = self.config_template.copy()
 
         if config_file.exists():
@@ -213,14 +213,14 @@ class ConfigManager:
                 loaded_config = yaml.safe_load(f) or {}
             logger.info(f"Loaded existing config from {config_file}")
 
-            # FOR SYSTEM-SPECIFIC KEYS: Ensure current OS/Arch value is set                                                                                                                  
+            # FOR SYSTEM-SPECIFIC KEYS: Ensure current OS/Arch value is set
             for key in SYSTEM_SPECIFIC_KEYS:
                 if key in loaded_config:
-                    # Preserve existing value for current system                                                                                                                             
+                    # Preserve existing value for current system
                     current_value = loaded_config[key]
                     self._set_system_value(key, current_value)
                 else:
-                    # Add missing key with default for current OS/Arch                                                                                                                       
+                    # Add missing key with default for current OS/Arch
                     default_value = self._get_system_value(key)
                     self._set_system_value(key, default_value)
 
@@ -273,25 +273,25 @@ class ConfigManager:
     def _set_system_value(self, key, value):
         """Set system-specific value in memory config, auto-repairing corrupted values"""
         current_system_key = (self.system, self.machine)
-        
+
         if key in SYSTEM_SPECIFIC_KEYS:
             # If value is None or empty string, skip and keep template default (avoids persisting null/empty)
             if value is None or (isinstance(value, str) and not value.strip()):
                 return
-            
+
             # Check if the CURRENT config value is corrupted, not the new value
             current_value = self.config[key]
-            
+
             # Handle nested dict corruption in the current config
             if isinstance(current_value, dict) and any(isinstance(v, dict) for v in current_value.values()):
                 logger.warning(f"Corrupted nested config for {key}, restoring from template")
                 return
-            
+
             # Handle string that was supposed to be a list (YAML corruption)
             if isinstance(value, str) and isinstance(current_value, (list, tuple)):
                 logger.warning(f"Corrupted config for {key}, restoring from template")
                 return
-            
+
             if isinstance(self.config[key], dict):
                 if current_system_key in self.config[key]:
                     self.config[key][current_system_key] = value

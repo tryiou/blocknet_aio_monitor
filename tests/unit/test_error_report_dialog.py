@@ -1,11 +1,11 @@
 import os
 import platform
-from unittest.mock import MagicMock, patch, mock_open, call
-
 import sys
+from unittest.mock import MagicMock, call, mock_open, patch
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from gui.error_report_dialog import build_report, show_error_report, ErrorReportDialog
+from gui.error_report_dialog import ErrorReportDialog, build_report, show_error_report
 
 
 def test_build_report_contains_fields():
@@ -67,8 +67,9 @@ def test_show_error_report_schedules_dialog():
 
 
 def test_base_binutil_get_stderr_snippet(tmp_path):
-    from utilities.bin_handlers.base_binutil import BaseBinUtil
     from unittest.mock import MagicMock
+
+    from utilities.bin_handlers.base_binutil import BaseBinUtil
 
     mock_container = MagicMock()
     mock_container.aio_folder = str(tmp_path)

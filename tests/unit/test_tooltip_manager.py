@@ -1,9 +1,10 @@
 """Tests for TooltipManager class."""
-import pytest
 from unittest.mock import MagicMock, patch
 
-from gui.tooltip_manager import TooltipManager
 import CTkToolTip
+import pytest
+
+from gui.tooltip_manager import TooltipManager
 
 # Test data constants
 TEST_MESSAGE = "Test Message"
@@ -113,13 +114,13 @@ class TestTooltipManager:
         other_widget = MagicMock()
         other_tooltip = MagicMock()
         manager.tooltips[other_widget] = other_tooltip
-        
+
         # Add a tooltip for the mock_widget first
         existing_tooltip = MagicMock()
         manager.tooltips[mock_widget] = existing_tooltip
-        
+
         manager.update_tooltip(mock_widget, UPDATED_MESSAGE)
-        
+
         mock_configure.assert_called_once_with(manager.tooltips[mock_widget], UPDATED_MESSAGE)
         assert manager.tooltips[other_widget] == other_tooltip
 
