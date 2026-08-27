@@ -644,10 +644,7 @@ def parse_conf_file(file_path=None, input_string=None):
 
 def get_blocknet_data_folder(custom_path: str | None = None):
     container = get_container()
-    if custom_path:
-        path = custom_path
-    else:
-        path = container.conf_data.blocknet_default_paths.get(container.system)
+    path = custom_path or container.conf_data.blocknet_default_paths.get(container.system)
     if path:
         expanded_path = os.path.expandvars(os.path.expanduser(path))
         return os.path.normpath(expanded_path)

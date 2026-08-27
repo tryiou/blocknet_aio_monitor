@@ -907,7 +907,8 @@ class TestKeyringBasedFunctions:
         mock_container.aio_folder = "/test/aio"
 
         with (
-            patch("utilities.utils.get_container", return_value=mock_container), patch("os.path.exists") as mock_exists,
+            patch("utilities.utils.get_container", return_value=mock_container),
+            patch("os.path.exists") as mock_exists,
             patch("os.path.expandvars") as mock_expandvars,
             patch("os.path.expanduser") as mock_expanduser,
             patch("os.rename") as mock_rename,

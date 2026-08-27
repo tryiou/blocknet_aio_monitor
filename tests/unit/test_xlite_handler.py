@@ -268,7 +268,9 @@ class TestXliteHandler(unittest.TestCase):
             handler.check_xlite_daemon_confs_sequence(silent=True)
 
             mock_rpc.assert_called_once_with(
-                rpc_user="user", rpc_password="pass", rpc_port=12345  # noqa: S106 # test fixture
+                rpc_user="user",
+                rpc_password="pass",  # noqa: S106 # test fixture
+                rpc_port=12345,
             )
             self.assertIn("test", handler.coins_rpc)
 

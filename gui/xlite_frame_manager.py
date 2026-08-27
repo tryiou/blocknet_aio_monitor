@@ -207,8 +207,7 @@ class XliteFrameManager:
     def update_xlite_daemon_valid_config_checkbox(self):
         # xlite_daemon_valid_config_checkbox_state
         valid_config = bool(
-            self.parent.utility.xlite_daemon_confs_local
-            and "master" in self.parent.utility.xlite_daemon_confs_local
+            self.parent.utility.xlite_daemon_confs_local and "master" in self.parent.utility.xlite_daemon_confs_local
         )
         self.daemon_valid_config_checkbox_state.set(valid_config)
         # self.xlite_daemon_valid_config_checkbox_string_var

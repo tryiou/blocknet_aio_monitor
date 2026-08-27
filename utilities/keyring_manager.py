@@ -135,10 +135,7 @@ class KeyringManager:
         """
         try:
             # Convert key to string if bytes
-            if isinstance(key, bytes):
-                key_str = key.decode("utf-8")
-            else:
-                key_str = key
+            key_str = key.decode("utf-8") if isinstance(key, bytes) else key
 
             # Validate key format (should be base64 encoded)
             try:

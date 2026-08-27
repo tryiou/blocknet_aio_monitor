@@ -25,10 +25,7 @@ class BlocknetManager:
 
     def check_config(self):
         use_xlite = bool(self.root_gui.xlite_manager.utility.xlite_daemon_confs_local)
-        if use_xlite:
-            xlite_daemon_conf = self.root_gui.xlite_manager.utility.xlite_daemon_confs_local
-        else:
-            xlite_daemon_conf = None
+        xlite_daemon_conf = self.root_gui.xlite_manager.utility.xlite_daemon_confs_local if use_xlite else None
         self.utility.compare_and_update_local_conf(xlite_daemon_conf)
 
     def update_status_blocknet_core(self):

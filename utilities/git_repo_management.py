@@ -51,9 +51,7 @@ def run_command(cmd_list: list[str], cwd: Path | None = None, timeout: int = 300
         ExecutionError: On command failure or timeout
     """
     try:
-        process = subprocess.run(
-            cmd_list, check=False, cwd=cwd, capture_output=True, text=True, timeout=timeout
-        )
+        process = subprocess.run(cmd_list, check=False, cwd=cwd, capture_output=True, text=True, timeout=timeout)
         return process.returncode, process.stdout, process.stderr
     except subprocess.TimeoutExpired as e:
         raise ExecutionError(f"Command timed out after {timeout} seconds: {' '.join(cmd_list)}") from e

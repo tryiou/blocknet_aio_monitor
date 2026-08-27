@@ -115,9 +115,7 @@ class TestPortablePythonInstaller:
                 with patch("builtins.open", create=True):
                     installer.download("http://example.com/installer.sh", dest)
 
-                mock_get.assert_called_once_with(
-                    "http://example.com/installer.sh", stream=True, timeout=30
-                )
+                mock_get.assert_called_once_with("http://example.com/installer.sh", stream=True, timeout=30)
                 mock_download_response.raise_for_status.assert_called_once()
 
     @patch("utilities.miniforge_portable.requests.get")

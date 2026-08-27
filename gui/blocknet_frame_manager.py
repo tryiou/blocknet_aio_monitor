@@ -219,11 +219,7 @@ class BlocknetCoreFrameManager:
                 # Path doesn't exist, prune latest folder
                 if expanded_path:
                     parent_dir = os.path.dirname(expanded_path)
-                    # Check if parent directory exists
-                    if os.path.exists(parent_dir):
-                        initialdir = parent_dir
-                    else:
-                        initialdir = None  # fallback if parent doesn't exist
+                    initialdir = parent_dir if os.path.exists(parent_dir) else None  # fallback if parent doesn't exist
                 else:
                     initialdir = None
         else:

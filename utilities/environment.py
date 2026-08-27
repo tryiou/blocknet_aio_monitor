@@ -319,8 +319,7 @@ def show_startup_error(title: str, message: str, details: str = "") -> None:
             try:
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(
-                        full_msg
-                        + f"\n\nPython: {_current_py_version()} {platform.system()} "
+                        full_msg + f"\n\nPython: {_current_py_version()} {platform.system()} "
                         f"{platform.machine()} ({sys.executable})\n"
                     )
                     f.write(f"Report: {GITHUB_ISSUE_URL}\n")
