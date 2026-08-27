@@ -170,7 +170,7 @@ class TestDarwinArm64Config(unittest.TestCase):
             self.assertEqual(mgr.container.blockdx_release_url, "https://example.com/BLOCK-DX-1.9.5-mac.dmg")
             # If bug existed, darwin_file would be "" and _is_item_match would incorrectly match every file
             # We test that scan doesn't mark everything as found when file is empty
-            from gui.binary_manager import BinaryManager as BM
+            from gui.binary_manager import BinaryManager as BinaryManagerAlias  # noqa: N817
 
             # Ensure _is_item_match with empty darwin_file would be bug, but we have correct file
             app_info = {"is_dir": False, "darwin_file": "BLOCK-DX-1.9.5-mac.dmg", "dir_prefix": "BLOCK-DX-"}

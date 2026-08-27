@@ -140,7 +140,8 @@ class BaseBinUtil:
             self._stderr_log_path = None
             self._stderr_file_handle = None
 
-        # If we have a file, use it; otherwise fall back to DEVNULL (preserve old behavior for tests where folder is mocked)
+        # If we have a file, use it; otherwise fall back to DEVNULL
+        # (preserve old behavior for tests where folder is mocked)
         stderr_dest = stderr_file if stderr_file is not None else subprocess.DEVNULL
 
         # store context before Popen so exception reports contain it

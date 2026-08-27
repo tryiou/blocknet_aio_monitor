@@ -58,9 +58,9 @@ class TestBlocknetManager(unittest.TestCase):
 
     def test_setup(self):
         """Test setup creates frame manager and schedules status update."""
-        with patch("gui.blocknet_manager.BlocknetCoreFrameManager") as MockBlocknetCoreFrameManager:
+        with patch("gui.blocknet_manager.BlocknetCoreFrameManager") as mock_blocknet_core_frame_manager:
             asyncio.run(self.blocknet_manager.setup())
-            MockBlocknetCoreFrameManager.assert_called_once_with(self.blocknet_manager)
+            mock_blocknet_core_frame_manager.assert_called_once_with(self.blocknet_manager)
             self.mock_root_gui.after.assert_called_once_with(0, self.blocknet_manager.update_status_blocknet_core)
 
     def test_check_config(self):

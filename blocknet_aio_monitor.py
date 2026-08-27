@@ -56,8 +56,10 @@ except Exception as e:
         py_mm = _current_py_mm()
         details = (
             f"Failed to load application modules: {e}\n\n"
-            f"System: {platform.system()} {platform.machine()} / Python {platform.python_version()} ({sys.executable})\n\n"
-            f"Try recreating venv: {sys.executable} -m venv venv && {sys.executable} -m pip install -r requirements.txt\n"
+            f"System: {platform.system()} {platform.machine()} / "
+            f"Python {platform.python_version()} ({sys.executable})\n\n"
+            f"Try recreating venv: {sys.executable} -m venv venv && "
+            f"{sys.executable} -m pip install -r requirements.txt\n"
             f"Or with versioned Python: python{py_mm} -m venv venv\n"
             f"Report: https://github.com/tryiou/blocknet_aio_monitor/issues/new"
         )
@@ -105,7 +107,7 @@ else:
     logger.error("Theme path not configured")
 
 
-class Blocknet_AIO_GUI(ctk.CTk):
+class BlocknetAioGui(ctk.CTk):
     """Main GUI class for Blocknet AIO application."""
 
     def __init__(self):
@@ -511,7 +513,7 @@ class Blocknet_AIO_GUI(ctk.CTk):
 
 def run_gui() -> None:
     """Run the Blocknet AIO GUI application."""
-    app = Blocknet_AIO_GUI()
+    app = BlocknetAioGui()
     # try:
     app.init_setup()
     app.mainloop()

@@ -423,7 +423,8 @@ class BlocknetHandler(BaseBinUtil):
                     response.raise_for_status()
                     if response.status_code == 200:
                         logger.info(
-                            f"Downloading {self.container.conf_data.blocknet_bootstrap_url} to {local_file_path}, remote size: {int(remote_file_size / 1024)} kb"
+                            f"Downloading {self.container.conf_data.blocknet_bootstrap_url} to "
+                            f"{local_file_path}, remote size: {int(remote_file_size / 1024)} kb"
                         )
                         bytes_downloaded = 0
                         for chunk in response.iter_content(chunk_size=8192):
@@ -578,7 +579,8 @@ def retrieve_xb_manifest():
             return parsed_json
         else:
             logger.error(
-                f"Failed to retrieve remote configuration file: {container.conf_data.remote_manifest_url} {response.status_code}"
+                f"Failed to retrieve remote configuration file: "
+                f"{container.conf_data.remote_manifest_url} {response.status_code}"
             )
             return None
     except requests.exceptions.RequestException as e:

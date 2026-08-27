@@ -263,9 +263,9 @@ class TestBinaryManager(unittest.TestCase):
 
     def test_setup(self):
         """Test BinaryManager setup method."""
-        with patch("gui.binary_manager.BinaryFrameManager") as MockBinaryFrameManager:
+        with patch("gui.binary_manager.BinaryFrameManager") as mock_binary_frame_manager:
             asyncio.run(self.binary_manager.setup())
-            MockBinaryFrameManager.assert_called_once_with(self.binary_manager)
+            mock_binary_frame_manager.assert_called_once_with(self.binary_manager)
             self.mock_root_gui.after.assert_has_calls(
                 [
                     call(0, self.binary_manager.check_and_update_aio_folder),

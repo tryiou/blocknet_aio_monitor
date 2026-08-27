@@ -11,12 +11,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import customtkinter as ctk
 
 import widgets_strings
-from blocknet_aio_monitor import Blocknet_AIO_GUI, run_gui
+from blocknet_aio_monitor import BlocknetAioGui, run_gui
 from utilities.app_container import AppContainer
 
 
 class TestBlocknetAioGui(unittest.TestCase):
-    """Test suite for Blocknet_AIO_GUI class."""
+    """Test suite for BlocknetAioGui class."""
 
     @classmethod
     def setUpClass(cls):
@@ -83,7 +83,7 @@ class TestBlocknetAioGui(unittest.TestCase):
 
     @classmethod
     def _create_app_instance(cls):
-        """Create Blocknet_AIO_GUI instance with mocked dependencies."""
+        """Create BlocknetAioGui instance with mocked dependencies."""
         with (
             patch("blocknet_aio_monitor.BinaryManager", return_value=cls.mock_binary_manager),
             patch("blocknet_aio_monitor.BlockDXManager", return_value=cls.mock_blockdx_manager),
@@ -94,7 +94,7 @@ class TestBlocknetAioGui(unittest.TestCase):
             patch("utilities.bin_handlers.xlite_handler.threading.Thread"),
             patch("gui.binary_manager.Observer"),
         ):
-            return Blocknet_AIO_GUI()
+            return BlocknetAioGui()
 
     @classmethod
     def tearDownClass(cls):
@@ -115,7 +115,7 @@ class TestBlocknetAioGui(unittest.TestCase):
         self.mock_tooltip_manager.reset_mock()
 
     def test_init_default(self):
-        """Test default initialization of Blocknet_AIO_GUI."""
+        """Test default initialization of BlocknetAioGui."""
         self.assertIsInstance(self.app, ctk.CTk)
         self.assertEqual(self.app.custom_path, None)
         self.assertEqual(self.app.stored_password, None)
@@ -138,7 +138,7 @@ class TestBlocknetAioGui(unittest.TestCase):
             patch("blocknet_aio_monitor.XliteManager", return_value=self.mock_xlite_manager),
             patch("blocknet_aio_monitor.TooltipManager", return_value=self.mock_tooltip_manager),
         ):
-            app = Blocknet_AIO_GUI()
+            app = BlocknetAioGui()
             self.assertEqual(app.custom_path, "/test/path")
             self.assertEqual(app.stored_password, "decrypted_pass")
             self.mocks["utils"].decrypt_password.assert_called_once_with("encrypted_pass")
@@ -154,7 +154,7 @@ class TestBlocknetAioGui(unittest.TestCase):
             patch("blocknet_aio_monitor.XliteManager", return_value=self.mock_xlite_manager),
             patch("blocknet_aio_monitor.TooltipManager", return_value=self.mock_tooltip_manager),
         ):
-            app = Blocknet_AIO_GUI()
+            app = BlocknetAioGui()
             self.assertIsNone(app.stored_password)
             self.mocks["logging"].error.assert_called_once()
 
@@ -164,11 +164,11 @@ class TestBlocknetAioGui(unittest.TestCase):
             asyncio.run(self.app.setup_management_sections())
             mock_setup.assert_called_once()
 
-    @patch.object(Blocknet_AIO_GUI, "setup_load_images")
-    @patch.object(Blocknet_AIO_GUI, "check_processes")
-    @patch.object(Blocknet_AIO_GUI, "setup_management_sections", new_callable=AsyncMock)
-    @patch.object(Blocknet_AIO_GUI, "setup_tooltips")
-    @patch.object(Blocknet_AIO_GUI, "init_grid")
+    @patch.object(BlocknetAioGui, "setup_load_images")
+    @patch.object(BlocknetAioGui, "check_processes")
+    @patch.object(BlocknetAioGui, "setup_management_sections", new_callable=AsyncMock)
+    @patch.object(BlocknetAioGui, "setup_tooltips")
+    @patch.object(BlocknetAioGui, "init_grid")
     def test_init_setup(
         self,
         mock_init_grid,
@@ -314,11 +314,11 @@ class TestBlocknetAioGui(unittest.TestCase):
 class TestRunGui(unittest.TestCase):
     """Test suite for run_gui function."""
 
-    @patch("blocknet_aio_monitor.Blocknet_AIO_GUI")
-    def test_run_gui(self, MockBlocknetAioGui):
+    @patch("blocknet_aio_monitor.BlocknetAioGui")
+    def test_run_gui(self, mock_blocknet_aio_gui):
         """Test that run_gui creates and initializes the GUI."""
-        mock_app_instance = MockBlocknetAioGui.return_value
+        mock_app_instance = mock_blocknet_aio_gui.return_value
         run_gui()
-        MockBlocknetAioGui.assert_called_once()
+        mock_blocknet_aio_gui.assert_called_once()
         mock_app_instance.init_setup.assert_called_once()
         mock_app_instance.mainloop.assert_called_once()

@@ -38,13 +38,13 @@ class TestXliteManager:
     def _create_xlite_manager_with_mocks(mock_root_gui, mock_container):
         """Create XliteManager instance with mocked dependencies."""
         with patch("gui.xlite_manager.get_container", return_value=mock_container):
-            with patch("gui.xlite_manager.XliteHandler") as MockXliteHandler:
+            with patch("gui.xlite_manager.XliteHandler") as mock_xlite_handler:
                 mock_handler = MagicMock()
-                MockXliteHandler.return_value = mock_handler
+                mock_xlite_handler.return_value = mock_handler
                 manager = XliteManager(mock_root_gui)
                 manager.utility = mock_handler
                 manager.frame_manager = MagicMock()
-                return manager, MockXliteHandler
+                return manager, mock_xlite_handler
 
     def test_init(self):
         """Test XliteManager initialization."""
@@ -52,7 +52,7 @@ class TestXliteManager:
         mock_container = self._create_mock_container()
 
         with patch("gui.xlite_manager.get_container", return_value=mock_container):
-            with patch("gui.xlite_manager.XliteHandler") as MockXliteHandler:
+            with patch("gui.xlite_manager.XliteHandler") as mock_xlite_handler:
                 manager = XliteManager(mock_root_gui)
 
                 assert manager.root_gui is mock_root_gui
@@ -60,7 +60,7 @@ class TestXliteManager:
                 assert manager.version == ["v1.0.0"]
                 assert manager.process_running is False
                 assert manager.daemon_process_running is False
-                MockXliteHandler.assert_called_once()
+                mock_xlite_handler.assert_called_once()
 
     def test_setup(self):
         """Test setup method initializes frame manager and schedules status update."""
@@ -69,9 +69,9 @@ class TestXliteManager:
 
         manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_container)
 
-        with patch("gui.xlite_manager.XliteFrameManager") as MockXliteFrameManager:
+        with patch("gui.xlite_manager.XliteFrameManager") as mock_xlite_frame_manager:
             asyncio.run(manager.setup())
-            MockXliteFrameManager.assert_called_once_with(manager)
+            mock_xlite_frame_manager.assert_called_once_with(manager)
             mock_root_gui.after.assert_called_once_with(0, manager.update_status_xlite)
 
     def test_refresh_xlite_confs(self):

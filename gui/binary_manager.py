@@ -216,7 +216,9 @@ class BinaryManager:
                 cur = Path("/proc/sys/fs/inotify/max_user_watches").read_text().strip()
             except Exception:
                 pass
-            cmd = f"echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p  # current {cur}"
+            cmd = (  # sudo command, not wrapped
+                f"echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p  # current {cur}"  # noqa: E501
+            )
             # Log with copyable command; GUI will also show via error_report if needed
             logger.warning(f"Inotify limit hit (current {cur}). Fix (click to copy): {cmd}")
             # Schedule a one-time popup via error_report dialog if GUI ready
@@ -382,7 +384,10 @@ class BinaryManager:
                 cwd=ctx.get("cwd"),
                 stderr_text=ctx.get("stderr") or "",
                 executable_path=ctx.get("executable"),
-                extra_info=f"Process terminated shortly after launch (code {rc}). If this repeats, copy this report to {widgets_strings.github_issue_url}",
+                extra_info=(
+                    f"Process terminated shortly after launch (code {rc}). "
+                    f"If this repeats, copy this report to {widgets_strings.github_issue_url}"
+                ),
             )
             logger.warning(f"{app_name} launch failed with code {rc}")
         except Exception as e:
@@ -907,7 +912,11 @@ class BinaryManager:
         # else:
         #     # self.tooltip_manager.update_tooltip(widget=self.frame_manager.install_delete_bots_button,
         #     #                                     msg=self.frame_manager.xbridge_bot_manager.repo_url)
-        #     button_condition = self.frame_manager.xbridge_bot_manager.process or self.frame_manager.xbridge_bot_manager.installer_thread and self.frame_manager.xbridge_bot_manager.installer_thread.is_alive()
+        #     button_condition = (  # noqa: E501 # long logic, commented
+        #         self.frame_manager.xbridge_bot_manager.process
+        #         or self.frame_manager.xbridge_bot_manager.installer_thread
+        #         and self.frame_manager.xbridge_bot_manager.installer_thread.is_alive()
+        #     )
 
         # Set install/delete button image based on state
         if button_condition:

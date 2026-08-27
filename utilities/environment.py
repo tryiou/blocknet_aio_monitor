@@ -78,7 +78,7 @@ def _tk_fix_commands() -> list[str]:
     elif system == "Linux":
         # Try to give distro-specific but generic fallback
         cmds.append(
-            f"sudo apt update && sudo apt install python{py_mm}-tk  # Debian/Ubuntu; fallback: sudo apt install python3-tk"
+            f"sudo apt update && sudo apt install python{py_mm}-tk  # Debian/Ubuntu; fallback: sudo apt install python3-tk"  # noqa: E501
         )
         cmds.append(f"sudo dnf install python{py_mm}-tkinter  # Fedora/RHEL fallback: sudo dnf install python3-tkinter")
         cmds.append(f"{py_exe} -m venv venv && {py_exe} -m pip install -r requirements.txt")
@@ -102,7 +102,7 @@ def _pygit2_fix_commands() -> list[str]:
     # Fallback suggestion for wheel missing — dynamic, no hardcoded version
     fallback = f"{MIN_PYTHON[0]}.{MIN_PYTHON[1]}"
     cmds.append(
-        f"# If wheel still missing for {py_ver}, try Python {fallback}: brew install python@{fallback} && python{fallback} -m venv venv"
+        f"# If wheel still missing for {py_ver}, try Python {fallback}: brew install python@{fallback} && python{fallback} -m venv venv"  # noqa: E501
     )
     cmds.append("brew install libgit2  # macOS source build deps")
     cmds.append("sudo apt install libgit2-dev  # Debian/Ubuntu source build deps")
@@ -121,7 +121,8 @@ def check_python_version() -> tuple[bool, str]:
     if cur < MIN_PYTHON:
         return (
             False,
-            f"Python {cur_str} is too old. Requires >= {MIN_PYTHON[0]}.{MIN_PYTHON[1]}. Current: {cur_str}, please install Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or newer.",
+            f"Python {cur_str} is too old. Requires >= {MIN_PYTHON[0]}.{MIN_PYTHON[1]}. "
+            f"Current: {cur_str}, please install Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or newer.",
         )
     # No upper bound — allow any newer
     return True, ""
@@ -319,7 +320,8 @@ def show_startup_error(title: str, message: str, details: str = "") -> None:
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(
                         full_msg
-                        + f"\n\nPython: {_current_py_version()} {platform.system()} {platform.machine()} ({sys.executable})\n"
+                        + f"\n\nPython: {_current_py_version()} {platform.system()} "
+                        f"{platform.machine()} ({sys.executable})\n"
                     )
                     f.write(f"Report: {GITHUB_ISSUE_URL}\n")
                     fd = None

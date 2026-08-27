@@ -88,7 +88,8 @@ class BlockDXHandler(BaseBinUtil):
             meta_data["selectedWallets"] = []
             meta_data["selectedWallets"].append(self.container.conf_data.blockdx_selectedWallets_blocknet)
             logger.info(
-                f"Initialized 'selectedWallets' with '{self.container.conf_data.blockdx_selectedWallets_blocknet}' in meta_data"
+                f"Initialized 'selectedWallets' with "
+                f"'{self.container.conf_data.blockdx_selectedWallets_blocknet}' in meta_data"
             )
         elif self.container.conf_data.blockdx_selectedWallets_blocknet not in meta_data["selectedWallets"]:
             meta_data["selectedWallets"] = [self.container.conf_data.blockdx_selectedWallets_blocknet]

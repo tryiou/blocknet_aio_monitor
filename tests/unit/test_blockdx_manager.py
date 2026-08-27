@@ -31,8 +31,8 @@ class TestBlockDXManager(unittest.TestCase):
 
         # Create BlockDXManager instance with mocked dependencies
         with patch("gui.blockdx_manager.get_container", return_value=self.mock_container):
-            with patch("gui.blockdx_manager.BlockDXHandler") as MockBlockDXHandler:
-                self.mock_blockdx_handler = MockBlockDXHandler.return_value
+            with patch("gui.blockdx_manager.BlockDXHandler") as mock_blockdx_handler:
+                self.mock_blockdx_handler = mock_blockdx_handler.return_value
                 self.blockdx_manager = BlockDXManager(self.mock_root_gui)
                 self.blockdx_manager.utility = self.mock_blockdx_handler
                 self.blockdx_manager.frame_manager = MagicMock()
@@ -49,11 +49,11 @@ class TestBlockDXManager(unittest.TestCase):
         """Test BlockDXManager setup creates frame manager and schedules status update."""
         import asyncio
 
-        with patch("gui.blockdx_manager.BlockDxFrameManager") as MockBlockDxFrameManager:
+        with patch("gui.blockdx_manager.BlockDxFrameManager") as mock_blockdx_frame_manager:
             asyncio.run(self.blockdx_manager.setup())
 
             # Verify frame manager was created
-            MockBlockDxFrameManager.assert_called_once_with(self.blockdx_manager)
+            mock_blockdx_frame_manager.assert_called_once_with(self.blockdx_manager)
 
             # Verify status update was scheduled
             self.mock_root_gui.after.assert_called_once_with(0, self.blockdx_manager.update_status_blockdx)
