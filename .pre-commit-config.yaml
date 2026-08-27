@@ -1,0 +1,22 @@
+# .pre-commit-config.yaml — opt-in pre-commit for Blocknet AIO Monitor
+# Baseline is ruff 0 + vulture 0 (global) + 1 prod deviation (warning)
+# Install: pip install pre-commit && pre-commit install
+# Run: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.12
+    hooks:
+      - id: ruff
+        name: ruff check (fix)
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+        name: ruff format
+  - repo: local
+    hooks:
+      - id: vulture-prod-deviation
+        name: vulture prod-only deviation (80, warning)
+        entry: vulture utilities/ gui/ blocknet_aio_monitor.py vulture_whitelist_prod.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size
+        language: system
+        pass_filenames: false
+        always_run: true
