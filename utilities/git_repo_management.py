@@ -52,7 +52,7 @@ def run_command(cmd_list: list[str], cwd: Path | None = None, timeout: int = 300
     """
     try:
         process = subprocess.run(
-            cmd_list, check=False, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout
+            cmd_list, check=False, cwd=cwd, capture_output=True, text=True, timeout=timeout
         )
         return process.returncode, process.stdout, process.stderr
     except subprocess.TimeoutExpired as e:
@@ -337,7 +337,7 @@ class GitRepository:
         # If diff failed or empty, be conservative: any dirty file could block
         # but we already filtered to changed-intersection for surgical backup
         blockers: list[str] = []
-        for path, flags in status.items():
+        for path, _flags in status.items():
             if changed and path not in changed:
                 # File not on the changed path set -> not blocking
                 # Exception: untracked colliding with new file should be in changed
@@ -504,13 +504,13 @@ class GitRepository:
                     self._checkout_branch()
 
                 try:
-                    repo_branch_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
+                    self.repo.lookup_reference(f"refs/heads/{branch}")
                 except KeyError:
                     logger.info(f"Local branch '{branch}' not found. Creating it.")
                     target_commit = self.repo.get(remote_master_id)
                     self._prepare_checkout(remote_master_id)
                     self.repo.create_branch(branch, target_commit)
-                    repo_branch_ref = self.repo.lookup_reference(f"refs/heads/{branch}")
+                    self.repo.lookup_reference(f"refs/heads/{branch}")
                     self.repo.set_head(f"refs/heads/{branch}")
 
                 merge_result, _ = self.repo.merge_analysis(remote_master_id)

@@ -142,15 +142,9 @@ selectedWallets_blocknet=BLOCK
         container.theme_path = str(workspace / "theme" / "aio.json")
 
         # Set up system-specific properties if provided
-        if "system" in kwargs:
-            container.system = kwargs["system"]
-        else:
-            container.system = "Linux"
+        container.system = kwargs.get("system", "Linux")
 
-        if "machine" in kwargs:
-            container.machine = kwargs["machine"]
-        else:
-            container.machine = "x86_64"
+        container.machine = kwargs.get("machine", "x86_64")
 
         # Set up binary configurations if provided
         if "blocknet_bin" in kwargs:

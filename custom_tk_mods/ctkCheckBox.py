@@ -143,7 +143,7 @@ class CTkCheckBox(CTkBaseClass):
         # register variable callback and set state according to variable
         if self._variable is not None and self._variable != "":
             self._variable_callback_name = self._variable.trace_add("write", self._variable_callback)
-            self._check_state = True if self._variable.get() == self._onvalue else False
+            self._check_state = self._variable.get() == self._onvalue
 
         self._create_bindings()
         self._set_cursor()
@@ -343,7 +343,7 @@ class CTkCheckBox(CTkBaseClass):
 
             if self._variable is not None and self._variable != "":
                 self._variable_callback_name = self._variable.trace_add("write", self._variable_callback)
-                self._check_state = True if self._variable.get() == self._onvalue else False
+                self._check_state = self._variable.get() == self._onvalue
                 require_redraw = True
 
         super().configure(require_redraw=require_redraw, **kwargs)

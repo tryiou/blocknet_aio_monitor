@@ -360,7 +360,7 @@ class BlocknetHandler(BaseBinUtil):
 
         if self.xbridge_conf_local is None:
             self.xbridge_conf_local = {}
-        sections_string = ",".join(section for section in self.xbridge_conf_local.keys() if section != "Main")
+        sections_string = ",".join(section for section in self.xbridge_conf_local if section != "Main")
 
         if "Main" in self.xbridge_conf_local:
             self.xbridge_conf_local["Main"]["ExchangeWallets"] = sections_string

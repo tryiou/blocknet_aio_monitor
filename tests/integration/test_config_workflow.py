@@ -228,7 +228,7 @@ class TestConfigManagementWorkflow:
             ("/home/user/.AIO_Blocknet", Path("/home/user/.AIO_Blocknet")),
         ]
 
-        for input_path, expected_path in test_paths:
+        for input_path, _expected_path in test_paths:
             # Simulate path expansion
             expanded = os.path.expanduser(input_path)
             expanded = os.path.expandvars(expanded)

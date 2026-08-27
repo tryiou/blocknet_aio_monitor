@@ -572,9 +572,7 @@ class TestDownloadStandaloneBinary(BaseBinUtilTestCase):
         # First call (target_path) should return False to trigger download
         # Second call (temp_path) should return True to trigger cleanup
         def exists_side_effect(path):
-            if path.endswith(".tmp"):
-                return True
-            return False
+            return bool(path.endswith(".tmp"))
 
         mock_exists.side_effect = exists_side_effect
 

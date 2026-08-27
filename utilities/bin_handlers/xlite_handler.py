@@ -190,7 +190,9 @@ class XliteHandler(BaseBinUtil):
                 f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(self.xlite_daemon_confs_local.keys())}"
             )
 
-    def start_xlite(self, env_vars=[]):
+    def start_xlite(self, env_vars=None):
+        if env_vars is None:
+            env_vars = []
         if self.container.system == "Windows":
             check_vc_redist_installed(self.container)
 

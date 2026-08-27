@@ -130,7 +130,7 @@ def test_show_startup_error_tk_fails_fallback(capsys, monkeypatch):
     environment.show_startup_error("TestTitle", "TestMessage", "Details here")
     # should log and print, not raise and not open window
     captured = capsys.readouterr()
-    assert "TestTitle" in captured.err or True  # log goes to stderr or logger
+    assert True  # log goes to stderr or logger
 
 
 def test_validate_or_exit_exits_on_failure(monkeypatch):
@@ -139,7 +139,7 @@ def test_validate_or_exit_exits_on_failure(monkeypatch):
     # should sys.exit(1)
     try:
         environment.validate_or_exit()
-        assert False, "should have exited"
+        raise AssertionError("should have exited")
     except SystemExit as e:
         assert e.code == 1
 

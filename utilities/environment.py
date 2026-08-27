@@ -92,7 +92,7 @@ def _tk_fix_commands() -> list[str]:
 
 
 def _pygit2_fix_commands() -> list[str]:
-    py_mm = _current_py_mm()
+    _current_py_mm()
     py_ver = _current_py_version()
     spec = _read_pygit2_spec()
     cmds: list[str] = []
