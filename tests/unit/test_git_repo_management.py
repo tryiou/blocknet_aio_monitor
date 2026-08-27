@@ -258,7 +258,7 @@ class TestVirtualEnvironment(unittest.TestCase):
 
         mock_run.side_effect = Exception("Unexpected error")
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017 # generic fallback intentionally
             self.venv.install_requirements(req_file)
 
     def test_get_python_path_exists(self):
@@ -460,9 +460,9 @@ class TestGitRepository(unittest.TestCase):
     @patch("pygit2.clone_repository")
     def test_clone_repo_failure(self, mock_clone):
         """Test repository cloning failure."""
-        mock_clone.side_effect = Exception("Clone failed")
+        mock_clone.side_effect = pygit2.GitError("Clone failed")
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(pygit2.GitError):
             self.repo._clone_repo()
 
     @patch("pygit2.clone_repository")
@@ -470,7 +470,7 @@ class TestGitRepository(unittest.TestCase):
         """Test cleanup on clone failure."""
         mock_clone.side_effect = Exception("Clone failed")
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017 # generic cleanup test
             self.repo._clone_repo()
 
         # Directory should exist but be cleaned up
@@ -619,7 +619,7 @@ class TestGitRepository(unittest.TestCase):
         with patch.object(self.repo, "_clone_repo") as mock_clone:
             mock_clone.side_effect = Exception("Clone failed")
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017 # generic propagate
                 self.repo.clone_or_update()
 
     def test_clone_or_update_existing_repo(self):
