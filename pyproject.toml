@@ -53,6 +53,7 @@ ignore = [
     "S101",  # assert used — common in tests
     "S603",  # subprocess without shell — audited, project controls inputs
     "S607",  # start_process with partial executable path — intentional
+    "UP038",  # deprecated non-pep604-isinstance, remove when ruff drops
 ]
 # Baseline suppression: do not churn whole repo in same PR.
 # Fix incrementally; suppress existing F401/F841 noise on tests if needed via per-file-ignores below.

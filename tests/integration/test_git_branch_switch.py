@@ -4,6 +4,7 @@ All tests use tmp_path only - never touch ~/.AIO_Blocknet.
 """
 
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -26,8 +27,6 @@ def _commit(repo: pygit2.Repository, message: str, files: dict, branch: str = "m
 
 # Helpers using subprocess git for brevity (requires git binary, but tests that need git are fine;
 # the app itself does NOT require git - this is test helper only).
-
-import subprocess
 
 
 def git(cwd: Path, *args):

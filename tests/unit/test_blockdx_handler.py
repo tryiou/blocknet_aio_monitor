@@ -177,7 +177,7 @@ class TestBlockDXHandler(unittest.TestCase):
         for patcher in patchers:
             try:
                 patcher.stop()
-            except:
+            except Exception:
                 pass
 
     def _change_system(self, system: str, machine: str = "x86_64"):
@@ -267,7 +267,7 @@ class TestBlockDXHandler(unittest.TestCase):
         # Should not write file since no changes (parse happens but no write)
         # Verify open was only called for reading (mode 'r'), not writing (mode 'w')
         call_args_list = self.mock_open.call_args_list
-        write_calls = [call for call in call_args_list if call[0] and "w" in str(call[0])]
+        write_calls = [c for c in call_args_list if c[0] and "w" in str(c[0])]
         self.assertEqual(len(write_calls), 0)
 
     def test_compare_and_update_local_conf_existing_file_with_changes(self):
@@ -287,7 +287,7 @@ class TestBlockDXHandler(unittest.TestCase):
 
         # Should write new config - verify open was called with 'w' mode
         call_args_list = self.mock_open.call_args_list
-        write_calls = [call for call in call_args_list if call[0] and "w" in str(call[0])]
+        write_calls = [c for c in call_args_list if c[0] and "w" in str(c[0])]
         self.assertGreater(len(write_calls), 0)
 
     def test_compare_and_update_local_conf_no_existing_file(self):
@@ -304,7 +304,7 @@ class TestBlockDXHandler(unittest.TestCase):
 
         # Should write base config - verify open was called with 'w' mode
         call_args_list = self.mock_open.call_args_list
-        write_calls = [call for call in call_args_list if call[0] and "w" in str(call[0])]
+        write_calls = [c for c in call_args_list if c[0] and "w" in str(c[0])]
         self.assertGreater(len(write_calls), 0)
 
     def test_compare_and_update_local_conf_non_list_selected_wallets(self):
@@ -319,7 +319,7 @@ class TestBlockDXHandler(unittest.TestCase):
 
         # Should handle string as list with one item
         call_args_list = self.mock_open.call_args_list
-        write_calls = [call for call in call_args_list if call[0] and "w" in str(call[0])]
+        write_calls = [c for c in call_args_list if c[0] and "w" in str(c[0])]
         self.assertGreater(len(write_calls), 0)
 
     def test_download_blockdx_bin_darwin_dmg(self):
