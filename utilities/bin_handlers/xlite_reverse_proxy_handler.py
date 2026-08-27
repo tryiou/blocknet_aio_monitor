@@ -152,5 +152,5 @@ class XliteReverseProxyHandler(BaseBinUtil):
         """Ensure cleanup when object is destroyed"""
         try:
             self.stop()
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)

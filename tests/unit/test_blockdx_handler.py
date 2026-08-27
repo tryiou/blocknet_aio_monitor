@@ -175,9 +175,9 @@ class TestBlockDXHandler(unittest.TestCase):
             self.patcher_base_binutil_sys,
         ]
         for patcher in patchers:
-            try:
+            try:  # noqa: SIM105
                 patcher.stop()
-            except Exception:
+            except Exception:  # noqa: S110, SIM105
                 pass
 
     def _change_system(self, system: str, machine: str = "x86_64"):

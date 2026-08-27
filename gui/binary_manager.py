@@ -105,8 +105,8 @@ class BinaryManager:
             # start periodic poll (2000ms) as fallback — mirrors update_all_binary_buttons cadence
             try:
                 self._poll_after_id = self.root_gui.after(2000, self._poll_aio_folder)
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def _create_observer(self, aio_folder) -> object | None:
         """Create file watcher with ENOSPC fallback to PollingObserver (2.0s)."""
@@ -143,8 +143,8 @@ class BinaryManager:
                         try:
                             obs.stop()
                             obs.join(0.5)
-                        except Exception:
-                            pass
+                        except Exception as e:  # debug logged
+                            logger.debug("Suppressed Exception: %s", e, exc_info=True)
                     continue
                 logger.error(f"Observer {name} failed: {e}", exc_info=True)
                 raise
@@ -159,8 +159,8 @@ class BinaryManager:
                         try:
                             obs.stop()
                             obs.join(0.5)
-                        except Exception:
-                            pass
+                        except Exception as e:  # debug logged
+                            logger.debug("Suppressed Exception: %s", e, exc_info=True)
                     continue
                 logger.error(f"Observer {name} failed: {e}", exc_info=True)
                 raise
@@ -185,8 +185,8 @@ class BinaryManager:
             logger.debug(f"Periodic poll failed: {e}")
         try:
             self._poll_after_id = self.root_gui.after(2000, self._poll_aio_folder)
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def stop(self) -> None:
         """Stop observer cleanly (call from on_close)."""
@@ -195,8 +195,8 @@ class BinaryManager:
         if poll_id is not None:
             try:
                 self.root_gui.after_cancel(poll_id)
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
             self._poll_after_id = None
         if self.observer:
             try:
@@ -214,8 +214,8 @@ class BinaryManager:
             cur = "unknown"
             try:
                 cur = Path("/proc/sys/fs/inotify/max_user_watches").read_text().strip()
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
             cmd = (  # sudo command, not wrapped
                 f"echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p  # current {cur}"  # noqa: E501
             )
@@ -243,8 +243,8 @@ class BinaryManager:
 
                 # Defer slightly to let GUI init
                 self.root_gui.after(1500, _show)
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
         except Exception as e:
             logger.debug(f"Failed to show ENOSPC hint: {e}")
 

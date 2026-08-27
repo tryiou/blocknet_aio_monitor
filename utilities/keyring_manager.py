@@ -229,8 +229,8 @@ class KeyringManager:
             try:
                 if keyring.get_password(self.SERVICE_NAME, self.KEY_NAME):
                     return True
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
         # Check if fallback file exists and contains the key (use "salt" for backward compatibility)
         if os.path.exists(self._get_fallback_path()):
@@ -238,8 +238,8 @@ class KeyringManager:
                 with open(self._get_fallback_path()) as f:
                     data = json.load(f)
                     return self.FALLBACK_KEY_NAME in data
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
         return False
 

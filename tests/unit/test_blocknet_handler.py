@@ -1089,9 +1089,9 @@ class TestBlocknetHandlerRPC(unittest.TestCase):
         self.handler.blocknet_rpc.send_rpc_request.return_value = {"result": "success"}
 
         with patch("time.sleep", side_effect=KeyboardInterrupt):
-            try:
+            try:  # noqa: SIM105
                 self.handler.check_blocknet_rpc()
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
         self.assertTrue(self.handler.valid_rpc)

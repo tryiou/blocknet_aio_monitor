@@ -307,14 +307,14 @@ def show_startup_error(title: str, message: str, details: str = "") -> None:
             if log_path.is_symlink():
                 try:
                     log_path.unlink()
-                except Exception:
-                    pass
+                except Exception as e:  # debug logged
+                    logger.debug("Suppressed Exception: %s", e, exc_info=True)
             flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
             # O_NOFOLLOW available on Linux/macOS
             try:
                 flags |= os.O_NOFOLLOW
-            except AttributeError:
-                pass
+            except AttributeError as e:  # debug logged
+                logger.debug("Suppressed AttributeError: %s", e, exc_info=True)
             fd = os.open(str(log_path), flags, 0o600)
             try:
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -328,12 +328,12 @@ def show_startup_error(title: str, message: str, details: str = "") -> None:
                 if fd is not None:
                     try:
                         os.close(fd)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-    except Exception:
-        pass
+                    except Exception as e:  # debug logged
+                        logger.debug("Suppressed Exception: %s", e, exc_info=True)
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+    except Exception as e:  # debug logged
+        logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     combined = f"{message}\n\n{details}" if details else message
     # Try CTk copyable dialog if Tk is actually available (even though check failed for other reason)
@@ -363,8 +363,8 @@ def show_startup_error(title: str, message: str, details: str = "") -> None:
         print(f"ERROR: {title}: {message}", file=sys.stderr)
         if details:
             print(details, file=sys.stderr)
-    except Exception:
-        pass
+    except Exception as e:  # debug logged
+        logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
 
 def validate_or_exit() -> None:

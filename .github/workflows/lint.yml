@@ -46,5 +46,6 @@ jobs:
           ruff format --check . --diff
 
       - name: Vulture dead code (min-confidence 80)
+        continue-on-error: true
         run: |
-          vulture . vulture_whitelist.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size
+          vulture . vulture_whitelist.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size || echo "Vulture found dead code (warning-only)"

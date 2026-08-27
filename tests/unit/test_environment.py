@@ -117,12 +117,12 @@ def test_show_startup_error_tk_fails_fallback(capsys, monkeypatch):
     )
     # Also ensure Tk/CTk are mocked (global conftest does, but be explicit)
     monkeypatch.setattr("tkinter.Tk", MagicMock)
-    try:
+    try:  # noqa: SIM105
         import customtkinter as _ctk
 
         monkeypatch.setattr(_ctk, "CTkToplevel", MagicMock)
         monkeypatch.setattr(_ctk, "CTk", MagicMock)
-    except Exception:
+    except Exception:  # noqa: S110, SIM105
         pass
     # Mock Path.home to avoid file creation
     monkeypatch.setattr("pathlib.Path.home", lambda: __import__("pathlib").Path("/tmp"))

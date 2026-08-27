@@ -135,8 +135,8 @@ class CopyableCommandRow(ctk.CTkFrame):
             self.entry.selection_clear()
             self.entry.selection_range(0, "end")
             self.entry.icursor("end")
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
         # Don't return "break" — allow native drag-select for partial copy
         return None
 
@@ -260,8 +260,8 @@ class ErrorReportDialog(ctk.CTkToplevel):
     def _select_all(self):
         try:
             self.textbox.tag_add("sel", "0.0", "end")
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
         return "break"
 
     def _copy_to_clipboard(self):
@@ -306,13 +306,13 @@ class ErrorReportDialog(ctk.CTkToplevel):
                 if f is not None:
                     try:
                         f.close()
-                    except Exception:
-                        pass
+                    except Exception as e:  # debug logged
+                        logger.debug("Suppressed Exception: %s", e, exc_info=True)
                 elif fd is not None:
                     try:
                         os.close(fd)
-                    except Exception:
-                        pass
+                    except Exception as e:  # debug logged
+                        logger.debug("Suppressed Exception: %s", e, exc_info=True)
             self.status_label.configure(text=f"Saved to {target}", text_color="green")
             logger.info(f"Error report saved to {target}")
         except Exception as e:
@@ -328,8 +328,8 @@ class ErrorReportDialog(ctk.CTkToplevel):
     def _on_close(self):
         try:
             self.grab_release()
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
         self.destroy()
 
 
@@ -510,8 +510,8 @@ class StartupErrorDialog(ctk.CTkToplevel):
     def _select_all(self):
         try:
             self.textbox.tag_add("sel", "0.0", "end")
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
         return "break"
 
     def _copy_details(self):
@@ -533,8 +533,8 @@ class StartupErrorDialog(ctk.CTkToplevel):
     def _on_close(self):
         try:
             self.grab_release()
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
         self.destroy()
 
 
@@ -552,8 +552,8 @@ def show_startup_error_report(title: str, message: str, details: str = "", paren
                 # Fallback: wait on dialog itself
                 try:
                     dialog.wait_window()
-                except Exception:
-                    pass
+                except Exception as e:  # debug logged
+                    logger.debug("Suppressed Exception: %s", e, exc_info=True)
         except Exception as e:
             logger.error(f"Failed to show startup error dialog: {e}", exc_info=True)
             logger.error(f"{title}: {message}\n{details}")
@@ -579,8 +579,8 @@ def show_startup_error_report(title: str, message: str, details: str = "", paren
         except Exception:
             try:
                 dialog.wait_window()
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
     except Exception as e:
         logger.error(f"Failed to create startup dialog root: {e}", exc_info=True)
         logger.error(f"{title}: {message}\n{details}")
@@ -588,5 +588,5 @@ def show_startup_error_report(title: str, message: str, details: str = "", paren
         if tmp_root is not None:
             try:
                 tmp_root.destroy()
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)

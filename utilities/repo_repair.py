@@ -30,8 +30,8 @@ def detect_broken_state(target_dir: Path) -> dict:
     if git_head.exists():
         try:
             info["head"] = git_head.read_text().strip()
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
     # Presence of any config_bak is considered broken (legacy repair artefact)
     info["broken"] = len(baks) > 0
     return info
@@ -159,8 +159,8 @@ def repair_broken_worktree(
         # Remove staging
         try:
             shutil.rmtree(staging)
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     # Write report
     report_path = backup_dir / "repair_report.json"

@@ -165,8 +165,8 @@ class BaseBinUtil:
             if stderr_file is not None:
                 try:
                     stderr_file.close()
-                except Exception:
-                    pass
+                except Exception as e:  # debug logged
+                    logger.debug("Suppressed Exception: %s", e, exc_info=True)
                 self._stderr_file_handle = None
             raise
         return self.process
@@ -184,10 +184,10 @@ class BaseBinUtil:
                     fh.flush()
                     try:
                         os.fsync(fh.fileno())
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
+                    except Exception as e:  # debug logged
+                        logger.debug("Suppressed Exception: %s", e, exc_info=True)
+                except Exception as e:  # debug logged
+                    logger.debug("Suppressed Exception: %s", e, exc_info=True)
             with open(path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
                 if not content.strip():
@@ -238,8 +238,8 @@ class BaseBinUtil:
         if fh:
             try:
                 fh.close()
-            except Exception:
-                pass
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
             self._stderr_file_handle = None
 
     def force_kill(self):
@@ -268,8 +268,8 @@ class BaseBinUtil:
                     try:
                         proc = psutil.Process(pid)
                         proc.kill()
-                    except Exception:
-                        pass
+                    except Exception as e:  # debug logged
+                        logger.debug("Suppressed Exception: %s", e, exc_info=True)
                     logger.warning(f"Process {name} PID {pid}: Timeout expired, killed process")
                 else:
                     logger.warning(f"Process {name} PID {pid}: {str(e)}")

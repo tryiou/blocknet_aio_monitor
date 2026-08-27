@@ -299,9 +299,9 @@ class TestXliteHandler(unittest.TestCase):
             handler = self._create_handler_with_os("Linux")
             handler.running = True
             handler.valid_coins_rpc = False
-            try:
+            try:  # noqa: SIM105
                 handler.check_xlite_daemon_confs()
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
             mock_rpc.assert_called_once()
@@ -338,9 +338,9 @@ class TestXliteHandler(unittest.TestCase):
             handler.coins_rpc = {"test": mock_rpc_server}
             handler.xlite_daemon_confs_local = {"test": {"rpcEnabled": True}}
             handler.running = True
-            try:
+            try:  # noqa: SIM105
                 handler.check_valid_xlite_coins_rpc(runonce=True)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
             mock_rpc_server.send_rpc_request.assert_called_once_with("getinfo")
@@ -356,9 +356,9 @@ class TestXliteHandler(unittest.TestCase):
             handler.coins_rpc = {"master": mock_rpc_server, "TBLOCK": mock_rpc_server}
             handler.xlite_daemon_confs_local = {"master": {"rpcEnabled": True}, "TBLOCK": {"rpcEnabled": True}}
             handler.running = True
-            try:
+            try:  # noqa: SIM105
                 handler.check_valid_xlite_coins_rpc(runonce=True)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
             mock_rpc_server.send_rpc_request.assert_not_called()
@@ -374,9 +374,9 @@ class TestXliteHandler(unittest.TestCase):
             handler.coins_rpc = {"test": mock_rpc_server}
             handler.xlite_daemon_confs_local = {"test": {"rpcEnabled": False}}
             handler.running = True
-            try:
+            try:  # noqa: SIM105
                 handler.check_valid_xlite_coins_rpc(runonce=True)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
             mock_rpc_server.send_rpc_request.assert_not_called()
@@ -388,9 +388,9 @@ class TestXliteHandler(unittest.TestCase):
             handler = self._create_handler_with_os("Linux")
             handler.coins_rpc = {}
             handler.running = True
-            try:
+            try:  # noqa: SIM105
                 handler.check_valid_xlite_coins_rpc(runonce=True)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
             self.assertFalse(handler.valid_coins_rpc)
@@ -405,9 +405,9 @@ class TestXliteHandler(unittest.TestCase):
             handler.coins_rpc = {"test": mock_rpc_server}
             handler.xlite_daemon_confs_local = {"test": {"rpcEnabled": True}}
             handler.running = True
-            try:
+            try:  # noqa: SIM105
                 handler.check_valid_xlite_coins_rpc(runonce=True)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
             mock_rpc_server.send_rpc_request.assert_called_once_with("getinfo")

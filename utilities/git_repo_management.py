@@ -519,8 +519,8 @@ class GitRepository:
                     try:
                         if self.repo.head.shorthand != branch:
                             self.repo.set_head(f"refs/heads/{branch}")
-                    except Exception:
-                        pass
+                    except Exception as e:  # debug logged
+                        logger.debug("Suppressed Exception: %s", e, exc_info=True)
                     return
 
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
@@ -551,8 +551,8 @@ class GitRepository:
                         head = self.repo.head
                         if head.shorthand != branch:
                             logger.warning(f"HEAD not on {branch} after FF (head={head.name})")
-                    except Exception:
-                        pass
+                    except Exception as e:  # debug logged
+                        logger.debug("Suppressed Exception: %s", e, exc_info=True)
                     logger.info("Fast-forward merge completed")
                     return
 

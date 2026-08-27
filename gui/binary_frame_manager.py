@@ -1,9 +1,13 @@
+import logging
+
 import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import utilities.utils
 from gui.constants import BINS_BUTTONS_WIDTH, BINS_FRAME_WIDTH, CORNER_RADIUS, HEADER_FRAMES_STICKY
 from gui.xbridge_bot_manager import XBridgeBotManager
+
+logger = logging.getLogger(__name__)
 
 
 class BinaryFrameManager:
@@ -188,8 +192,8 @@ class BinaryFrameManager:
         """Persist user branch choice immediately."""
         try:
             self.xbridge_bot_manager.save_branch(choice)
-        except Exception:
-            pass
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def install_update_bots_command(self):
         """Handle install/update button click - left click installs/updates, right click deletes"""
