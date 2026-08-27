@@ -432,9 +432,11 @@ def integration_test_mocks():
 @pytest.fixture
 def binary_manager_test_setup(mock_app_container_base, mock_file_operations_safe):
     """Setup for binary manager tests using centralized mocks."""
-    with patch("gui.binary_manager.get_container", return_value=mock_app_container_base):
-        with patch("gui.binary_manager.utils") as mock_utils:
-            yield mock_utils
+    with (
+        patch("gui.binary_manager.get_container", return_value=mock_app_container_base),
+        patch("gui.binary_manager.utils") as mock_utils,
+    ):
+        yield mock_utils
 
 
 @pytest.fixture
@@ -591,25 +593,29 @@ def gui_manager_root():
 @pytest.fixture
 def blocknet_handler_setup(blocknet_handler_container, unit_test_mocks):
     """Complete setup for BlocknetHandler tests"""
-    with patch("utilities.bin_handlers.blocknet_handler.get_container", return_value=blocknet_handler_container):
-        with patch("utilities.bin_handlers.blocknet_handler.threading.Thread"):
-            with patch("utilities.bin_handlers.blocknet_handler.parse_conf_file"):
-                with patch("utilities.bin_handlers.blocknet_handler.save_conf_to_file"):
-                    with patch("utilities.bin_handlers.blocknet_handler.retrieve_xb_manifest"):
-                        with patch("utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_conf"):
-                            with patch("utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_xbridge_conf"):
-                                yield blocknet_handler_container
+    with (
+        patch("utilities.bin_handlers.blocknet_handler.get_container", return_value=blocknet_handler_container),
+        patch("utilities.bin_handlers.blocknet_handler.threading.Thread"),
+        patch("utilities.bin_handlers.blocknet_handler.parse_conf_file"),
+        patch("utilities.bin_handlers.blocknet_handler.save_conf_to_file"),
+        patch("utilities.bin_handlers.blocknet_handler.retrieve_xb_manifest"),
+        patch("utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_conf"),
+        patch("utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_xbridge_conf"),
+    ):
+        yield blocknet_handler_container
 
 
 @pytest.fixture
 def xlite_handler_setup(mock_app_container_base, unit_test_mocks):
     """Setup specifically for XliteHandler tests"""
-    with patch("utilities.app_container.get_container", return_value=mock_app_container_base):
-        with patch("utilities.bin_handlers.xlite_handler.os.path.exists", return_value=True):
-            with patch("utilities.bin_handlers.xlite_handler.os.makedirs"):
-                with patch("utilities.bin_handlers.xlite_handler.os.chmod"):
-                    with patch("utilities.bin_handlers.xlite_handler.subprocess.Popen"):
-                        yield
+    with (
+        patch("utilities.app_container.get_container", return_value=mock_app_container_base),
+        patch("utilities.bin_handlers.xlite_handler.os.path.exists", return_value=True),
+        patch("utilities.bin_handlers.xlite_handler.os.makedirs"),
+        patch("utilities.bin_handlers.xlite_handler.os.chmod"),
+        patch("utilities.bin_handlers.xlite_handler.subprocess.Popen"),
+    ):
+        yield
 
 
 @contextmanager

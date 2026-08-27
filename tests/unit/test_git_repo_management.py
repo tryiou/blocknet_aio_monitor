@@ -405,16 +405,18 @@ class TestVirtualEnvironment(unittest.TestCase):
         req_file.write_text("pytest\n")
         # mock python path exists and run_command success
         mock_run.return_value = (0, "success", "")
-        with patch.object(VirtualEnvironment, "get_python_path", return_value="/fake/python"):
-            with patch.object(VirtualEnvironment, "get_pip_path", return_value="/fake/pip"):
-                # ensure _is_broken not triggered
-                with patch.object(VirtualEnvironment, "_is_broken", return_value=(False, "")):
-                    self.venv.install_requirements(req_file)
-                    # should call python -m pip, not direct pip
-                    called_cmd = mock_run.call_args[0][0]
-                    self.assertIn("-m", called_cmd)
-                    self.assertIn("pip", called_cmd)
-                    self.assertEqual(called_cmd[0], "/fake/python")
+        # ensure _is_broken not triggered
+        with (
+            patch.object(VirtualEnvironment, "get_python_path", return_value="/fake/python"),
+            patch.object(VirtualEnvironment, "get_pip_path", return_value="/fake/pip"),
+            patch.object(VirtualEnvironment, "_is_broken", return_value=(False, "")),
+        ):
+            self.venv.install_requirements(req_file)
+            # should call python -m pip, not direct pip
+            called_cmd = mock_run.call_args[0][0]
+            self.assertIn("-m", called_cmd)
+            self.assertIn("pip", called_cmd)
+            self.assertEqual(called_cmd[0], "/fake/python")
 
     @patch("utilities.git_repo_management.run_command")
     def test_install_requirements_heals_on_failure(self, mock_run):
@@ -423,14 +425,16 @@ class TestVirtualEnvironment(unittest.TestCase):
         req_file.write_text("pytest\n")
         # first call raises ExecutionError (simulates pip not found), second succeeds
         mock_run.side_effect = [ExecutionError("Command not found: pip"), (0, "success", "")]
-        with patch.object(VirtualEnvironment, "get_python_path", side_effect=["/fake/python", "/fake/python2"]):
-            with patch.object(VirtualEnvironment, "_is_broken", return_value=(True, "stale")):
-                with patch.object(VirtualEnvironment, "ensure_healthy", return_value=True):
-                    self.venv.install_requirements(req_file)
-                    self.assertEqual(mock_run.call_count, 2)
-                    # second call should use healed python path
-                    second_cmd = mock_run.call_args_list[1][0][0]
-                    self.assertEqual(second_cmd[0], "/fake/python2")
+        with (
+            patch.object(VirtualEnvironment, "get_python_path", side_effect=["/fake/python", "/fake/python2"]),
+            patch.object(VirtualEnvironment, "_is_broken", return_value=(True, "stale")),
+            patch.object(VirtualEnvironment, "ensure_healthy", return_value=True),
+        ):
+            self.venv.install_requirements(req_file)
+            self.assertEqual(mock_run.call_count, 2)
+            # second call should use healed python path
+            second_cmd = mock_run.call_args_list[1][0][0]
+            self.assertEqual(second_cmd[0], "/fake/python2")
 
 
 class TestGitRepository(unittest.TestCase):
@@ -553,7 +557,7 @@ class TestGitRepository(unittest.TestCase):
         mock_repo.diff.return_value.deltas = []
         self.repo.repo = mock_repo
 
-        with patch.object(self.repo, "_prepare_checkout", side_effect=BranchSwitchBlockedError("blocked")):
+        with patch.object(self.repo, "_prepare_checkout", side_effect=BranchSwitchBlockedError("blocked")):  # noqa: SIM117
             with self.assertRaises(BranchSwitchBlockedError):
                 self.repo._checkout_branch()
 

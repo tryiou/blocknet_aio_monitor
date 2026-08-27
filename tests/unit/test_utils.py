@@ -240,10 +240,12 @@ class TestRemoveCfgJsonKey:
             temp_file = f.name
 
         try:
-            with patch("builtins.open", mock_open=create_real_file_mock(temp_file)):
-                with patch("json.load", return_value=config_data):
-                    with patch("json.dump") as mock_dump:
-                        utils.remove_cfg_json_key("key1")
+            with (
+                patch("builtins.open", mock_open=create_real_file_mock(temp_file)),
+                patch("json.load", return_value=config_data),
+                patch("json.dump") as mock_dump,
+            ):
+                utils.remove_cfg_json_key("key1")
 
             assert mock_dump.call_count == 1
             saved_data = mock_dump.call_args[0][0]
@@ -277,11 +279,14 @@ class TestRemoveCfgJsonKey:
 
         config_data = {"key1": "value1"}
 
-        with patch("builtins.open", mock_open=create_real_file_mock("/test/data/aio_settings.json")):
-            with patch("json.load", return_value=config_data), patch("json.dump") as mock_dump:
-                utils.remove_cfg_json_key("nonexistent_key")
+        with (
+            patch("builtins.open", mock_open=create_real_file_mock("/test/data/aio_settings.json")),
+            patch("json.load", return_value=config_data),
+            patch("json.dump") as mock_dump,
+        ):
+            utils.remove_cfg_json_key("nonexistent_key")
 
-            mock_dump.assert_not_called()
+        mock_dump.assert_not_called()
 
     @patch("utilities.utils.get_container", return_value=MagicMock())
     @patch("os.path.expandvars")
@@ -344,13 +349,16 @@ class TestSaveCfgJson:
 
         existing_data = {"old_key": "old_value"}
 
-        with patch("builtins.open", mock_open=create_real_file_mock("/test/data/aio_settings.json")):
-            with patch("json.load", return_value=existing_data), patch("json.dump") as mock_dump:
-                utils.save_cfg_json("new_key", "new_value")
+        with (
+            patch("builtins.open", mock_open=create_real_file_mock("/test/data/aio_settings.json")),
+            patch("json.load", return_value=existing_data),
+            patch("json.dump") as mock_dump,
+        ):
+            utils.save_cfg_json("new_key", "new_value")
 
-            assert mock_dump.call_count == 1
-            saved_data = mock_dump.call_args[0][0]
-            assert saved_data == {"old_key": "old_value", "new_key": "new_value"}
+        assert mock_dump.call_count == 1
+        saved_data = mock_dump.call_args[0][0]
+        assert saved_data == {"old_key": "old_value", "new_key": "new_value"}
 
     @patch("utilities.utils.get_container", return_value=MagicMock())
     @patch("os.path.expandvars")
@@ -369,9 +377,11 @@ class TestSaveCfgJson:
             mock_file.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_file
 
-            with patch("json.load", side_effect=json.JSONDecodeError("Invalid", "", 0)):
-                with patch("json.dump") as mock_dump:
-                    utils.save_cfg_json("test_key", "test_value")
+            with (
+                patch("json.load", side_effect=json.JSONDecodeError("Invalid", "", 0)),
+                patch("json.dump") as mock_dump,
+            ):
+                utils.save_cfg_json("test_key", "test_value")
 
             assert mock_dump.call_count == 1
             saved_data = mock_dump.call_args[0][0]
@@ -708,13 +718,15 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            with patch("utilities.utils.Fernet.generate_key") as mock_generate:
-                mock_generate.return_value = b"test_key_123"
-                result = utils.generate_key()
+        with (
+            patch("utilities.utils.get_container", return_value=mock_container),
+            patch("utilities.utils.Fernet.generate_key") as mock_generate,
+        ):
+            mock_generate.return_value = b"test_key_123"
+            result = utils.generate_key()
 
-                assert result == b"test_key_123"
-                mock_keyring_manager.store_key.assert_called_once_with("test_key_123")
+            assert result == b"test_key_123"
+            mock_keyring_manager.store_key.assert_called_once_with("test_key_123")
 
     @patch("utilities.utils.KeyringManager")
     def test_generate_key_keyring_failure(self, mock_keyring_manager_class):
@@ -727,13 +739,15 @@ class TestKeyringBasedFunctions:
         mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
         mock_container.system = "Linux"
 
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            with patch("utilities.utils.Fernet.generate_key") as mock_generate:
-                mock_generate.return_value = b"test_key_123"
-                result = utils.generate_key()
+        with (
+            patch("utilities.utils.get_container", return_value=mock_container),
+            patch("utilities.utils.Fernet.generate_key") as mock_generate,
+        ):
+            mock_generate.return_value = b"test_key_123"
+            result = utils.generate_key()
 
-                assert result is None
-                mock_keyring_manager.store_key.assert_called_once_with("test_key_123")
+            assert result is None
+            mock_keyring_manager.store_key.assert_called_once_with("test_key_123")
 
     @patch("utilities.utils.load_encryption_key")
     def test_encrypt_password_with_keyring(self, mock_load_key):
@@ -851,10 +865,12 @@ class TestKeyringBasedFunctions:
                 temp_file = f.name
 
             try:
-                with patch("builtins.open", mock_open=create_real_file_mock(temp_file)):
-                    with patch("json.load", return_value=config_data):
-                        with patch("json.dump") as mock_dump:
-                            utils.remove_cfg_json_key("xl_pass")
+                with (
+                    patch("builtins.open", mock_open=create_real_file_mock(temp_file)),
+                    patch("json.load", return_value=config_data),
+                    patch("json.dump") as mock_dump,
+                ):
+                    utils.remove_cfg_json_key("xl_pass")
 
                 # Verify encryption key was deleted
                 mock_delete_key.assert_called_once()
@@ -880,10 +896,12 @@ class TestKeyringBasedFunctions:
                 temp_file = f.name
 
             try:
-                with patch("builtins.open", mock_open=create_real_file_mock(temp_file)):
-                    with patch("json.load", return_value=config_data):
-                        with patch("json.dump") as mock_dump:
-                            utils.remove_cfg_json_key("theme")
+                with (
+                    patch("builtins.open", mock_open=create_real_file_mock(temp_file)),
+                    patch("json.load", return_value=config_data),
+                    patch("json.dump") as mock_dump,
+                ):
+                    utils.remove_cfg_json_key("theme")
 
                 # Verify encryption key was NOT deleted
                 mock_delete_key.assert_not_called()

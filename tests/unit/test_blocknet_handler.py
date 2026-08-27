@@ -408,14 +408,16 @@ class TestDownloadRemoteConf(unittest.TestCase):
         mock_response.text = "[global]\nrpcuser=test\n"
         mock_get.return_value = mock_response
 
-        with patch("utilities.bin_handlers.blocknet_handler.parse_conf_file") as mock_parse:
-            with patch("utilities.bin_handlers.blocknet_handler.save_conf_to_file") as mock_save:
-                mock_parse.return_value = {"global": {"rpcuser": "test"}}
-                mock_save.return_value = True
+        with (
+            patch("utilities.bin_handlers.blocknet_handler.parse_conf_file") as mock_parse,
+            patch("utilities.bin_handlers.blocknet_handler.save_conf_to_file") as mock_save,
+        ):
+            mock_parse.return_value = {"global": {"rpcuser": "test"}}
+            mock_save.return_value = True
 
-                result = download_remote_conf("http://example.com/conf", "/tmp/test.conf")
+            result = download_remote_conf("http://example.com/conf", "/tmp/test.conf")
 
-                self.assertEqual(result, {"global": {"rpcuser": "test"}})
+            self.assertEqual(result, {"global": {"rpcuser": "test"}})
 
     @patch("utilities.bin_handlers.blocknet_handler.requests.get")
     def test_download_remote_conf_http_error(self, mock_get):

@@ -345,13 +345,15 @@ class TestKeyringManager:
 
         def test_store_key_fallback_failure(self, manager):
             """Test storing key when fallback save fails."""
-            with patch("utilities.keyring_manager.KEYRING_AVAILABLE", False):
-                # Mock _save_fallback to fail
-                with patch.object(manager, "_save_fallback", return_value=False):
-                    success, message = manager.store_key(TEST_KEY)
+            # Mock _save_fallback to fail
+            with (
+                patch("utilities.keyring_manager.KEYRING_AVAILABLE", False),
+                patch.object(manager, "_save_fallback", return_value=False),
+            ):
+                success, message = manager.store_key(TEST_KEY)
 
-                    assert success is False
-                    assert "failed" in message.lower()
+                assert success is False
+                assert "failed" in message.lower()
 
         def test_store_key_keyring_failure_fallback_success(self, manager, mock_keyring):
             """Test storing key when keyring fails but fallback succeeds."""
@@ -443,12 +445,14 @@ class TestKeyringManager:
 
         def test_save_fallback_exception(self, manager):
             """Test _save_fallback when exception occurs."""
-            with patch("utilities.keyring_manager.KEYRING_AVAILABLE", False):
-                # Mock os.replace to raise exception
-                with patch("utilities.keyring_manager.os.replace", side_effect=Exception("OS error")):
-                    success = manager._save_fallback("test_key")
+            # Mock os.replace to raise exception
+            with (
+                patch("utilities.keyring_manager.KEYRING_AVAILABLE", False),
+                patch("utilities.keyring_manager.os.replace", side_effect=Exception("OS error")),
+            ):
+                success = manager._save_fallback("test_key")
 
-                    assert success is False
+                assert success is False
 
         def test_delete_fallback_exception(self, manager):
             """Test _delete_fallback when exception occurs."""

@@ -37,30 +37,34 @@ class TestXliteManager:
     @staticmethod
     def _create_xlite_manager_with_mocks(mock_root_gui, mock_container):
         """Create XliteManager instance with mocked dependencies."""
-        with patch("gui.xlite_manager.get_container", return_value=mock_container):
-            with patch("gui.xlite_manager.XliteHandler") as mock_xlite_handler:
-                mock_handler = MagicMock()
-                mock_xlite_handler.return_value = mock_handler
-                manager = XliteManager(mock_root_gui)
-                manager.utility = mock_handler
-                manager.frame_manager = MagicMock()
-                return manager, mock_xlite_handler
+        with (
+            patch("gui.xlite_manager.get_container", return_value=mock_container),
+            patch("gui.xlite_manager.XliteHandler") as mock_xlite_handler,
+        ):
+            mock_handler = MagicMock()
+            mock_xlite_handler.return_value = mock_handler
+            manager = XliteManager(mock_root_gui)
+            manager.utility = mock_handler
+            manager.frame_manager = MagicMock()
+            return manager, mock_xlite_handler
 
     def test_init(self):
         """Test XliteManager initialization."""
         mock_root_gui = self._create_mock_root_gui()
         mock_container = self._create_mock_container()
 
-        with patch("gui.xlite_manager.get_container", return_value=mock_container):
-            with patch("gui.xlite_manager.XliteHandler") as mock_xlite_handler:
-                manager = XliteManager(mock_root_gui)
+        with (
+            patch("gui.xlite_manager.get_container", return_value=mock_container),
+            patch("gui.xlite_manager.XliteHandler") as mock_xlite_handler,
+        ):
+            manager = XliteManager(mock_root_gui)
 
-                assert manager.root_gui is mock_root_gui
-                assert manager.utility is not None
-                assert manager.version == ["v1.0.0"]
-                assert manager.process_running is False
-                assert manager.daemon_process_running is False
-                mock_xlite_handler.assert_called_once()
+            assert manager.root_gui is mock_root_gui
+            assert manager.utility is not None
+            assert manager.version == ["v1.0.0"]
+            assert manager.process_running is False
+            assert manager.daemon_process_running is False
+            mock_xlite_handler.assert_called_once()
 
     def test_setup(self):
         """Test setup method initializes frame manager and schedules status update."""

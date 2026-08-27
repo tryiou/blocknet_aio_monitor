@@ -268,25 +268,27 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.handler.process = mock_process
         self.handler.running_locally = True
 
-        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
-            with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg"):
-                with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", return_value=12345):
-                    self.handler.stop()
+        with (
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger,
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg"),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", return_value=12345),
+        ):
+            self.handler.stop()
 
-            # Verify process was terminated and killed
-            mock_process.terminate.assert_called_once()
-            mock_process.kill.assert_called_once()
+        # Verify process was terminated and killed
+        mock_process.terminate.assert_called_once()
+        mock_process.kill.assert_called_once()
 
-            # Verify handler state was reset
-            self.assertIsNone(self.handler.process)
-            self.assertFalse(self.handler.running_locally)
+        # Verify handler state was reset
+        self.assertIsNone(self.handler.process)
+        self.assertFalse(self.handler.running_locally)
 
-            # Verify logger was called
-            mock_logger.warning.assert_called_once_with("Proxy didn't terminate gracefully, forcing kill")
-            # Check that info was called with the expected messages
-            info_calls = [str(call) for call in mock_logger.info.call_args_list]
-            self.assertTrue(any("Terminating proxy (PID: 12345)" in call for call in info_calls))
-            self.assertTrue(any("Proxy killed forcefully" in call for call in info_calls))
+        # Verify logger was called
+        mock_logger.warning.assert_called_once_with("Proxy didn't terminate gracefully, forcing kill")
+        # Check that info was called with the expected messages
+        info_calls = [str(call) for call in mock_logger.info.call_args_list]
+        self.assertTrue(any("Terminating proxy (PID: 12345)" in call for call in info_calls))
+        self.assertTrue(any("Proxy killed forcefully" in call for call in info_calls))
 
     def test_stop_exception(self):
         """Test stop when an exception occurs."""
@@ -297,18 +299,20 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.handler.process = mock_process
         self.handler.running_locally = True
 
-        with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger:
-            with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg"):
-                with patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", return_value=12345):
-                    self.handler.stop()
+        with (
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger,
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg"),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", return_value=12345),
+        ):
+            self.handler.stop()
 
-            # Verify logger was called with error
-            mock_logger.error.assert_called_once()
-            self.assertIn("Proxy stop error", str(mock_logger.error.call_args))
+        # Verify logger was called with error
+        mock_logger.error.assert_called_once()
+        self.assertIn("Proxy stop error", str(mock_logger.error.call_args))
 
-            # Verify handler state was still reset
-            self.assertIsNone(self.handler.process)
-            self.assertFalse(self.handler.running_locally)
+        # Verify handler state was still reset
+        self.assertIsNone(self.handler.process)
+        self.assertFalse(self.handler.running_locally)
 
     def test_stop_not_running_locally(self):
         """Test stop when proxy is not running locally."""

@@ -30,12 +30,14 @@ class TestBlockDXManager(unittest.TestCase):
         self.mock_root_gui.children = {}
 
         # Create BlockDXManager instance with mocked dependencies
-        with patch("gui.blockdx_manager.get_container", return_value=self.mock_container):
-            with patch("gui.blockdx_manager.BlockDXHandler") as mock_blockdx_handler:
-                self.mock_blockdx_handler = mock_blockdx_handler.return_value
-                self.blockdx_manager = BlockDXManager(self.mock_root_gui)
-                self.blockdx_manager.utility = self.mock_blockdx_handler
-                self.blockdx_manager.frame_manager = MagicMock()
+        with (
+            patch("gui.blockdx_manager.get_container", return_value=self.mock_container),
+            patch("gui.blockdx_manager.BlockDXHandler") as mock_blockdx_handler,
+        ):
+            self.mock_blockdx_handler = mock_blockdx_handler.return_value
+            self.blockdx_manager = BlockDXManager(self.mock_root_gui)
+            self.blockdx_manager.utility = self.mock_blockdx_handler
+            self.blockdx_manager.frame_manager = MagicMock()
 
     def test_init(self):
         """Test BlockDXManager initialization."""

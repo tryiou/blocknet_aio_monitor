@@ -253,12 +253,12 @@ class TestRPCNetworkWorkflow:
         # Test various network errors
 
         # 1. Connection error
-        with patch("requests.get", side_effect=requests.ConnectionError("Connection refused")):
+        with patch("requests.get", side_effect=requests.ConnectionError("Connection refused")):  # noqa: SIM117
             with pytest.raises(requests.ConnectionError):
                 requests.get("https://example.com", timeout=10)
 
         # 2. Timeout error
-        with patch("requests.get", side_effect=requests.Timeout("Request timeout")):
+        with patch("requests.get", side_effect=requests.Timeout("Request timeout")):  # noqa: SIM117
             with pytest.raises(requests.Timeout):
                 requests.get("https://example.com", timeout=10)
 
