@@ -32,7 +32,7 @@ class PortablePythonInstaller:
 
     def download(self, url: str, dest: Path):
         logger.info(f"Downloading {url}")
-        r = requests.get(url, stream=True)
+        r = requests.get(url, stream=True, timeout=30)
         r.raise_for_status()
         with open(dest, "wb") as f:
             for chunk in r.iter_content(8192):

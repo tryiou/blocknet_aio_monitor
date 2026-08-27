@@ -46,7 +46,7 @@ def install_vc_redist(url):
         installer_name = os.path.basename(url)
 
         with open(installer_name, "wb") as file:
-            response = requests.get(url)
+            response = requests.get(url, timeout=10)
             file.write(response.content)
 
         command = f"{installer_name} /install /quiet /norestart"

@@ -240,7 +240,8 @@ class TestRPCNetworkWorkflow:
         with patch("requests.get", return_value=mock_response):
             # Make network request
             response = requests.get(
-                "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-linux.tar.gz"
+                "https://github.com/blocknetdx/blocknet/releases/download/v4.4.1/blocknet-4.4.1-linux.tar.gz",
+                timeout=10,
             )
 
             # Verify response
@@ -254,12 +255,12 @@ class TestRPCNetworkWorkflow:
         # 1. Connection error
         with patch("requests.get", side_effect=requests.ConnectionError("Connection refused")):
             with pytest.raises(requests.ConnectionError):
-                requests.get("https://example.com")
+                requests.get("https://example.com", timeout=10)
 
         # 2. Timeout error
         with patch("requests.get", side_effect=requests.Timeout("Request timeout")):
             with pytest.raises(requests.Timeout):
-                requests.get("https://example.com")
+                requests.get("https://example.com", timeout=10)
 
         # 3. HTTP error
         mock_response = MagicMock()
@@ -267,7 +268,7 @@ class TestRPCNetworkWorkflow:
         mock_response.raise_for_status = MagicMock(side_effect=requests.HTTPError("404 Not Found"))
 
         with patch("requests.get", return_value=mock_response):
-            response = requests.get("https://example.com")
+            response = requests.get("https://example.com", timeout=10)
             with pytest.raises(requests.HTTPError):
                 response.raise_for_status()
 
@@ -283,7 +284,7 @@ class TestRPCNetworkWorkflow:
 
         with patch("requests.get", return_value=mock_response):
             # Simulate download
-            response = requests.get("https://example.com/file.tar.gz")
+            response = requests.get("https://example.com/file.tar.gz", timeout=10)
 
             # Write to file
             with open(download_path, "wb") as f:

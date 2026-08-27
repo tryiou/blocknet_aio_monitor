@@ -162,7 +162,7 @@ class TestBinaryDownloadWorkflow:
         extract_dir.mkdir()
 
         with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(extract_dir)
+            zf.extractall(extract_dir)  # noqa: S202 # test fixture
 
         # Verify extraction
         assert (extract_dir / "test" / "file1.txt").exists()
@@ -186,7 +186,7 @@ class TestBinaryDownloadWorkflow:
         extract_dir.mkdir()
 
         with tarfile.open(tar_path, "r:gz") as tf:
-            tf.extractall(extract_dir)
+            tf.extractall(extract_dir, filter="data")
 
         # Verify extraction
         assert (extract_dir / "test" / "file1.txt").exists()
@@ -249,7 +249,7 @@ class TestBinaryDownloadWorkflow:
 
         with pytest.raises(zipfile.BadZipFile):
             with zipfile.ZipFile(corrupted_zip, "r") as zf:
-                zf.extractall(self.workspace)
+                zf.extractall(self.workspace)  # noqa: S202 # test corrupted
 
         # Test permission denied
         restricted_dir = self.workspace / "restricted"

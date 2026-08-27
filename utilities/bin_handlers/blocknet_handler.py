@@ -483,7 +483,7 @@ class BlocknetHandler(BaseBinUtil):
 
 
 def get_remote_file_size(url):
-    r = requests.head(url)
+    r = requests.head(url, timeout=10)
     r.raise_for_status()
     return int(r.headers.get("content-length", 0))
 
@@ -539,7 +539,7 @@ def retrieve_remote_conf(remote_url: str, subfolder: str, expected_filename: str
 
 def download_remote_conf(url, filepath):
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
             conf_data = response.text
             parsed_conf = parse_conf_file(input_string=conf_data)
@@ -568,7 +568,7 @@ def retrieve_xb_manifest():
     local_manifest_file = os.path.join(aio_folder, folder, filename)
 
     try:
-        response = requests.get(container.conf_data.remote_manifest_url)
+        response = requests.get(container.conf_data.remote_manifest_url, timeout=10)
         if response.status_code == 200:
             parsed_json = response.json()
             os.makedirs(os.path.dirname(local_manifest_file), exist_ok=True)

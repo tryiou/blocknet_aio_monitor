@@ -67,11 +67,14 @@ known-first-party = ["gui", "utilities", "custom_tk_mods"]
 [tool.ruff.lint.per-file-ignores]
 # Tests intentionally import fixtures/helpers that appear unused to Ruff;
 # and GUI callbacks are dynamically referenced (Vulture-style false positives)
-"tests/**/*.py" = ["F401", "F841", "S101"]
+# S105/S108 test fixtures use hardcoded passwords and /tmp (intentional)
+"tests/**/*.py" = ["F401", "F841", "S101", "S105", "S108", "S202"]
 "utilities/bin_handlers/*.py" = ["E402"]  # imports after sys.path tweaks
 "blocknet_aio_monitor.py" = ["E402"]
 # custom_tk_mods are vendored / modified upstream
 "custom_tk_mods/*.py" = ["E402", "N806", "N803"]
+# UI strings trigger S105 false positive (not real passwords)
+"widgets_strings.py" = ["S105"]
 
 [tool.ruff.format]
 quote-style = "double"

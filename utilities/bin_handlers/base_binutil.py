@@ -82,24 +82,24 @@ class BaseBinUtil:
 
                     # Blocknet preserves internal folder structure
                     if handler_class == "BlocknetHandler":
-                        zip_ref.extractall(extract_to)
+                        zip_ref.extractall(extract_to)  # noqa: S202 # trusted Blocknet archive
                         logger.info(f"Extracted Blocknet ZIP directly to {extract_to}")
                         # XLite/BlockDX create new archive-named subfolders
                     elif handler_class in ["XliteHandler", "BlockDXHandler"]:
                         archive_name = os.path.splitext(os.path.basename(url))[0]
                         target_path = os.path.join(extract_to, archive_name)
                         os.makedirs(target_path, exist_ok=True)
-                        zip_ref.extractall(target_path)
+                        zip_ref.extractall(target_path)  # noqa: S202 # trusted archive
                         logger.info(f"Extracted {handler_class} to new folder {target_path}")
                         # Other handlers use default extraction
                     else:
-                        zip_ref.extractall(extract_to)
+                        zip_ref.extractall(extract_to)  # noqa: S202 # trusted archive
                         logger.info(f"Extracted {handler_class} ZIP to {extract_to}")
 
             os.remove(tmp_path)
         elif url.endswith(".tar.gz"):
             with tarfile.open(tmp_path, "r:gz") as tar:
-                tar.extractall(extract_to)
+                tar.extractall(extract_to, filter="data")
             os.remove(tmp_path)
             logger.info(f"Extracted TAR.GZ file to {extract_to}")
         elif url.endswith(".dmg") and self.container.system == "Darwin":

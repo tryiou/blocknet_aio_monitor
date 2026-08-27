@@ -237,7 +237,7 @@ class TestDownload(BaseBinUtilTestCase):
             self.base_binutil,
         )
 
-        mock_tar.extractall.assert_called_once_with(self.temp_dir)
+        mock_tar.extractall.assert_called_once_with(self.temp_dir, filter="data")
         mock_remove.assert_called_once()
 
     @patch("os.rename")
