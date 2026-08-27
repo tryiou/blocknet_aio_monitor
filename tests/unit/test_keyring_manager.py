@@ -696,10 +696,11 @@ class TestKeyringMigration:
             with open(config_file, 'w') as f:
                 json.dump(old_config, f)
 
-            # Mock open to raise exception on write
+            # Mock open to raise exception on write (robust to UP015 open without mode)
             original_open = open
             def mock_open_side_effect(*args, **kwargs):
-                if 'w' in args[1]:
+                mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
+                if 'w' in mode:
                     raise Exception("Write error")
                 return original_open(*args, **kwargs)
 

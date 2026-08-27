@@ -45,7 +45,6 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         self.patches.append(patch('utilities.bin_handlers.xlite_reverse_proxy_handler.os.makedirs'))
         self.patches.append(patch('utilities.bin_handlers.xlite_reverse_proxy_handler.socket.socket'))
         self.patches.append(patch('utilities.bin_handlers.xlite_reverse_proxy_handler.subprocess.Popen'))
-        self.patches.append(patch('utilities.bin_handlers.xlite_reverse_proxy_handler.requests.get'))
         self.patches.append(patch('re.search'))  # Patch re module directly
 
         # Start all patches
