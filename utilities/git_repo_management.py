@@ -708,7 +708,7 @@ class GitRepoManagement:
         except BranchSwitchBlockedError:
             raise
         except Exception as e:
-            raise Exception(f"Repository setup failed: {e}")
+            raise Exception(f"Repository setup failed: {e}") from e
 
     def run_script(
         self, script_path: str, script_args: list[str] | None = None, timeout: int | None = None

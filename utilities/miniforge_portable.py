@@ -70,7 +70,7 @@ class PortablePythonInstaller:
         try:
             subprocess.run(cmd, check=True)
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Installer failed: {e}")
+            raise RuntimeError(f"Installer failed: {e}") from e
 
         python_bin = install_path / ("Scripts/python.exe" if self.system == "Windows" else "bin/python")
         logger.info(f"✅ Installed portable Python to: {install_path}")

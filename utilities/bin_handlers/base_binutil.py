@@ -128,7 +128,9 @@ class BaseBinUtil:
                 os.makedirs(aio_folder, exist_ok=True)
                 stderr_log_path = os.path.join(aio_folder, f"{self.app_name.lower()}_launch.log")
                 # truncate previous launch log
-                stderr_file = open(stderr_log_path, "w", encoding="utf-8", errors="replace")
+                stderr_file = open(  # noqa: SIM115 # keep handle open for Popen
+                    stderr_log_path, "w", encoding="utf-8", errors="replace"
+                )
                 self._stderr_log_path = stderr_log_path
                 self._stderr_file_handle = stderr_file
             else:
@@ -295,7 +297,7 @@ class BaseBinUtil:
 
                 # Set executable permissions
                 if sys.platform in ["linux", "darwin"]:
-                    os.chmod(target_path, 0o755)
+                    os.chmod(target_path, 0o755)  # noqa: S103 # intentional executable
 
                 logger.info(f"Binary saved to {target_path}")
                 return True

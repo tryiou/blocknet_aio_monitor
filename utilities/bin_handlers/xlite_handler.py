@@ -51,7 +51,7 @@ def install_vc_redist(url):
 
         command = f"{installer_name} /install /quiet /norestart"
 
-        subprocess.run(command, shell=True, check=True)
+        subprocess.run(command, shell=True, check=True)  # noqa: S602 # shell required for Windows installer
         logger.info("Visual C++ Redistributable installed successfully.")
 
         os.remove(installer_name)

@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-import random
+import secrets
 import shutil
 import string
 import threading
@@ -490,7 +490,7 @@ def get_remote_file_size(url):
 
 
 def generate_random_string(length):
-    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+    return "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(length))
 
 
 def save_conf_to_file(conf_data, file_path):

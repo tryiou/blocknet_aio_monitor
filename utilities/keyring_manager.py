@@ -120,7 +120,7 @@ class KeyringManager:
                 logger.info("Encryption key removed from fallback storage")
             return True
         except Exception as e:
-            logger.error(f"Failed to delete from fallback: {e}")
+            logger.error(f"Failed to delete from fallback: {e}")  # noqa: S608 # false positive, not SQL
             return False
 
     def store_key(self, key: str | bytes) -> tuple[bool, str]:
