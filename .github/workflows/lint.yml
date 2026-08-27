@@ -46,6 +46,10 @@ jobs:
           ruff format --check . --diff
 
       - name: Vulture dead code (min-confidence 80)
+        run: |
+          vulture . vulture_whitelist.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size
+
+      - name: Vulture prod-only (deviation, 80)
         continue-on-error: true
         run: |
-          vulture . vulture_whitelist.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size || echo "Vulture found dead code (warning-only)"
+          vulture utilities/ gui/ blocknet_aio_monitor.py vulture_whitelist_prod.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size || echo "Prod-only deviations (warning-only, tests must use prod code)"

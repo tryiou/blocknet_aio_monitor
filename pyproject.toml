@@ -76,6 +76,9 @@ known-first-party = ["gui", "utilities", "custom_tk_mods"]
 "custom_tk_mods/*.py" = ["E402", "N806", "N803"]
 # UI strings trigger S105 false positive (not real passwords)
 "widgets_strings.py" = ["S105"]
+# Vulture whitelist — intentional useless expressions for Vulture
+"vulture_whitelist.py" = ["F821", "F401", "B018", "E501"]
+"vulture_whitelist_prod.py" = ["F821", "F401", "B018", "E501"]
 
 [tool.ruff.format]
 quote-style = "double"
