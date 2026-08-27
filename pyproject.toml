@@ -1,0 +1,95 @@
+[project]
+name = "blocknet-aio-monitor"
+version = "1.3.8"
+description = "Python 3.12+ GUI monitor for Blocknet Core, Block-DX and XLite (customtkinter)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "psutil~=5.9.8",
+    "requests~=2.32.0",
+    "cryptography~=44.0.1",
+    "customtkinter~=5.2.2",
+    "CTkToolTip~=0.8",
+    "pillow~=12.3.0",
+    "pygit2~=1.20.0",
+    "watchdog~=6.0.0",
+    "PyYAML~=6.0.1",
+    "keyring~=25.5.0",
+]
+
+[project.optional-dependencies]
+# Keep pip install -r requirements-dev.txt as primary (AGENTS.md:36).
+# This mirrors it for `pip install -e .[dev]` if used.
+dev = [
+    "pytest==9.0.2",
+    "pytest-asyncio==1.3.0",
+    "pyinstaller==6.22.2",
+    "ruff~=0.12.0",
+    "vulture~=2.14",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    "venv",
+    "build",
+    "dist",
+    ".git",
+    "__pycache__",
+    ".pytest_cache",
+    ".aider*",
+    ".idea",
+    ".kilocodemodes",
+    ".roomodes",
+]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: isort, N: pep8-naming, UP: pyupgrade,
+# S: bandit, B: bugbear, C4: comprehensions, SIM: simplify
+select = ["E", "F", "W", "I", "N", "UP", "S", "B", "C4", "SIM"]
+ignore = [
+    "S101",  # assert used — common in tests
+    "S603",  # subprocess without shell — audited, project controls inputs
+    "S607",  # start_process with partial executable path — intentional
+]
+# Baseline suppression: do not churn whole repo in same PR.
+# Fix incrementally; suppress existing F401/F841 noise on tests if needed via per-file-ignores below.
+unfixable = []
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["gui", "utilities", "custom_tk_mods"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests intentionally import fixtures/helpers that appear unused to Ruff;
+# and GUI callbacks are dynamically referenced (Vulture-style false positives)
+"tests/**/*.py" = ["F401", "F841", "S101"]
+"utilities/bin_handlers/*.py" = ["E402"]  # imports after sys.path tweaks
+"blocknet_aio_monitor.py" = ["E402"]
+# custom_tk_mods are vendored / modified upstream
+"custom_tk_mods/*.py" = ["E402", "N806", "N803"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-v --tb=short --strict-markers --disable-warnings"
+testpaths = ["tests/unit", "tests/integration"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "integration: marks tests as integration tests",
+    "network: marks tests that require network access",
+    "gui: marks tests that interact with GUI components",
+    "filesystem: marks tests that perform file operations",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "unit: marks tests as unit tests",
+]

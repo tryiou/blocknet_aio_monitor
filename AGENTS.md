@@ -112,4 +112,10 @@ async def setup(self) -> None:
 - Use `~=` for compatible versions: `psutil~=5.9.8`
 - Use `==` for pinned versions: `pygit2==1.18.0`
 
-**No linting configured** - consider adding flake8/mypy if needed.
+**Linting configured** — `pyproject.toml:1` (`[tool.ruff]`, `[tool.pytest.ini_options]`), `vulture_whitelist.py:1`, `requirements-dev.txt:5` (`ruff~=0.12.0`, `vulture~=2.14`), CI `.github/workflows/lint.yml:1` (warning-only).
+```bash
+venv/bin/ruff check .                          # lint (E,F,W,I,N,UP,S,B,C4,SIM, line-length 100)
+venv/bin/ruff format --check . --diff          # format check (Black-compatible, 100)
+venv/bin/ruff check --fix .                    # auto-fix where safe
+venv/bin/vulture . vulture_whitelist.py --min-confidence 80 --exclude venv,build,dist,.git
+```

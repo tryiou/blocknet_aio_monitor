@@ -9,3 +9,6 @@ __pycache__*
 .coverage
 .kilocodemodes
 .roomodes
+.ruff_cache/
+.pytest_cache/
+*.pyc

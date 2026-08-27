@@ -1,0 +1,56 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - "**"
+    tags-ignore:
+      - "v**"
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    # Warning-only initially: continue-on-error so CI does not block merges.
+    # After baseline is clean, remove continue-on-error to make it blocking.
+    continue-on-error: true
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install lint dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Ruff check
+        continue-on-error: true
+        run: |
+          ruff check . --output-format concise || echo "Ruff found issues (warning-only, 1396 baseline)"
+
+      - name: Ruff format (check only)
+        continue-on-error: true
+        run: |
+          ruff format --check . --diff || echo "Format diff above (warning-only)"
+
+      - name: Vulture dead code (min-confidence 80)
+        continue-on-error: true
+        run: |
+          vulture . vulture_whitelist.py --min-confidence 80 --exclude venv,build,dist,.git --sort-by-size || echo "Vulture found dead code (warning-only)"
