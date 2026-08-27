@@ -459,12 +459,10 @@ class BinaryManager:
             return
         for item in os.listdir(aio_folder):
             item_path = os.path.join(aio_folder, item)
-            if os.path.isdir(item_path):
-                # if a wrong version is found, delete it.
-                if "blocknet-" in item:
-                    if blocknet_pruned_version in item:
-                        logger.info(f"deleting {item_path}")
-                        shutil.rmtree(item_path)
+            # if a wrong version is found, delete it.
+            if os.path.isdir(item_path) and "blocknet-" in item and blocknet_pruned_version in item:
+                logger.info(f"deleting {item_path}")
+                shutil.rmtree(item_path)
 
     def install_delete_blockdx_command(self):
         blockdx_boolvar = self.frame_manager.blockdx_installed_boolvar.get()
@@ -489,16 +487,13 @@ class BinaryManager:
             item_path = os.path.join(aio_folder, item)
             if self.container.system == "Darwin":
                 blockdx_filename = os.path.basename(self.container.blockdx_release_url or "")
-                if os.path.isfile(item_path):
-                    if blockdx_filename in item_path:
-                        self.root_gui.blockdx_manager.unmount_dmg()
-                        os.remove(item_path)
+                if os.path.isfile(item_path) and blockdx_filename in item_path:
+                    self.root_gui.blockdx_manager.unmount_dmg()
+                    os.remove(item_path)
             else:
-                if os.path.isdir(item_path):
-                    if "BLOCK-DX-" in item:
-                        if blockdx_pruned_version in item:
-                            logger.info(f"deleting {item_path}")
-                            shutil.rmtree(item_path)
+                if os.path.isdir(item_path) and "BLOCK-DX-" in item and blockdx_pruned_version in item:
+                    logger.info(f"deleting {item_path}")
+                    shutil.rmtree(item_path)
 
     def install_delete_xlite_command(self):
         xlite_boolvar = self.frame_manager.xlite_installed_boolvar.get()
@@ -521,16 +516,13 @@ class BinaryManager:
             item_path = os.path.join(aio_folder, item)
             if self.container.system == "Darwin":
                 xlite_filename = os.path.basename(self.container.xlite_release_url or "")
-                if os.path.isfile(item_path):
-                    if xlite_filename in item_path:
-                        self.root_gui.xlite_manager.utility.unmount_dmg()
-                        os.remove(item_path)
+                if os.path.isfile(item_path) and xlite_filename in item_path:
+                    self.root_gui.xlite_manager.utility.unmount_dmg()
+                    os.remove(item_path)
             else:
-                if os.path.isdir(item_path):
-                    if "XLite-" in item:
-                        if xlite_pruned_version in item:
-                            logger.info(f"deleting {item_path}")
-                            shutil.rmtree(item_path)
+                if os.path.isdir(item_path) and "XLite-" in item and xlite_pruned_version in item:
+                    logger.info(f"deleting {item_path}")
+                    shutil.rmtree(item_path)
 
     def get_directory_mtime(self) -> int:
         """

@@ -153,19 +153,18 @@ class TestConfigManagementWorkflow:
         config_dict = {}
         for line in config_content.strip().split("\n"):
             line = line.strip()
-            if line and not line.startswith("#"):
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    key = key.strip()
-                    value = value.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip()
 
-                    if key in config_dict:
-                        # Handle multiple values (e.g., addnode)
-                        if not isinstance(config_dict[key], list):
-                            config_dict[key] = [config_dict[key]]
-                        config_dict[key].append(value)
-                    else:
-                        config_dict[key] = value
+                if key in config_dict:
+                    # Handle multiple values (e.g., addnode)
+                    if not isinstance(config_dict[key], list):
+                        config_dict[key] = [config_dict[key]]
+                    config_dict[key].append(value)
+                else:
+                    config_dict[key] = value
 
         # Verify parsed config
         assert config_dict["rpcuser"] == "testuser"
@@ -191,10 +190,9 @@ class TestConfigManagementWorkflow:
         config_dict = {}
         for line in config_content.strip().split("\n"):
             line = line.strip()
-            if line and not line.startswith("#"):
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    config_dict[key.strip()] = value.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                config_dict[key.strip()] = value.strip()
 
         # Verify parsed config
         assert config_dict["rpcuser"] == "testuser"

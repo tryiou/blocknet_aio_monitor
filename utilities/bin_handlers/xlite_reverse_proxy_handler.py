@@ -70,10 +70,9 @@ class XliteReverseProxyHandler(BaseBinUtil):
                 os.makedirs(bin_dir, exist_ok=True)
 
             # Download if missing
-            if not os.path.exists(exe_path):
-                if not self.download_standalone_binary(self.release_url, exe_path):
-                    logger.error("Proxy download failed")
-                    return
+            if not os.path.exists(exe_path) and not self.download_standalone_binary(self.release_url, exe_path):
+                logger.error("Proxy download failed")
+                return
 
             # Start proxy with dynlist=true argument
             self.process = subprocess.Popen(
