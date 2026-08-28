@@ -4,6 +4,8 @@ import platform
 import signal
 import sys
 
+from cryptography.fernet import InvalidToken as FernetInvalidToken
+
 # Early environment validation before Tk imports (issue #26: no console debugging)
 try:
     from utilities.environment import show_startup_error, validate_or_exit
@@ -144,8 +146,16 @@ class BlocknetAioGui(ctk.CTk):
                     # Decrypt password using keyring (migration handled in load_cfg_json)
                     self.stored_password = utils.decrypt_password(self.cfg["xl_pass"])
                 except Exception as e:
-                    logger.error(f"Error decrypting XLite password: {e}")
+                    logger.error(f"Error decrypting XLite password: {e} ({type(e).__name__})", exc_info=True)
                     self.stored_password = None
+                    # Only clear persisted xl_pass on InvalidToken (stale key/cipher mismatch);
+                    # other exceptions (e.g. TypeError) indicate programming error, not stale data.
+                    if isinstance(e, FernetInvalidToken):
+                        try:
+                            utils.remove_cfg_json_key("xl_pass")
+                            logger.info("Cleared stale xl_pass after InvalidToken — please Store Password again")
+                        except Exception as ce:
+                            logger.error(f"Failed to clear stale xl_pass: {ce}", exc_info=True)
 
         self.time_disable_button: int = TIME_DISABLE_BUTTON_MS
 

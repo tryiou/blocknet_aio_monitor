@@ -8,7 +8,7 @@ from typing import Any
 
 import customtkinter as ctk
 import psutil
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 from utilities.app_container import get_container
 from utilities.atomic_write import atomic_write_json, backup_corrupt_file, ensure_dir_secure
@@ -319,9 +319,13 @@ def decrypt_password(encrypted_password, key=None):
             logger.error("No encryption key available for password decryption")
             return None
 
-    cipher_suite = Fernet(key)
-    decrypted_password = cipher_suite.decrypt(encrypted_password.encode())
-    return decrypted_password.decode()
+    try:
+        cipher_suite = Fernet(key)
+        decrypted_password = cipher_suite.decrypt(encrypted_password.encode())
+        return decrypted_password.decode()
+    except InvalidToken as e:
+        logger.error(f"Failed to decrypt password: {e} ({type(e).__name__})", exc_info=True)
+        raise
 
 
 def enable_button(button, img=None):

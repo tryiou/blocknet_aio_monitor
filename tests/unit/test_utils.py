@@ -846,6 +846,35 @@ class TestKeyringBasedFunctions:
         assert decrypted is None
         mock_load_key.assert_called_once()
 
+    def test_decrypt_password_invalid_token_raises(self):
+        """Decrypt with mismatched key raises InvalidToken and logs — ensures InvalidSignature not silenced."""
+        from cryptography.fernet import Fernet, InvalidToken
+
+        key1 = Fernet.generate_key()
+        key2 = Fernet.generate_key()
+        password = "secret123"
+        cipher1 = Fernet(key1)
+        encrypted = cipher1.encrypt(password.encode()).decode()
+
+        # Decrypt with wrong key must raise InvalidToken
+        with pytest.raises(InvalidToken):
+            utils.decrypt_password(encrypted, key2)
+
+    def test_encrypt_decrypt_key_rotation_invalidates_old_cipher(self):
+        """New key invalidates old xl_pass — reproduces intermittent InvalidToken after Store Password rotation."""
+        from cryptography.fernet import Fernet, InvalidToken
+
+        old_key = Fernet.generate_key()
+        new_key = Fernet.generate_key()
+        password = "rotate_me"
+        old_cipher = Fernet(old_key).encrypt(password.encode()).decode()
+
+        # Old cipher must not decrypt with new key
+        with pytest.raises(InvalidToken):
+            utils.decrypt_password(old_cipher, new_key)
+        # Old cipher still decrypts with old key
+        assert utils.decrypt_password(old_cipher, old_key) == password
+
     @patch("utilities.utils.KeyringManager")
     @patch("utilities.utils.delete_encryption_key")
     def test_remove_cfg_json_key_with_password(self, mock_delete_key, mock_keyring_manager_class):
