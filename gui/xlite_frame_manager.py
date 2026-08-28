@@ -135,14 +135,15 @@ class XliteFrameManager:
                 title="Store XLite Password", text="Enter XLite password:", show="*", fg_color=fg_color
             ).get_input()
             if password:
-                # Generate key and store in keyring
+                # Generate key and store in keyring — use same key object for encrypt to avoid
+                # split-brain where store_key goes to fallback but load_encryption_key reads keyring
                 encryption_key = utils.generate_key()
                 if encryption_key is None:
                     logger.error("Failed to generate encryption key")
                     return "break"
 
-                # Encrypt password using keyring
-                salted_pass = utils.encrypt_password(password)
+                # Encrypt password using the freshly generated key directly (atomic, no reload race)
+                salted_pass = utils.encrypt_password(password, encryption_key)
                 if salted_pass is None:
                     logger.error("Failed to encrypt password")
                     return "break"

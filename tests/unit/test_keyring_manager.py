@@ -756,6 +756,30 @@ class TestKeyringIntegration:
             # Verify key no longer exists
             assert manager.key_exists() is False
 
+    def test_retrieve_prefers_keyring_over_fallback_split_brain(self, temp_dir, mock_keyring):
+        """Keyring stale key wins over fallback fresh key — reproduces intermittent InvalidToken split-brain."""
+        manager = KeyringManager(temp_dir)
+        # Fallback holds fresh key
+        with patch("utilities.keyring_manager.KEYRING_AVAILABLE", False):
+            manager.store_key("fallback_fresh_key")
+        # Keyring holds stale key
+        setup_keyring_mock(mock_keyring, key="keyring_stale_key")
+        key, msg = manager.retrieve_key()
+        # Current code prefers keyring — stale key returned, decrypt of fallback-encrypted xl_pass will fail
+        assert key == "keyring_stale_key"
+        assert "keyring" in msg.lower()
+
+    def test_handle_process_alias_for_dev_binary(self):
+        """Dev binary xlite-daemon must be detected even when target is xlite-daemon-linux64."""
+        from utilities.utils import handle_process
+
+        # Dev name matches target with suffix
+        assert handle_process(100, "xlite-daemon", "running", "xlite-daemon-linux64") == 100
+        # Exact match still works
+        assert handle_process(101, "xlite-daemon-linux64", "running", "xlite-daemon-linux64") == 101
+        # Other mismatches remain None
+        assert handle_process(102, "other", "running", "xlite-daemon-linux64") is None
+
     def test_migration_workflow(self, temp_dir):
         """Test complete migration workflow (fallback - salt kept)."""
         keyring_manager = KeyringManager(temp_dir)

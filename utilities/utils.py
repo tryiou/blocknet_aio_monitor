@@ -375,7 +375,15 @@ def processes_check():
 
 def handle_process(pid, name, status, target_name):
     """Helper function to handle individual process logic."""
-    if name == target_name:
+    # Dev builds run as `xlite-daemon` (no suffix) while the configured name
+    # is `xlite-daemon-linux64` / `xlite-daemon-win64.exe` / `xlite-daemon-osx64`.
+    # Accept the dev alias only — do not match cross-platform suffixed names.
+    if not isinstance(name, str) or not isinstance(target_name, str):
+        return None
+    n = name.lower().removesuffix(".exe")
+    t = target_name.lower().removesuffix(".exe")
+    is_match = n == t or (n == "xlite-daemon" and t.startswith("xlite-daemon-"))
+    if is_match:
         if status == "zombie":
             # the app was closed by user manually, clean zombie process
             process = psutil.Process(pid)
