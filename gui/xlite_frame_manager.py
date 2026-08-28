@@ -158,7 +158,10 @@ class XliteFrameManager:
         self.daemon_process_status_checkbox.grid(row=x + 2, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
         self.valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
         self.daemon_valid_config_checkbox.grid(row=x + 2, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
-        self.reverse_proxy_process_status_checkbox.grid(row=x + 3, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+        # TEMP DISABLE xlite-reverse-proxy widget — keep for restore:
+        # self.reverse_proxy_process_status_checkbox.grid(
+        #     row=x + 3, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY
+        # )
         self.store_password_button.grid(row=x, column=y + 3, padx=2, pady=2, sticky="e")
 
     def update_xlite_process_status_checkbox(self):

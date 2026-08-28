@@ -3,7 +3,9 @@ import logging
 from gui.xlite_frame_manager import XliteFrameManager
 from utilities.app_container import get_container
 from utilities.bin_handlers.xlite_handler import XliteHandler
-from utilities.bin_handlers.xlite_reverse_proxy_handler import XliteReverseProxyHandler
+from utilities.bin_handlers.xlite_reverse_proxy_handler import (
+    XliteReverseProxyHandler,  # noqa: F401 — kept for restore (TEMP DISABLE)
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +27,11 @@ class XliteManager:
 
     async def setup(self):
         self.frame_manager = XliteFrameManager(self)
-        self.reverse_proxy = XliteReverseProxyHandler()
+        # TEMP DISABLE xlite-reverse-proxy — keep handler for restore
+        self.reverse_proxy = None  # was: XliteReverseProxyHandler()
         self.reverse_proxy_running = False
-        try:
-            self.reverse_proxy.start()
-        except Exception as e:
-            logger.error(f"Proxy init failed: {e}")
+        # TEMP DISABLE: self.reverse_proxy = XliteReverseProxyHandler()
+        # TEMP DISABLE: try: self.reverse_proxy.start() except Exception as e: logger.error(f"Proxy init failed: {e}")
         self.root_gui.after(0, self.update_status_xlite)
 
     def refresh_xlite_confs(self):
@@ -57,7 +58,9 @@ class XliteManager:
         self.frame_manager.update_xlite_daemon_process_status()
         self.frame_manager.update_xlite_valid_config_checkbox()
         self.frame_manager.update_xlite_daemon_valid_config_checkbox()
-        # Update proxy status
-        self.reverse_proxy_running = self.reverse_proxy.port_occupied() or self.reverse_proxy.running_locally
+        # TEMP DISABLE xlite-reverse-proxy polling — keep for restore:
+        # self.reverse_proxy_running = self.reverse_proxy.port_occupied() or self.reverse_proxy.running_locally
+        self.reverse_proxy_running = False
+        # Keep UI sync for hidden widget (grid hidden) so tests stay green; remove if fully disabling
         self.frame_manager.update_xlite_reverse_proxy_process_status()
         self.root_gui.after(2000, self.update_status_xlite)

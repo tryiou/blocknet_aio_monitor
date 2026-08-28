@@ -453,9 +453,10 @@ class BlocknetAioGui(ctk.CTk):
                 self.binary_manager.stop()
         except Exception as e:
             logger.debug(f"Watcher stop error: {e}")
+        # TEMP DISABLE xlite-reverse-proxy — keep for restore
         # Stop proxy if running
         try:
-            if hasattr(self, "xlite_manager") and hasattr(self.xlite_manager, "reverse_proxy"):
+            if hasattr(self, "xlite_manager") and getattr(self.xlite_manager, "reverse_proxy", None):
                 self.xlite_manager.reverse_proxy.stop()
         except Exception as e:
             logger.error(f"Proxy shutdown error: {e}")
