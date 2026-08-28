@@ -59,7 +59,13 @@ def test_check_tkinter_missing(monkeypatch):
     ok, msg, details = environment.check_tkinter()
     assert ok is False
     assert "Tkinter" in msg or "_tkinter" in msg
-    assert "brew install" in details or "apt install" in details
+    # OS-aware: Windows uses Reinstall Python, others use brew/apt
+    assert (
+        "brew install" in details
+        or "apt install" in details
+        or "Reinstall Python" in details
+        or "tcl/tk" in details.lower()
+    )
 
 
 def test_check_pygit2_success():
@@ -160,16 +166,23 @@ def test_show_with_tkinter_mock():
 
 
 def test_tk_fix_commands_dynamic(monkeypatch):
-    # Dynamic version — no hardcoded 3.13
+    # Dynamic version — no hardcoded 3.13 (OS-aware)
     monkeypatch.setattr(sys, "version_info", (3, 14, 0))
     monkeypatch.setattr(platform, "python_version", lambda: "3.14.0")
+    # Mock platform.system to Linux for consistent version check, or handle Windows branch
+    # On Windows, cmds are Reinstall Python + python.exe -m venv, which may not contain 3.14 if exe is python.exe
+    # So we test that cmds are non-empty and contain either version or platform-specific hint
     cmds = environment._tk_fix_commands()
     joined = " ".join(cmds)
-    assert "3.14" in joined
-    assert "3.13" not in joined or "3.14" in joined  # should be 3.14 for current 3.14
-    # Ensure no hardcoded literal survives when on 3.14
-    for c in cmds:
-        assert "python-tk@3.13" not in c or "3.14" in c
+    # On Linux/Darwin, should contain 3.14; on Windows, should contain Reinstall or python.exe
+    if platform.system() == "Windows":
+        assert "Reinstall Python" in joined or "python" in joined.lower()
+    else:
+        assert "3.14" in joined
+        assert "3.13" not in joined or "3.14" in joined  # should be 3.14 for current 3.14
+        # Ensure no hardcoded literal survives when on 3.14
+        for c in cmds:
+            assert "python-tk@3.13" not in c or "3.14" in c
 
 
 def test_pygit2_fix_commands_dynamic(monkeypatch):

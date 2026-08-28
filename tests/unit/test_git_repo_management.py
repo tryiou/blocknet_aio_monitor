@@ -143,8 +143,8 @@ class TestVirtualEnvironment(unittest.TestCase):
     @patch("utilities.git_repo_management.run_command")
     def test_create_already_exists(self, mock_run, mock_broken):
         """Test creation when venv already exists."""
-        # Create fake venv directory
-        venv_bin_path = Path(self.temp_dir) / "venv" / "bin"
+        # Create fake venv directory (OS-aware: bin vs Scripts)
+        venv_bin_path = Path(self.temp_dir) / "venv" / self.venv.bin_dir
         venv_bin_path.mkdir(parents=True)
 
         self.venv.create()
@@ -263,7 +263,7 @@ class TestVirtualEnvironment(unittest.TestCase):
 
     def test_get_python_path_exists(self):
         """Test getting Python path when it exists."""
-        venv_python = Path(self.temp_dir) / "venv" / "bin" / "python"
+        venv_python = Path(self.temp_dir) / "venv" / self.venv.bin_dir / self.venv.python_exe
         venv_python.parent.mkdir(parents=True)
         venv_python.touch()
 
@@ -277,7 +277,7 @@ class TestVirtualEnvironment(unittest.TestCase):
 
     def test_get_pip_path_exists(self):
         """Test getting pip path when it exists."""
-        venv_pip = Path(self.temp_dir) / "venv" / "bin" / "pip"
+        venv_pip = Path(self.temp_dir) / "venv" / self.venv.bin_dir / self.venv.pip_exe
         venv_pip.parent.mkdir(parents=True)
         venv_pip.touch()
 
@@ -292,20 +292,20 @@ class TestVirtualEnvironment(unittest.TestCase):
     @patch("utilities.git_repo_management.run_command", return_value=(0, "pip 1.0", ""))
     def test_is_broken_healthy(self, mock_run):
         """Test _is_broken returns False for healthy venv."""
-        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin = Path(self.temp_dir) / "venv" / self.venv.bin_dir
         venv_bin.mkdir(parents=True)
-        (venv_bin / "python").touch()
-        pip = venv_bin / "pip"
-        pip.write_text(f"#!{venv_bin / 'python'}\nimport pip\n")
+        (venv_bin / self.venv.python_exe).touch()
+        pip = venv_bin / self.venv.pip_exe
+        pip.write_text(f"#!{venv_bin / self.venv.python_exe}\nimport pip\n")
         pip.chmod(0o755)
         broken, reason = self.venv._is_broken()
         self.assertFalse(broken)
 
     def test_is_broken_missing_pip(self):
         """Test _is_broken detects missing pip."""
-        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin = Path(self.temp_dir) / "venv" / self.venv.bin_dir
         venv_bin.mkdir(parents=True)
-        (venv_bin / "python").touch()
+        (venv_bin / self.venv.python_exe).touch()
         # no pip
         broken, reason = self.venv._is_broken()
         self.assertTrue(broken)
@@ -313,7 +313,7 @@ class TestVirtualEnvironment(unittest.TestCase):
 
     def test_is_broken_missing_python(self):
         """Test _is_broken detects missing python."""
-        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin = Path(self.temp_dir) / "venv" / self.venv.bin_dir
         venv_bin.mkdir(parents=True)
         # no python, no pip
         broken, reason = self.venv._is_broken()
@@ -322,10 +322,10 @@ class TestVirtualEnvironment(unittest.TestCase):
 
     def test_is_broken_stale_interpreter_missing(self):
         """Test _is_broken detects pip shebang with missing interpreter."""
-        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin = Path(self.temp_dir) / "venv" / self.venv.bin_dir
         venv_bin.mkdir(parents=True)
-        (venv_bin / "python").touch()
-        pip = venv_bin / "pip"
+        (venv_bin / self.venv.python_exe).touch()
+        pip = venv_bin / self.venv.pip_exe
         pip.write_text("#!/tmp/other/venv/bin/python\n")
         pip.chmod(0o755)
         ve2 = VirtualEnvironment(Path(self.temp_dir), venv_dir=Path(self.temp_dir) / "venv")
@@ -335,10 +335,11 @@ class TestVirtualEnvironment(unittest.TestCase):
 
     def test_is_broken_stale_legacy_path(self):
         """Test _is_broken detects legacy xbridge_trading_bots/venv path after relocation."""
-        venv_bin = Path(self.temp_dir) / "relocated_venv" / "bin"
+        # Use current venv's bin_dir for relocated test (bin vs Scripts)
+        venv_bin = Path(self.temp_dir) / "relocated_venv" / self.venv.bin_dir
         venv_bin.mkdir(parents=True)
-        (venv_bin / "python").touch()
-        pip = venv_bin / "pip"
+        (venv_bin / self.venv.python_exe).touch()
+        pip = venv_bin / self.venv.pip_exe
         pip.write_text("#!/home/tryou/.AIO_Blocknet/xbridge_trading_bots/venv/bin/python\n")
         pip.chmod(0o755)
         ve = VirtualEnvironment(Path(self.temp_dir), venv_dir=Path(self.temp_dir) / "relocated_venv")
@@ -348,11 +349,11 @@ class TestVirtualEnvironment(unittest.TestCase):
 
     def test_is_broken_pip_not_runnable(self):
         """Test _is_broken detects pip not runnable via python -m pip."""
-        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin = Path(self.temp_dir) / "venv" / self.venv.bin_dir
         venv_bin.mkdir(parents=True)
-        (venv_bin / "python").touch()
-        pip = venv_bin / "pip"
-        pip.write_text(f"#!{venv_bin / 'python'}\n")
+        (venv_bin / self.venv.python_exe).touch()
+        pip = venv_bin / self.venv.pip_exe
+        pip.write_text(f"#!{venv_bin / self.venv.python_exe}\n")
         pip.chmod(0o755)
         with patch("utilities.git_repo_management.run_command", return_value=(1, "", "error")):
             broken, reason = self.venv._is_broken()
@@ -374,10 +375,10 @@ class TestVirtualEnvironment(unittest.TestCase):
     @patch.object(VirtualEnvironment, "_create_venv_force")
     def test_ensure_healthy_recreates_when_broken(self, mock_create, mock_rm, mock_run):
         """Test ensure_healthy recreates broken venv."""
-        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin = Path(self.temp_dir) / "venv" / self.venv.bin_dir
         venv_bin.mkdir(parents=True)
         # missing pip -> broken
-        (venv_bin / "python").touch()
+        (venv_bin / self.venv.python_exe).touch()
         # mock _is_broken to sequence: first broken, then healthy after create
         with patch.object(VirtualEnvironment, "_is_broken", side_effect=[(True, "missing pip"), (False, "")]):
             recreated = self.venv.ensure_healthy()
@@ -388,10 +389,10 @@ class TestVirtualEnvironment(unittest.TestCase):
     @patch("shutil.rmtree")
     def test_create_recreates_when_broken(self, mock_rm, mock_broken):
         """Test create() recreates when existing venv is broken."""
-        venv_bin = Path(self.temp_dir) / "venv" / "bin"
+        venv_bin = Path(self.temp_dir) / "venv" / self.venv.bin_dir
         venv_bin.mkdir(parents=True)
-        (venv_bin / "python").touch()
-        (venv_bin / "pip").touch()
+        (venv_bin / self.venv.python_exe).touch()
+        (venv_bin / self.venv.pip_exe).touch()
         with patch.object(VirtualEnvironment, "_create_venv_force") as mock_force:
             self.venv.create()
             mock_force.assert_called_once()

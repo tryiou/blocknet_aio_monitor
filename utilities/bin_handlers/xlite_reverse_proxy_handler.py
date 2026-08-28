@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import signal
 import socket
 import subprocess
 
@@ -8,6 +9,22 @@ from utilities.app_container import AppContainer
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 
 logger = logging.getLogger(__name__)
+
+
+def _kill_process_group(pid: int) -> None:
+    """Kill process group if POSIX, else fallback to SIGTERM.
+
+    On Windows os.killpg / os.getpgid / signal.SIGKILL are absent;
+    fall back to os.kill with SIGTERM or do nothing (caller already
+    does process.kill()).
+    """
+    try:
+        if hasattr(os, "killpg") and hasattr(os, "getpgid") and hasattr(signal, "SIGKILL"):
+            os.killpg(os.getpgid(pid), signal.SIGKILL)  # type: ignore[attr-defined]
+        elif hasattr(os, "kill") and hasattr(signal, "SIGTERM"):
+            os.kill(pid, signal.SIGTERM)
+    except (ProcessLookupError, AttributeError, OSError):
+        pass
 
 
 class XliteReverseProxyHandler(BaseBinUtil):
@@ -112,13 +129,7 @@ class XliteReverseProxyHandler(BaseBinUtil):
             except subprocess.TimeoutExpired:
                 logger.warning("Proxy didn't terminate gracefully, forcing kill")
                 # Kill the entire process group to ensure cleanup
-                try:
-                    import signal
-
-                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
-                except (ProcessLookupError, AttributeError):
-                    # Process already dead or pgid not available
-                    pass
+                _kill_process_group(self.process.pid)
                 self.process.kill()
                 self.process.wait(timeout=2)
                 logger.info("Proxy killed forcefully")
@@ -127,21 +138,14 @@ class XliteReverseProxyHandler(BaseBinUtil):
             if self.process.poll() is None:
                 logger.error("Proxy process still running after stop attempt")
                 # Final attempt to kill
-                try:
-                    import signal
-
-                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
-                except (ProcessLookupError, AttributeError):
-                    pass
+                _kill_process_group(self.process.pid)
 
         except Exception as e:
             logger.error(f"Proxy stop error: {e}")
             # Try emergency cleanup
             try:
                 if self.process and self.process.poll() is None:
-                    import signal
-
-                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                    _kill_process_group(self.process.pid)
             except (ProcessLookupError, AttributeError):
                 pass
         finally:

@@ -473,7 +473,7 @@ class TestKeyringManager:
             with patch("utilities.keyring_manager.os.makedirs", side_effect=Exception("OS error")):
                 manager = KeyringManager("/invalid/path")
                 # Should not raise exception, just log error
-                assert manager.config_path == "/invalid/path"
+                assert manager.config_path == os.path.normpath("/invalid/path")
 
         def test_load_fallback_generic_exception(self, manager):
             """Test _load_fallback when generic exception occurs."""

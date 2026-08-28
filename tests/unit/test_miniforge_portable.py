@@ -180,8 +180,8 @@ class TestPortablePythonInstaller:
             assert "/S" in call_args
             assert "/D=" in call_args[-1]
 
-            # Verify result
-            assert result == target_dir / "miniforge" / "Scripts" / "python.exe"
+            # Verify result (use resolve for Windows D: handling)
+            assert result == target_dir.resolve() / "miniforge" / "Scripts" / "python.exe"
 
     # -------------------------------------------------------------------------
     # INSTALL TESTS - LINUX
@@ -240,8 +240,8 @@ class TestPortablePythonInstaller:
             assert "install" in conda_args
             assert "tk=*=xft_*" in conda_args
 
-            # Verify result
-            assert result == target_dir / "miniforge" / "bin" / "python"
+            # Verify result (use resolve for Windows D: handling)
+            assert result == target_dir.resolve() / "miniforge" / "bin" / "python"
 
     # -------------------------------------------------------------------------
     # INSTALL TESTS - EDGE CASES
@@ -271,7 +271,7 @@ class TestPortablePythonInstaller:
             patch("utilities.miniforge_portable.platform.machine", return_value="x86_64"),
         ):
             installer = PortablePythonInstaller(target_dir)
-            install_path = target_dir / "miniforge"
+            install_path = target_dir.resolve() / "miniforge"
 
             with patch.object(Path, "exists", return_value=True):
                 mock_get.return_value = mock_download_response

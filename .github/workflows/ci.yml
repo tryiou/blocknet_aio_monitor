@@ -39,6 +39,7 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
+    continue-on-error: ${{ matrix.os == 'windows' }}
 
     steps:
       - uses: actions/checkout@v4

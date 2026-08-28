@@ -143,7 +143,7 @@ class TestXliteHandler(unittest.TestCase):
             handler.download_xlite_bin()
 
             expected_url = "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-linux.tar.gz"
-            expected_executable = "/mock/aio_folder/XLite-1.0.7-linux/xlite"
+            expected_executable = os.path.join("/mock/aio_folder", "XLite-1.0.7-linux", "xlite")
             mock_download.assert_called_once_with(expected_url, "tmp_xl_bin", expected_executable, "/mock/aio_folder")
 
     def test_download_xlite_bin_windows_zip(self):
@@ -153,7 +153,7 @@ class TestXliteHandler(unittest.TestCase):
             handler.download_xlite_bin()
 
             expected_url = "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-win-x64.zip"
-            expected_executable = "/mock/aio_folder/XLite-1.0.7-win-x64/XLite.exe"
+            expected_executable = os.path.join("/mock/aio_folder", "XLite-1.0.7-win-x64", "XLite.exe")
             mock_download.assert_called_once_with(expected_url, "tmp_xl_bin", expected_executable, "/mock/aio_folder")
 
     def test_download_xlite_bin_darwin_dmg(self):
@@ -163,7 +163,7 @@ class TestXliteHandler(unittest.TestCase):
             handler.download_xlite_bin()
 
             expected_url = "https://github.com/blocknetdx/xlite/releases/download/v1.0.7/XLite-1.0.7-mac.dmg"
-            expected_executable = "/mock/aio_folder/XLite-1.0.7-mac.dmg"
+            expected_executable = os.path.join("/mock/aio_folder", "XLite-1.0.7-mac.dmg")
             mock_download.assert_called_once_with(expected_url, "tmp_xl_bin", expected_executable, "/mock/aio_folder")
 
     def test_download_xlite_bin_unsupported_os(self):
@@ -427,7 +427,7 @@ class TestXliteHandler(unittest.TestCase):
 
             self.handler.start_xlite(env_vars=["ENV_VAR=value"])
 
-            expected_cmd = ["/mock/aio_folder/XLite-1.0.7-linux/xlite"]
+            expected_cmd = [os.path.join("/mock/aio_folder", "XLite-1.0.7-linux", "xlite")]
             mock_start.assert_called_once()
             args, kwargs = mock_start.call_args
             self.assertEqual(args[0], expected_cmd)
@@ -448,7 +448,7 @@ class TestXliteHandler(unittest.TestCase):
             handler = self._create_handler_with_os("Windows")
             handler.start_xlite()
 
-            expected_cmd = ["/mock/aio_folder/XLite-1.0.7-win-x64/XLite.exe", "--in-process-gpu"]
+            expected_cmd = [os.path.join("/mock/aio_folder", "XLite-1.0.7-win-x64", "XLite.exe"), "--in-process-gpu"]
             mock_start.assert_called_once()
             args, kwargs = mock_start.call_args
             self.assertEqual(args[0], expected_cmd)
@@ -469,7 +469,7 @@ class TestXliteHandler(unittest.TestCase):
             handler.dmg_mount_path = "/Volumes/XliteVolume"
 
             # Set executable_path for Darwin (it's set differently than other OS)
-            handler.executable_path = "/mock/aio_folder/XLite-1.0.7-mac.dmg"
+            handler.executable_path = os.path.join("/mock/aio_folder", "XLite-1.0.7-mac.dmg")
 
             handler.start_xlite()
 

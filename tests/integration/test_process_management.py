@@ -256,17 +256,21 @@ class TestProcessManagementWorkflow:
         mock_process.pid = 12345
         mock_process.send_signal = MagicMock()
 
-        # Test SIGTERM signal
+        # Test SIGTERM signal (available on all platforms)
         mock_process.send_signal(signal.SIGTERM)
         mock_process.send_signal.assert_called_with(signal.SIGTERM)
 
-        # Test SIGKILL signal
-        mock_process.send_signal(signal.SIGKILL)
-        mock_process.send_signal.assert_called_with(signal.SIGKILL)
+        # Test SIGKILL signal (POSIX only)
+        if hasattr(signal, "SIGKILL"):
+            mock_process.send_signal(signal.SIGKILL)
+            mock_process.send_signal.assert_called_with(signal.SIGKILL)
+        else:
+            pytest.skip("SIGKILL not available on Windows")
 
-        # Test SIGHUP signal
-        mock_process.send_signal(signal.SIGHUP)
-        mock_process.send_signal.assert_called_with(signal.SIGHUP)
+        # Test SIGHUP signal (not on Windows)
+        if hasattr(signal, "SIGHUP"):
+            mock_process.send_signal(signal.SIGHUP)
+            mock_process.send_signal.assert_called_with(signal.SIGHUP)
 
     def test_process_lifecycle_integration(self):
         """Test complete process lifecycle integration."""

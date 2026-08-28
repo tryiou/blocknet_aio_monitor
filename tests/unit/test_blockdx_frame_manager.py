@@ -191,7 +191,7 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
         self.mock_parent.utility.blockdx_conf_local = {
             "user": "user",
             "password": "pass",
-            "xbridgeConfPath": "/mock/data/xbridge.conf",
+            "xbridgeConfPath": os.path.join("/mock/data", "xbridge.conf"),
             "selectedWallets": [self.mock_container.conf_data.blockdx_selectedWallets_blocknet],
         }
 
@@ -214,7 +214,7 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
         self.mock_parent.utility.blockdx_conf_local = {
             "user": "different_user",
             "password": "different_pass",
-            "xbridgeConfPath": "/mock/data/xbridge.conf",
+            "xbridgeConfPath": os.path.join("/mock/data", "xbridge.conf"),
             "selectedWallets": [self.mock_container.conf_data.blockdx_selectedWallets_blocknet],
         }
         self.mock_parent.is_config_sync = False
@@ -284,7 +284,7 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
         self.mock_parent.utility.blockdx_conf_local = {
             "user": "user",
             "password": "pass",
-            "xbridgeConfPath": "/mock/data/xbridge.conf",
+            "xbridgeConfPath": os.path.join("/mock/data", "xbridge.conf"),
             "selectedWallets": [],
         }
 

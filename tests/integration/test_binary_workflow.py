@@ -250,7 +250,9 @@ class TestBinaryDownloadWorkflow:
         with pytest.raises(zipfile.BadZipFile), zipfile.ZipFile(corrupted_zip, "r") as zf:
             zf.extractall(self.workspace)  # noqa: S202 # test corrupted
 
-        # Test permission denied
+        # Test permission denied (POSIX only - Windows chmod is no-op)
+        if sys.platform == "win32":
+            pytest.skip("chmod read-only not enforced on Windows")
         restricted_dir = self.workspace / "restricted"
         restricted_dir.mkdir()
         restricted_file = restricted_dir / "test.txt"

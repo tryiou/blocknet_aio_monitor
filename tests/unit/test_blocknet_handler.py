@@ -307,10 +307,11 @@ class TestSaveConfToFile(unittest.TestCase):
         """Test saving configuration with error."""
         conf_data = {"global": {"rpcuser": "testuser"}}
 
-        # Try to save to invalid path
-        result = save_conf_to_file(conf_data, "/invalid/path/test.conf")
+        # Mock makedirs to simulate failure (Windows creates D:\invalid\path otherwise)
+        with patch("utilities.bin_handlers.blocknet_handler.os.makedirs", side_effect=OSError("mocked failure")):
+            result = save_conf_to_file(conf_data, "/invalid/path/test.conf")
 
-        self.assertFalse(result)
+            self.assertFalse(result)
 
 
 class TestGetBlocknetDataFolder(unittest.TestCase):
@@ -321,7 +322,7 @@ class TestGetBlocknetDataFolder(unittest.TestCase):
         custom_path = "/custom/path"
         result = get_blocknet_data_folder(custom_path)
 
-        self.assertEqual(result, "/custom/path")
+        self.assertEqual(result, os.path.normpath("/custom/path"))
 
     def test_get_blocknet_data_folder_with_default_path(self):
         """Test getting data folder with default path."""
@@ -332,15 +333,23 @@ class TestGetBlocknetDataFolder(unittest.TestCase):
         with patch("utilities.bin_handlers.blocknet_handler.get_container", return_value=mock_container):
             result = get_blocknet_data_folder()
 
-            self.assertEqual(result, "/default/path")
+            self.assertEqual(result, os.path.normpath("/default/path"))
 
     def test_get_blocknet_data_folder_with_env_vars(self):
         """Test getting data folder with environment variables."""
-        custom_path = "$HOME/blocknet"
-        result = get_blocknet_data_folder(custom_path)
+        # Use OS-appropriate env var syntax: $HOME on POSIX, %HOME% on Windows
+        if sys.platform == "win32":
+            custom_path = "%HOME%/blocknet"
+            var = "%HOME%"
+        else:
+            custom_path = "$HOME/blocknet"
+            var = "$HOME"
+        # Ensure HOME is set for expansion
+        with patch.dict(os.environ, {"HOME": "/home/testuser"}):
+            result = get_blocknet_data_folder(custom_path)
 
-        # Should expand environment variables
-        self.assertNotIn("$HOME", result)
+            # Should expand environment variables
+            self.assertNotIn(var, result)
 
 
 class TestGenerateRandomString(unittest.TestCase):
@@ -604,7 +613,7 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
         with patch("os.path.exists", return_value=False), patch("os.makedirs") as mock_makedirs:
             self.handler.create_data_folder()
 
-            mock_makedirs.assert_called_once_with("/test/path")
+            mock_makedirs.assert_called_once_with(os.path.normpath("/test/path"))
 
     def test_create_data_folder_exists(self):
         """Test creating data folder when it already exists."""
@@ -619,7 +628,7 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
             self.handler.container.aio_folder = "/aio/path"
             self.handler.create_aio_folder()
 
-            mock_makedirs.assert_called_once_with("/aio/path")
+            mock_makedirs.assert_called_once_with(os.path.normpath("/aio/path"))
 
     def test_check_data_folder_existence(self):
         """Test checking if data folder exists."""
@@ -668,8 +677,8 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
         ):
             self.handler.set_custom_data_path("/new/path")
 
-            mock_makedirs.assert_called_once_with("/new/path")
-            self.assertEqual(self.handler.data_folder, "/new/path")
+            mock_makedirs.assert_called_once_with(os.path.normpath("/new/path"))
+            self.assertEqual(self.handler.data_folder, os.path.normpath("/new/path"))
             mock_parse_blocknet.assert_called_once()
             mock_parse_xbridge.assert_called_once()
             mock_init_rpc.assert_called_once()

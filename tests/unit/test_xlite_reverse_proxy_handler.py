@@ -87,7 +87,7 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
         with patch("re.search", return_value=mock_match):
             handler = XliteReverseProxyHandler(self.mock_container)
             # The path should be constructed from aio_folder, version folder, and bin_name
-            expected_path = "/mock/aio_folder/xlite-reverse-proxy-1.0.0/xlite-reverse-proxy"
+            expected_path = os.path.join("/mock/aio_folder", "xlite-reverse-proxy-1.0.0", "xlite-reverse-proxy")
             self.assertEqual(handler.executable_path, expected_path)
 
     # ============================================================================
@@ -270,8 +270,8 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
 
         with (
             patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger,
-            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg"),
-            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", return_value=12345),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg", create=True),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", create=True, return_value=12345),
         ):
             self.handler.stop()
 
@@ -301,8 +301,8 @@ class TestXliteReverseProxyHandler(unittest.TestCase):
 
         with (
             patch("utilities.bin_handlers.xlite_reverse_proxy_handler.logger") as mock_logger,
-            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg"),
-            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", return_value=12345),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.killpg", create=True),
+            patch("utilities.bin_handlers.xlite_reverse_proxy_handler.os.getpgid", create=True, return_value=12345),
         ):
             self.handler.stop()
 

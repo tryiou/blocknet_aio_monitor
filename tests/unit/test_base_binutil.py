@@ -547,7 +547,11 @@ class TestDownloadStandaloneBinary(BaseBinUtilTestCase):
 
         assert result is True
         mock_replace.assert_called_once()
-        mock_chmod.assert_called_once_with(target_path, 0o755)
+        # On Windows chmod is skipped (posix only)
+        if sys.platform in ("linux", "darwin"):
+            mock_chmod.assert_called_once_with(target_path, 0o755)
+        else:
+            mock_chmod.assert_not_called()
 
     @patch("os.path.exists")
     def test_download_standalone_binary_already_exists(self, mock_exists):
