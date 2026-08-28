@@ -49,23 +49,14 @@ def _resolve_aio_folder(container: Any) -> str:
     if raw and str(raw).strip():
         expanded = expand_config_path(str(raw))
         # Guard against polluted singleton (e.g. "/aio" from test mock not cleaned).
-        # Use Path.is_absolute + parts check (robust vs string hack).
-        try:
-            p = Path(expanded)
-            if p.is_absolute() and len(p.parts) >= 2 and p.parts[1] == "aio":
-                # Any absolute path rooted at /aio (covers /aio, /aio/path, /aio/...) is suspicious.
-                logger.warning(
-                    f"Suspicious aio_folder '{raw}' expanded to '{expanded}', falling back to conf_data template"
-                )
-            else:
-                return expanded
-        except Exception as e:  # pragma: no cover - fallback to string check
-            logger.debug("Suppressed Exception: %s", e, exc_info=True)
-            if expanded not in ("/aio", "/aio/path") and not expanded.startswith("/aio/"):
-                return expanded
+        # Handle both POSIX ("/aio") and Windows ("\\aio") separators.
+        norm_forward = expanded.replace("\\", "/")
+        if norm_forward in ("/aio", "/aio/path") or norm_forward.startswith("/aio/"):
             logger.warning(
                 f"Suspicious aio_folder '{raw}' expanded to '{expanded}', falling back to conf_data template"
             )
+        else:
+            return expanded
 
     try:
         raw = container.conf_data.aio_blocknet_data_path.get(container.system, "")

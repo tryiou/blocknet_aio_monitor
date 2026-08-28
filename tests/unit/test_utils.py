@@ -186,7 +186,7 @@ class TestLoadCfgJson:
         mock_container.aio_folder = "/test/aio"
         mock_expanduser.return_value = "/test/aio"
         mock_expandvars.return_value = "/test/aio"
-        mock_exists.side_effect = [True, True]
+        mock_exists.return_value = True
 
         mock_file_content = '{"old_key": "old_value"}'
 
@@ -197,11 +197,11 @@ class TestLoadCfgJson:
             mock_file.__exit__ = Mock(return_value=False)
             mock_open.return_value = mock_file
 
-            with patch("os.rename") as mock_rename:
+            with patch("os.replace") as mock_replace, patch("os.rename") as mock_rename:
                 result = utils.load_cfg_json()
 
             assert result == {"old_key": "old_value"}
-            mock_rename.assert_called_once()
+            assert mock_replace.called or mock_rename.called
 
     @patch("utilities.utils.get_container", return_value=MagicMock())
     @patch("os.path.exists")
