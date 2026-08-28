@@ -948,3 +948,100 @@ class TestKeyringBasedFunctions:
                     assert result == new_config
                     mock_migration.migrate_from_old_format.assert_called_once_with(old_config)
                     mock_dump.assert_called_once()
+
+
+class TestAtomicAndSelfHeal:
+    """Tests for atomic 0o600, corrupted JSON self-heal, and permissions."""
+
+    def test_load_cfg_json_corrupted_self_heal_backup(self, tmp_path):
+        """Corrupted aio_settings.json is backed up and returns {}."""
+        from pathlib import Path
+
+        container = MagicMock()
+        container.aio_folder = str(tmp_path)
+        container.conf_data.aio_blocknet_data_path = {"Linux": str(tmp_path)}
+        container.system = "Linux"
+        cfg_path = tmp_path / "aio_settings.json"
+        cfg_path.write_text("{invalid json", encoding="utf-8")
+
+        with patch("utilities.utils.get_container", return_value=container):
+            result = utils.load_cfg_json()
+            assert result == {}
+            # Backup file created
+            backups = list(tmp_path.glob("aio_settings.json.corrupt.*"))
+            assert len(backups) == 1
+            assert backups[0].read_text(encoding="utf-8") == "{invalid json"
+
+    def test_save_cfg_json_atomic_and_0600(self, tmp_path):
+        """save_cfg_json writes atomically with 0o600."""
+        container = MagicMock()
+        container.aio_folder = str(tmp_path)
+        container.conf_data.aio_blocknet_data_path = {"Linux": str(tmp_path)}
+        container.system = "Linux"
+
+        with patch("utilities.utils.get_container", return_value=container):
+            utils.save_cfg_json("mykey", "myval")
+            cfg_path = tmp_path / "aio_settings.json"
+            assert cfg_path.exists()
+            data = json.loads(cfg_path.read_text(encoding="utf-8"))
+            assert data["mykey"] == "myval"
+            # Permissions 0o600 (skip on Windows, but check on Linux)
+            if os.name != "nt":
+                mode = cfg_path.stat().st_mode & 0o777
+                assert mode == 0o600
+            # Dir 0o700
+            if os.name != "nt":
+                dmode = tmp_path.stat().st_mode & 0o777
+                assert dmode == 0o700
+
+    def test_save_cfg_json_corrupted_backup(self, tmp_path):
+        """save_cfg_json backs up corrupted existing file before overwrite."""
+        container = MagicMock()
+        container.aio_folder = str(tmp_path)
+        container.conf_data.aio_blocknet_data_path = {"Linux": str(tmp_path)}
+        container.system = "Linux"
+        cfg_path = tmp_path / "aio_settings.json"
+        cfg_path.write_text("{corrupt", encoding="utf-8")
+
+        with patch("utilities.utils.get_container", return_value=container):
+            utils.save_cfg_json("k", "v")
+            backups = list(tmp_path.glob("aio_settings.json.corrupt.*"))
+            assert len(backups) == 1
+            data = json.loads(cfg_path.read_text(encoding="utf-8"))
+            assert data == {"k": "v"}
+
+    def test_remove_cfg_json_key_corrupted_backup(self, tmp_path):
+        """remove_cfg_json_key backs up corrupted file."""
+        container = MagicMock()
+        container.aio_folder = str(tmp_path)
+        container.conf_data.aio_blocknet_data_path = {"Linux": str(tmp_path)}
+        container.system = "Linux"
+        cfg_path = tmp_path / "aio_settings.json"
+        cfg_path.write_text("{bad", encoding="utf-8")
+
+        with patch("utilities.utils.get_container", return_value=container):
+            utils.remove_cfg_json_key("any")
+            backups = list(tmp_path.glob("aio_settings.json.corrupt.*"))
+            assert len(backups) == 1
+
+    def test_resolve_aio_folder_suspicious_fallback(self, tmp_path):
+        """_resolve_aio_folder falls back when aio_folder is /aio."""
+        from utilities.utils import _resolve_aio_folder
+
+        container = MagicMock()
+        container.aio_folder = "/aio"
+        container.system = "Linux"
+        container.conf_data.aio_blocknet_data_path = {"Linux": str(tmp_path)}
+        # Should fallback to conf_data template, not return /aio
+        result = _resolve_aio_folder(container)
+        assert result != "/aio"
+        assert result == os.path.normpath(str(tmp_path))
+
+        container.aio_folder = "/aio/path"
+        result2 = _resolve_aio_folder(container)
+        assert result2 != "/aio/path"
+
+        # Normal path is preserved
+        container.aio_folder = str(tmp_path / "normal")
+        result3 = _resolve_aio_folder(container)
+        assert result3 == os.path.normpath(str(tmp_path / "normal"))

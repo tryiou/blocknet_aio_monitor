@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import platform
@@ -97,7 +96,14 @@ urllib3_logger.setLevel(logging.WARNING)
 urllib3_logger = logging.getLogger("watchdog")
 urllib3_logger.setLevel(logging.WARNING)
 
-from gui.constants import MAIN_FRAMES_STICKY, TITLE_FRAMES_STICKY, tooltip_bg_color
+from gui.constants import (
+    INTERVAL_PROCESS_CHECK_MS,
+    MAIN_FRAMES_STICKY,
+    TIME_DISABLE_BUTTON_MS,
+    TITLE_FRAMES_STICKY,
+    tooltip_bg_color,
+)
+from gui.ui_sync_controller import UiSyncController
 
 container = get_container()
 theme_path = container.theme_path
@@ -141,7 +147,12 @@ class BlocknetAioGui(ctk.CTk):
                     logger.error(f"Error decrypting XLite password: {e}")
                     self.stored_password = None
 
-        self.time_disable_button: int = 3000
+        self.time_disable_button: int = TIME_DISABLE_BUTTON_MS
+
+        self._closing: bool = False
+        self._after_ids: list[str] = []
+        self._check_processes_after_id: str | None = None
+        self.ui_sync: UiSyncController | None = None
 
         self.tooltip_manager: TooltipManager = TooltipManager(self)
 
@@ -150,28 +161,91 @@ class BlocknetAioGui(ctk.CTk):
         self.blockdx_manager: BlockDXManager = BlockDXManager(self)
         self.xlite_manager: XliteManager = XliteManager(self)
 
-    async def setup_management_sections(self) -> None:
-        """Initialize and setup all management sections asynchronously."""
-        await asyncio.gather(
-            self.binary_manager.setup(),
-            self.blocknet_manager.setup(),
-            self.blockdx_manager.setup(),
-            self.xlite_manager.setup(),
-        )
+    def setup_management_sections(self) -> None:
+        """Initialize and setup all management sections synchronously."""
+        self.binary_manager.setup()
+        self.blocknet_manager.setup()
+        self.blockdx_manager.setup()
+        self.xlite_manager.setup()
+
+    def _track_after(self, after_id: str | None) -> str | None:
+        """Track after ID for later cancellation."""
+        if after_id is not None:
+            self._after_ids.append(after_id)
+            if after_id == self._check_processes_after_id or self._check_processes_after_id is None:
+                # keep generic list; check_processes tracked separately via assignment
+                pass
+        return after_id
+
+    def _cancel_all_afters(self) -> None:
+        """Cancel all tracked afters, guarded by winfo_exists and TclError."""
+        for aid in list(self._after_ids):
+            try:
+                if hasattr(self, "winfo_exists"):
+                    try:
+                        if not self.winfo_exists():
+                            break
+                    except Exception:
+                        break
+                self.after_cancel(aid)
+            except Exception as e:  # TclError or ValueError if already cancelled
+                logger.debug(f"after_cancel failed for {aid}: {e}")
+        self._after_ids.clear()
+        # Also try to cancel check_processes id if not in list (legacy)
+        if self._check_processes_after_id is not None:
+            try:
+                if hasattr(self, "winfo_exists"):
+                    try:
+                        if self.winfo_exists():
+                            self.after_cancel(self._check_processes_after_id)
+                    except Exception as e:  # debug logged
+                        logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+                else:
+                    self.after_cancel(self._check_processes_after_id)
+            except Exception as e:  # debug logged
+                logger.debug(f"after_cancel check_processes failed: {e}")
+            self._check_processes_after_id = None
+
+    def _deferred_network_init(self) -> None:
+        """Deferred network-heavy init off critical path (branch fetch, etc)."""
+        try:
+            # BinaryFrameManager already defers branch fetch via Thread;
+            # Keep hook for future network deferrals (e.g., manifest refresh)
+            pass
+        except Exception as e:
+            logger.debug(f"Deferred network init failed: {e}")
 
     def init_setup(self) -> None:
         """Initialize the GUI setup, including layout, images, and frame configuration."""
         self.title(widgets_strings.app_title_string)
         self.resizable(False, False)
         self.setup_load_images()
-        self.after(0, self.check_processes)
-        asyncio.run(self.setup_management_sections())
+        aid = self.after(0, self.check_processes)
+        self._track_after(aid)
+        self.setup_management_sections()
         self.setup_tooltips()
         self.init_grid()
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
-        signal.signal(signal.SIGINT, self.handle_signal)
-        signal.signal(signal.SIGTERM, self.handle_signal)
+        # Deferred network off critical path
+        try:
+            self.after(100, self._deferred_network_init)
+        except Exception as e:
+            logger.debug(f"Deferred network schedule failed: {e}")
+        # Start unified scheduler (replaces individual 2000ms loops)
+        try:
+            self.ui_sync = UiSyncController(self)
+            self.ui_sync.start()
+        except Exception as e:
+            logger.debug(f"UiSync start failed: {e}")
+        try:
+            signal.signal(signal.SIGINT, self.handle_signal)
+        except ValueError as e:
+            logger.debug(f"SIGINT handler not set: {e}")
+        try:
+            signal.signal(signal.SIGTERM, self.handle_signal)
+        except (ValueError, AttributeError, OSError) as e:
+            logger.debug(f"SIGTERM handler not set (Windows/bypass): {e}")
 
     def setup_load_images(self) -> None:
         """Load and set up images for use in the GUI."""
@@ -441,18 +515,88 @@ class BlocknetAioGui(ctk.CTk):
 
     def handle_signal(self, signum: int, frame) -> None:
         """Handle signals like SIGINT and SIGTERM."""
+        if getattr(self, "_closing", False):
+            logger.debug(f"Signal {signum} ignored, already closing")
+            return
         logger.info(f"Signal {signum} received.")
+        # Deregister to avoid double call
+        try:
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+        except (ValueError, OSError, AttributeError) as e:
+            logger.debug(f"Reset SIGINT failed: {e}")
+        try:
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        except (ValueError, OSError, AttributeError) as e:
+            logger.debug(f"Reset SIGTERM failed: {e}")
+        # Schedule on_close on main thread via after(0) if possible
+        try:
+            if hasattr(self, "winfo_exists"):
+                try:
+                    if self.winfo_exists():
+                        self.after(0, self.on_close)
+                        return
+                except Exception as e:  # debug logged
+                    logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+        except Exception as e:  # debug logged
+            logger.debug(f"handle_signal after failed: {e}")
         self.on_close()
 
     def on_close(self) -> None:
-        """Handle application close event."""
+        """Handle application close event — idempotent graceful shutdown."""
+        if getattr(self, "_closing", False):
+            logger.debug("on_close already in progress, ignoring")
+            return
+        self._closing = True
         logger.info("Closing application...")
-        # Stop file watcher
+        # Reset signals to DFL to avoid double handling
+        try:
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+        except (ValueError, OSError, AttributeError) as e:
+            logger.debug(f"Reset SIGINT failed: {e}")
+        try:
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        except (ValueError, OSError, AttributeError) as e:
+            logger.debug(f"Reset SIGTERM failed: {e}")
+
+        # Stop unified scheduler first
+        try:
+            if hasattr(self, "ui_sync") and getattr(self, "ui_sync", None):
+                self.ui_sync.stop()
+        except Exception as e:
+            logger.debug(f"UiSync stop error: {e}")
+
+        # Cancel all scheduled afters
+        try:
+            self._cancel_all_afters()
+        except Exception as e:  # debug logged
+            logger.debug(f"Cancel afters failed: {e}")
+
+        # Stop file watcher and binary manager loops
         try:
             if hasattr(self, "binary_manager") and hasattr(self.binary_manager, "stop"):
                 self.binary_manager.stop()
         except Exception as e:
             logger.debug(f"Watcher stop error: {e}")
+
+        # Stop GUI manager update loops
+        for mgr_name in ("blocknet_manager", "blockdx_manager", "xlite_manager"):
+            try:
+                mgr = getattr(self, mgr_name, None)
+                if mgr and hasattr(mgr, "stop"):
+                    mgr.stop()
+            except Exception as e:
+                logger.debug(f"{mgr_name} stop error: {e}")
+
+        # Signal handler utilities to stop threads via Event
+        for mgr_name in ("blocknet_manager", "blockdx_manager", "xlite_manager"):
+            try:
+                mgr = getattr(self, mgr_name, None)
+                util = getattr(mgr, "utility", None) if mgr else None
+                if util and hasattr(util, "stop"):
+                    util.stop()
+            except Exception as e:
+                logger.debug(f"{mgr_name} utility stop error: {e}")
+
         # TEMP DISABLE xlite-reverse-proxy — keep for restore
         # Stop proxy if running
         try:
@@ -461,9 +605,20 @@ class BlocknetAioGui(ctk.CTk):
         except Exception as e:
             logger.error(f"Proxy shutdown error: {e}")
 
-        utils.terminate_all_threads()
+        utils.join_daemon_threads()
         logger.info("Threads terminated.")
-        os._exit(0)
+
+        # Graceful destroy, never os._exit/sys.exit inside on_close
+        try:
+            if hasattr(self, "winfo_exists"):
+                try:
+                    if not self.winfo_exists():
+                        return
+                except Exception:
+                    return
+            self.destroy()
+        except Exception as e:  # TclError after destroy
+            logger.debug(f"destroy failed: {e}")
 
     def adjust_theme(self) -> None:
         """Adjust the theme of the application based on the configuration."""
@@ -508,8 +663,19 @@ class BlocknetAioGui(ctk.CTk):
         self.xlite_manager.daemon_process_running = bool(xlite_daemon_processes)
         self.xlite_manager.utility.xlite_daemon_pids = xlite_daemon_processes
 
-        # Schedule the next check
-        self.after(5000, func=self.check_processes)
+        # Schedule the next check only if not driven by UiSyncController
+        if getattr(self, "ui_sync", None) is not None and not getattr(self.ui_sync, "_closing", True):
+            return
+        if getattr(self, "_closing", False):
+            return
+        try:
+            if hasattr(self, "winfo_exists") and not self.winfo_exists():
+                return
+        except Exception:
+            return
+        aid = self.after(INTERVAL_PROCESS_CHECK_MS, func=self.check_processes)
+        self._check_processes_after_id = aid
+        self._track_after(aid)
 
 
 def run_gui() -> None:

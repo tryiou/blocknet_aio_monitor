@@ -2,7 +2,7 @@ import os
 import sys
 import tkinter as tk
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -323,13 +323,18 @@ class TestBinaryFrameManager(unittest.TestCase):
     def test_run_after_setup_venv_not_exists(self):
         """Test run_after_setup when venv doesn't exist."""
         frame_manager = self._create_frame_manager()
+        # Reset after count from _defer_branch_fetch
+        self.mock_root.after.reset_mock()
+        # Ensure no UiSyncController driving retries
+        self.mock_root.ui_sync = None
+        self.mock_root._closing = False
         frame_manager.xbridge_bot_manager = self.mock_bot_manager
         self.mock_bot_manager.repo_management.venv = False
 
         frame_manager.run_after_setup()
 
-        # Verify after was called to retry
-        self.mock_root.after.assert_called_once()
+        # Verify after was called to retry (1000ms)
+        self.mock_root.after.assert_called_once_with(1000, unittest.mock.ANY)
 
 
 if __name__ == "__main__":

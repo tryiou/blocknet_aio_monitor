@@ -1,4 +1,3 @@
-import asyncio
 import os
 import sys
 import unittest
@@ -59,7 +58,7 @@ class TestBlocknetManager(unittest.TestCase):
     def test_setup(self):
         """Test setup creates frame manager and schedules status update."""
         with patch("gui.blocknet_manager.BlocknetCoreFrameManager") as mock_blocknet_core_frame_manager:
-            asyncio.run(self.blocknet_manager.setup())
+            self.blocknet_manager.setup()
             mock_blocknet_core_frame_manager.assert_called_once_with(self.blocknet_manager)
             self.mock_root_gui.after.assert_called_once_with(0, self.blocknet_manager.update_status_blocknet_core)
 
@@ -79,6 +78,7 @@ class TestBlocknetManager(unittest.TestCase):
 
     def test_update_status_blocknet_core(self):
         """Test update_status_blocknet_core calls all frame manager update methods."""
+        self.mock_root_gui.after.reset_mock()
         self.blocknet_manager.update_status_blocknet_core()
 
         # Verify all frame manager methods are called
@@ -95,5 +95,5 @@ class TestBlocknetManager(unittest.TestCase):
             with self.subTest(method=method):
                 getattr(self.blocknet_manager.frame_manager, method).assert_called_once()
 
-        # Verify status update is scheduled
-        self.mock_root_gui.after.assert_called_once_with(2000, self.blocknet_manager.update_status_blocknet_core)
+        # Single-shot: no periodic rescheduling (handled by UiSyncController)
+        self.mock_root_gui.after.assert_not_called()

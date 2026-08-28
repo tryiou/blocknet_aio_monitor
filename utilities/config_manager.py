@@ -1,9 +1,12 @@
+import contextlib
 import logging
 import os
 import platform
 from pathlib import Path
 
 import yaml
+
+from utilities.atomic_write import atomic_write_yaml, backup_corrupt_file, ensure_dir_secure
 
 logger = logging.getLogger(__name__)
 
@@ -231,21 +234,34 @@ class ConfigManager:
                     }[self.system]
                 )
             )
-        os.makedirs(aio_path, exist_ok=True)
+        ensure_dir_secure(aio_path, 0o700)
         return Path(aio_path)
 
     def _load_config(self) -> None:
         # Only set aio_folder if it wasn't already set (e.g., via constructor parameter)
         if not self.aio_folder:
             self.aio_folder = self._get_aio_path()
+        else:
+            # Ensure provided folder has secure perms
+            with contextlib.suppress(Exception):
+                ensure_dir_secure(self.aio_folder, 0o700)
         config_file = Path(self.aio_folder) / "aio_config.yaml"
 
         # Start with template as base config
         self.config = self.config_template.copy()
 
         if config_file.exists():
-            with open(config_file) as f:
-                loaded_config = yaml.safe_load(f) or {}
+            try:
+                with open(config_file) as f:
+                    loaded_config = yaml.safe_load(f) or {}
+            except (yaml.YAMLError, OSError, ValueError) as e:
+                logger.error(f"Corrupted YAML in {config_file}: {e}, backing up and self-healing")
+                backup_corrupt_file(config_file)
+                loaded_config = {}
+            except Exception as e:
+                logger.error(f"Failed to load config {config_file}: {e}, self-healing", exc_info=True)
+                backup_corrupt_file(config_file)
+                loaded_config = {}
             logger.info(f"Loaded existing config from {config_file}")
 
             # FOR SYSTEM-SPECIFIC KEYS: Ensure current OS/Arch value is set
@@ -356,6 +372,41 @@ class ConfigManager:
     def _save_config(self) -> None:
         config_file = Path(self.aio_folder) / "aio_config.yaml"
         filtered_config = self._filter_config_for_saving()
-        with open(config_file, "w") as f:
-            yaml.dump(filtered_config, f, default_flow_style=False)
+        try:
+            atomic_write_yaml(config_file, filtered_config)
+        except Exception as e:
+            logger.error(f"Atomic YAML write failed for {config_file}: {e}, fallback", exc_info=True)
+            try:
+                ensure_dir_secure(Path(self.aio_folder), 0o700)
+                # Fallback manual atomic with 0o600
+                import time as _time
+
+                tmp_path = Path(str(config_file) + f".tmp.{os.getpid()}.{_time.time_ns()}")
+                flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+                try:
+                    flags |= os.O_NOFOLLOW  # type: ignore[attr-defined]
+                except AttributeError:  # noqa: S110, SIM105
+                    pass  # noqa: S110, SIM105
+                fd = os.open(str(tmp_path), flags, 0o600)
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8") as f:
+                        yaml.safe_dump(filtered_config, f, default_flow_style=False)
+                        fd = None
+                    with contextlib.suppress(Exception):
+                        os.chmod(tmp_path, 0o600)
+                    os.replace(str(tmp_path), str(config_file))
+                    with contextlib.suppress(Exception):
+                        os.chmod(config_file, 0o600)
+                finally:
+                    if fd is not None:
+                        with contextlib.suppress(Exception):
+                            os.close(fd)
+                    try:
+                        if tmp_path.exists():
+                            tmp_path.unlink()
+                    except Exception:  # noqa: S110, SIM105
+                        pass  # noqa: S110, SIM105
+            except Exception as e2:
+                logger.error(f"Failed to save config {config_file}: {e2}", exc_info=True)
+                return
         logger.info(f"Saved filtered config to {config_file}")

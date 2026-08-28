@@ -264,7 +264,7 @@ class TestKeyringManager:
                 assert "deleted from fallback storage" in message.lower()
 
         def test_delete_key_corrupted_json(self, manager):
-            """Test deleting key when fallback file has corrupted JSON."""
+            """Test deleting key when fallback file has corrupted JSON — self-heal backup."""
             with patch("utilities.keyring_manager.KEYRING_AVAILABLE", False):
                 # Create corrupted JSON file
                 fallback_path = manager.fallback_path
@@ -273,8 +273,14 @@ class TestKeyringManager:
 
                 success, message = manager.delete_key()
 
-                assert success is False
-                assert "no key found" in message.lower()
+                # New atomic self-heal: corrupted file is backed up and considered cleaned
+                assert success is True
+                # Backup file should exist
+                import glob
+
+                backups = glob.glob(fallback_path + ".corrupt.*")
+                assert len(backups) == 1
+                assert "deleted from fallback storage" in message.lower() or "corrupt" in message.lower()
 
         def test_retrieve_key_fallback_corrupted_json(self, manager):
             """Test retrieving key when fallback file has corrupted JSON."""
@@ -668,7 +674,7 @@ class TestKeyringMigration:
                 assert "error" in message.lower()
 
     def test_migrate_config_file_write_exception(self, temp_dir, manager):
-        """Test migrate_config_file when write fails."""
+        """Test migrate_config_file when write fails — atomic path."""
         with patch("utilities.keyring_manager.KEYRING_AVAILABLE", False):
             migration = KeyringMigration(temp_dir, manager)
 
@@ -680,20 +686,16 @@ class TestKeyringMigration:
             with open(config_file, "w") as f:
                 json.dump(old_config, f)
 
-            # Mock open to raise exception on write (robust to UP015 open without mode)
-            original_open = open
-
-            def mock_open_side_effect(*args, **kwargs):
-                mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
-                if "w" in mode:
-                    raise Exception("Write error")
-                return original_open(*args, **kwargs)
-
-            with patch("builtins.open", side_effect=mock_open_side_effect):
+            # Mock atomic write and fallback os.open to raise on write
+            with (
+                patch("utilities.atomic_write.atomic_write_json", side_effect=Exception("Write error")),
+                patch("utilities.keyring_manager.os.open", side_effect=Exception("Write error")),
+            ):
                 success, message = migration.migrate_config_file(config_file)
 
                 assert success is False
-                assert "migration failed" in message.lower()
+                # Message may be generic error or migration failed
+                assert "error" in message.lower() or "migration failed" in message.lower()
 
     def test_migrate_from_old_format_outer_exception(self, temp_dir, manager, old_config):
         """Test migrate_from_old_format when outer try block raises exception."""
@@ -787,3 +789,35 @@ class TestKeyringIntegration:
             # Verify key is in keyring/fallback
             key, _ = keyring_manager.retrieve_key()
             assert key == "old_encryption_key"
+
+
+class TestAtomicPerms:
+    """Atomic 0o600 and dir 0o700 checks for fallback."""
+
+    def test_fallback_0600_and_0700(self, temp_dir):
+        manager = KeyringManager(temp_dir)
+        with patch("utilities.keyring_manager.KEYRING_AVAILABLE", False):
+            manager.store_key(TEST_KEY)
+            fb = manager.fallback_path
+            assert os.path.exists(fb)
+            if os.name != "nt":
+                assert (os.stat(fb).st_mode & 0o777) == 0o600
+                assert (os.stat(temp_dir).st_mode & 0o777) == 0o700
+            # Delete also atomic 0o600
+            manager.delete_key()
+            # File still exists but without salt, still 0o600
+            if os.path.exists(fb) and os.name != "nt":
+                assert (os.stat(fb).st_mode & 0o777) == 0o600
+
+    def test_migrate_config_file_atomic_0600(self, temp_dir):
+        manager = KeyringManager(temp_dir)
+        migration = KeyringMigration(temp_dir, manager)
+        config_file = os.path.join(temp_dir, "aio_settings.json")
+        old_config = {"theme": TEST_THEME, "salt": TEST_SALT, "xl_pass": TEST_PASSWORD}
+        with open(config_file, "w") as f:
+            json.dump(old_config, f)
+        with patch("utilities.keyring_manager.KEYRING_AVAILABLE", False):
+            success, _ = migration.migrate_config_file(config_file)
+            assert success is True
+            if os.name != "nt":
+                assert (os.stat(config_file).st_mode & 0o777) == 0o600

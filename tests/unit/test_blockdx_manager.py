@@ -49,10 +49,8 @@ class TestBlockDXManager(unittest.TestCase):
 
     def test_setup(self):
         """Test BlockDXManager setup creates frame manager and schedules status update."""
-        import asyncio
-
         with patch("gui.blockdx_manager.BlockDxFrameManager") as mock_blockdx_frame_manager:
-            asyncio.run(self.blockdx_manager.setup())
+            self.blockdx_manager.setup()
 
             # Verify frame manager was created
             mock_blockdx_frame_manager.assert_called_once_with(self.blockdx_manager)
@@ -88,12 +86,13 @@ class TestBlockDXManager(unittest.TestCase):
         )
 
     def test_update_status_blockdx(self):
-        """Test update_status_blockdx updates UI and schedules next update."""
+        """Test update_status_blockdx updates UI (single-shot, scheduler handles poll)."""
+        self.mock_root_gui.after.reset_mock()
         self.blockdx_manager.update_status_blockdx()
 
         # Verify frame manager methods were called
         self.blockdx_manager.frame_manager.update_blockdx_process_status_checkbox.assert_called_once()
         self.blockdx_manager.frame_manager.update_blockdx_config_button_checkbox.assert_called_once()
 
-        # Verify next status update was scheduled
-        self.mock_root_gui.after.assert_called_once_with(2000, self.blockdx_manager.update_status_blockdx)
+        # Single-shot: no periodic rescheduling
+        self.mock_root_gui.after.assert_not_called()

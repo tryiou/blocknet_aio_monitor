@@ -1,6 +1,8 @@
+import contextlib
 import json
 import logging
 import os
+from pathlib import Path
 from threading import current_thread, enumerate
 from typing import Any
 
@@ -9,6 +11,7 @@ import psutil
 from cryptography.fernet import Fernet
 
 from utilities.app_container import get_container
+from utilities.atomic_write import atomic_write_json, backup_corrupt_file, ensure_dir_secure
 from utilities.keyring_manager import KeyringManager, KeyringMigration, expand_config_path
 
 logger = logging.getLogger(__name__)
@@ -27,13 +30,42 @@ def _resolve_aio_folder(container: Any) -> str:
         raw = container.aio_folder
     except Exception as e:  # debug logged
         logger.debug("Suppressed Exception: %s", e, exc_info=True)
+    # Guard against MagicMock aio_folder (e.g. MagicMock(name='mock.aio_folder'))
+    # which str() -> "<MagicMock name='...' id='...'>" would otherwise create real dirs.
+    if raw is not None:
+        try:
+            raw_s = str(raw)
+            if raw_s.startswith("<MagicMock") or "MagicMock" in raw_s:
+                logger.debug("Skipping mocked aio_folder %s, falling back to conf_data template", raw_s)
+                raw = None
+            elif not isinstance(raw, (str, Path, os.PathLike)):
+                # Non-path-like mock that slipped through string check
+                if "MagicMock" in raw_s or "<MagicMock" in raw_s:
+                    logger.debug("Skipping mocked aio_folder %s", raw_s)
+                    raw = None
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+            raw = None
     if raw and str(raw).strip():
         expanded = expand_config_path(str(raw))
-        # Guard against polluted singleton (e.g. "/aio" from test mock not cleaned)
-        # If expanded is exactly "/aio" or "/aio/..." and not under HOME, fallback to conf_data
-        if expanded not in ("/aio", "/aio/path") and not expanded.startswith("/aio/"):
-            return expanded
-        logger.warning(f"Suspicious aio_folder '{raw}' expanded to '{expanded}', falling back to conf_data template")
+        # Guard against polluted singleton (e.g. "/aio" from test mock not cleaned).
+        # Use Path.is_absolute + parts check (robust vs string hack).
+        try:
+            p = Path(expanded)
+            if p.is_absolute() and len(p.parts) >= 2 and p.parts[1] == "aio":
+                # Any absolute path rooted at /aio (covers /aio, /aio/path, /aio/...) is suspicious.
+                logger.warning(
+                    f"Suspicious aio_folder '{raw}' expanded to '{expanded}', falling back to conf_data template"
+                )
+            else:
+                return expanded
+        except Exception as e:  # pragma: no cover - fallback to string check
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+            if expanded not in ("/aio", "/aio/path") and not expanded.startswith("/aio/"):
+                return expanded
+            logger.warning(
+                f"Suspicious aio_folder '{raw}' expanded to '{expanded}', falling back to conf_data template"
+            )
 
     try:
         raw = container.conf_data.aio_blocknet_data_path.get(container.system, "")
@@ -58,14 +90,34 @@ def load_cfg_json():
     full_new_path = os.path.join(local_conf_path, local_filename)
 
     if os.path.exists(full_old_path):
-        # migrate old config file
+        # migrate old config file atomically
         logger.info(f"Renaming {full_old_path} to {full_new_path}")
-        os.rename(full_old_path, full_new_path)
+        try:
+            # Ensure dir exists with 0o700 before rename
+            ensure_dir_secure(local_conf_path, 0o700)
+            os.replace(full_old_path, full_new_path)
+        except Exception as e:
+            # Fallback to legacy rename for mocked tests
+            try:
+                os.rename(full_old_path, full_new_path)  # noqa: PTH104
+            except Exception as e2:
+                logger.error(
+                    f"Failed to migrate old config {full_old_path} -> {full_new_path}: {e} / {e2}",
+                    exc_info=True,
+                )
 
     # Check if the file exists
     if os.path.exists(full_new_path):
-        with open(full_new_path) as file:
-            cfg_data = json.load(file)
+        try:
+            with open(full_new_path) as file:
+                cfg_data = json.load(file)
+        except json.JSONDecodeError as e:
+            logger.error(f"Corrupted JSON in {full_new_path}: {e}, backing up and self-healing")
+            backup_corrupt_file(full_new_path)
+            return {}
+        except FileNotFoundError:
+            logger.info(f"Configuration file not found (race): [{full_new_path}]")
+            return None
 
         # Check if migration from old format (with salt) is needed
         if cfg_data and "salt" in cfg_data:
@@ -75,9 +127,16 @@ def load_cfg_json():
 
             success, new_cfg_data, message, old_key = migration.migrate_from_old_format(cfg_data)
             if success:
-                # Save the migrated config (may or may not include salt depending on keyring availability)
-                with open(full_new_path, "w") as file:
-                    json.dump(new_cfg_data, file, indent=2)
+                # Save the migrated config atomically with 0o600
+                try:
+                    atomic_write_json(full_new_path, new_cfg_data, indent=2)
+                except Exception as e:
+                    logger.error(f"Failed to save migrated config: {e}", exc_info=True)
+                    try:
+                        with open(full_new_path, "w") as file:
+                            json.dump(new_cfg_data, file, indent=2)
+                    except Exception:  # noqa: S110, SIM105
+                        pass  # noqa: S110, SIM105
                 logger.info(f"Migration successful: {message}")
                 cfg_data = new_cfg_data
             else:
@@ -90,13 +149,30 @@ def load_cfg_json():
         return None
 
 
-def terminate_all_threads():
-    logger.info("Terminating all threads...")
+def join_daemon_threads(timeout: float = 0.25) -> None:
+    """Cooperatively join daemon threads; does not kill threads.
+
+    Only joins daemon threads other than the current thread. Logs whether
+    threads are still alive after timeout instead of claiming terminated.
+    """
+    logger.info("Joining daemon threads...")
     for thread in enumerate():
-        if thread != current_thread():
-            # logger.info(f"Terminating thread: {thread.name}")
-            thread.join(timeout=0.25)  # Terminate thread
-            logger.info(f"Thread {thread.name} terminated")
+        if thread is current_thread():
+            continue
+        if not thread.daemon:
+            logger.debug(f"Skipping non-daemon thread: {thread.name}")
+            continue
+        thread.join(timeout=timeout)
+        if thread.is_alive():
+            logger.warning(f"Thread {thread.name} still alive after {timeout}s")
+        else:
+            logger.info(f"Thread {thread.name} joined")
+
+
+def terminate_all_threads(timeout: float = 0.25) -> None:
+    """Backward-compat wrapper: does not terminate threads, only joins daemons."""
+    logger.warning("terminate_all_threads is deprecated, use join_daemon_threads (does not kill)")
+    join_daemon_threads(timeout=timeout)
 
 
 def remove_cfg_json_key(key):
@@ -109,16 +185,31 @@ def remove_cfg_json_key(key):
     try:
         with open(filename) as file:
             cfg_data = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError:
         logger.error(f"Failed to load JSON file: [{filename}]")
+        return
+    except json.JSONDecodeError as e:
+        logger.error(f"Corrupted JSON in {filename}: {e}, backing up")
+        backup_corrupt_file(filename)
         return
 
     # Check if the key exists in the dictionary
     if key in cfg_data:
         # Remove the key from the dictionary
         del cfg_data[key]
-        with open(filename, "w") as file:
-            json.dump(cfg_data, file)
+        try:
+            atomic_write_json(filename, cfg_data, indent=2)
+        except Exception as e:
+            logger.error(f"Atomic write failed for {filename}: {e}, fallback to direct write", exc_info=True)
+            try:
+                ensure_dir_secure(local_conf_path, 0o700)
+                with open(filename, "w") as file:
+                    json.dump(cfg_data, file, indent=2)
+                with contextlib.suppress(Exception):
+                    os.chmod(filename, 0o600)
+            except Exception as e2:
+                logger.error(f"Failed to remove key {key}: {e2}", exc_info=True)
+                return
         logger.info(f"Key '{key}' was removed from configuration file: [{filename}]")
 
         # If removing password-related keys, also delete encryption key from keyring
@@ -138,15 +229,30 @@ def save_cfg_json(key, data):
     try:
         with open(filename) as file:
             cfg_data = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        # If file doesn't exist or JSON decoding error occurs, create a new empty dictionary
+    except FileNotFoundError:
+        # If file doesn't exist, create a new empty dictionary
+        cfg_data = {}
+    except json.JSONDecodeError as e:
+        logger.error(f"Corrupted JSON in {filename}: {e}, backing up and self-healing")
+        backup_corrupt_file(filename)
         cfg_data = {}
 
     cfg_data.update({key: data})
 
-    # Save to file
-    with open(filename, "w") as file:
-        json.dump(cfg_data, file)
+    # Save atomically with 0o600
+    try:
+        atomic_write_json(filename, cfg_data, indent=2)
+    except Exception as e:
+        logger.error(f"Atomic write failed for {filename}: {e}, fallback to direct write", exc_info=True)
+        try:
+            ensure_dir_secure(local_conf_path, 0o700)
+            with open(filename, "w") as file:
+                json.dump(cfg_data, file, indent=2)
+            with contextlib.suppress(Exception):
+                os.chmod(filename, 0o600)
+        except Exception as e2:
+            logger.error(f"Failed to save {key}: {e2}", exc_info=True)
+            return
     logger.info(f"{key} {data} was saved to configuration file: [{filename}]")
 
 

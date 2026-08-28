@@ -17,8 +17,20 @@ try:
 except ImportError:
     PollingObserver = None  # type: ignore
 
+import contextlib
+
 import widgets_strings
 from gui.binary_frame_manager import BinaryFrameManager
+from gui.constants import (
+    DELAY_ENOSPC_HINT_MS,
+    DELAY_LAUNCH_CHECK_FAST_MS,
+    DELAY_LAUNCH_CHECK_SLOW_MS,
+    FILE_WATCHER_DEBOUNCE_S,
+    INTERVAL_AIO_FALLBACK_MS,
+    INTERVAL_FILE_QUEUE_MS,
+    POLLING_OBSERVER_TIMEOUT_S,
+    TIME_DISABLE_BUTTON_MS,
+)
 from utilities import utils
 from utilities.app_container import get_container
 
@@ -37,7 +49,7 @@ class BinaryFileHandler(FileSystemEventHandler):
         """
         super().__init__()
         self.binary_manager: BinaryManager = binary_manager
-        self.max_delay: float = 5  # seconds
+        self.max_delay: float = FILE_WATCHER_DEBOUNCE_S
         self.last_run: float = 0
         self.scheduled: bool = False
 
@@ -94,28 +106,43 @@ class BinaryManager:
         self._reported_failures: set = set()
         self._inotify_fallback_active = False
         self._poll_after_id = None
+        self._process_file_changes_id: str | None = None
+        self._update_all_id: str | None = None
+        self._update_bots_id: str | None = None
+        self._enospc_hint_id: str | None = None
+        self._launch_check_ids: list[str] = []
+        self._enable_button_id: str | None = None
+        self._setup_ids: list[str] = []
+        self._closing: bool = False
 
         aio_folder = self.container.aio_folder
         self.handler = BinaryFileHandler(self) if aio_folder else None
         self.observer = self._create_observer(aio_folder)
 
+        self._last_all_snapshot: tuple | None = None
+        self._last_bots_snapshot: tuple | None = None
+
         self.process_file_changes()
         # If observer unavailable, ensure periodic mtime poll still updates UI
         if self.observer is None and aio_folder:
-            # start periodic poll (2000ms) as fallback — mirrors update_all_binary_buttons cadence
+            # start periodic poll (INTERVAL_AIO_FALLBACK_MS) as fallback — mirrors update cadence
             try:
-                self._poll_after_id = self.root_gui.after(2000, self._poll_aio_folder)
+                self._poll_after_id = self.root_gui.after(INTERVAL_AIO_FALLBACK_MS, self._poll_aio_folder)
             except Exception as e:  # debug logged
                 logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def _create_observer(self, aio_folder) -> object | None:
-        """Create file watcher with ENOSPC fallback to PollingObserver (2.0s)."""
+        """Create file watcher with ENOSPC fallback to PollingObserver."""
         if not aio_folder or not self.handler:
             return None
         # Try inotify first, then polling
         for cls, name, kwargs in [
             (Observer, "inotify", {}),
-            (PollingObserver, "polling", {"timeout": 2.0} if PollingObserver else {}),
+            (
+                PollingObserver,
+                "polling",
+                {"timeout": POLLING_OBSERVER_TIMEOUT_S} if PollingObserver else {},
+            ),
         ]:
             if cls is None:
                 continue
@@ -126,7 +153,9 @@ class BinaryManager:
                 obs.start()
                 if name == "polling":
                     self._inotify_fallback_active = True
-                    logger.warning("Inotify watch limit reached — using PollingObserver (2.0s) fallback")
+                    logger.warning(
+                        f"Inotify watch limit reached — using PollingObserver ({POLLING_OBSERVER_TIMEOUT_S}s) fallback"
+                    )
                     self._show_enospc_hint()
                 else:
                     logger.info(f"File watcher started with {name} for {aio_folder}")
@@ -166,14 +195,17 @@ class BinaryManager:
                 raise
         # Both failed — will use periodic mtime poll only
         logger.warning(
-            "File watcher unavailable (ENOSPC even for polling) — falling back to periodic mtime polling (2000ms)"
+            "File watcher unavailable (ENOSPC even for polling) — "
+            f"falling back to periodic mtime polling ({INTERVAL_AIO_FALLBACK_MS}ms)"
         )
         self._inotify_fallback_active = True
         self._show_enospc_hint()
         return None
 
     def _poll_aio_folder(self) -> None:
-        """Periodic mtime poll when observer is unavailable (2000ms)."""
+        """Periodic mtime poll when observer is unavailable."""
+        if getattr(self, "_closing", False):
+            return
         try:
             if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
                 return
@@ -183,29 +215,84 @@ class BinaryManager:
             self.check_and_update_aio_folder()
         except Exception as e:
             logger.debug(f"Periodic poll failed: {e}")
+        if getattr(self, "_closing", False):
+            return
         try:
-            self._poll_after_id = self.root_gui.after(2000, self._poll_aio_folder)
+            if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                return
+        except Exception:
+            return
+        try:
+            self._poll_after_id = self.root_gui.after(INTERVAL_AIO_FALLBACK_MS, self._poll_aio_folder)
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+
+    def _cancel_after(self, after_id: str | None) -> None:
+        if after_id is None:
+            return
+        try:
+            if hasattr(self.root_gui, "winfo_exists"):
+                try:
+                    if not self.root_gui.winfo_exists():
+                        return
+                except Exception:
+                    return
+            self.root_gui.after_cancel(after_id)
         except Exception as e:  # debug logged
             logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def stop(self) -> None:
-        """Stop observer cleanly (call from on_close)."""
-        # Cancel periodic poll
-        poll_id = getattr(self, "_poll_after_id", None)
-        if poll_id is not None:
-            try:
-                self.root_gui.after_cancel(poll_id)
-            except Exception as e:  # debug logged
-                logger.debug("Suppressed Exception: %s", e, exc_info=True)
-            self._poll_after_id = None
+        """Stop observer and cancel all scheduled afters (idempotent)."""
+        if getattr(self, "_closing", False):
+            # already stopped, but ensure observer cleaned
+            pass
+        self._closing = True
+        # Cancel all tracked afters
+        for aid in list(getattr(self, "_setup_ids", [])):
+            self._cancel_after(aid)
+        self._setup_ids.clear()
+        self._cancel_after(getattr(self, "_poll_after_id", None))
+        self._poll_after_id = None
+        self._cancel_after(getattr(self, "_process_file_changes_id", None))
+        self._process_file_changes_id = None
+        self._cancel_after(getattr(self, "_update_all_id", None))
+        self._update_all_id = None
+        self._cancel_after(getattr(self, "_update_bots_id", None))
+        self._update_bots_id = None
+        self._cancel_after(getattr(self, "_enospc_hint_id", None))
+        self._enospc_hint_id = None
+        self._cancel_after(getattr(self, "_enable_button_id", None))
+        self._enable_button_id = None
+        for aid in list(getattr(self, "_launch_check_ids", [])):
+            self._cancel_after(aid)
+        self._launch_check_ids.clear()
+
         if self.observer:
             try:
                 self.observer.stop()
-                self.observer.join(1)
+                # join only if alive, short timeout to avoid blocking exit
+                try:
+                    if hasattr(self.observer, "is_alive") and self.observer.is_alive():
+                        self.observer.join(0.5)
+                    else:
+                        # fallback: try join with timeout if no is_alive
+                        self.observer.join(0.5)
+                except Exception as e:  # debug logged
+                    logger.debug("Suppressed Exception: %s", e, exc_info=True)
                 logger.info("File watcher stopped")
             except Exception as e:
                 logger.debug(f"Error stopping observer: {e}")
             self.observer = None
+
+        # Join download threads cooperatively (daemon, don't block long)
+        for attr in ("download_blocknet_thread", "download_blockdx_thread", "download_xlite_thread"):
+            thr = getattr(self, attr, None)
+            if thr is not None:
+                try:
+                    if thr.is_alive():
+                        thr.join(timeout=0.2)
+                except Exception as e:  # debug logged
+                    logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def _show_enospc_hint(self):
         """Show one-time copyable hint for ENOSPC with current limit (for #14 dialog)."""
@@ -242,18 +329,37 @@ class BinaryManager:
                         logger.debug(f"ENOSPC hint dialog failed: {ex}")
 
                 # Defer slightly to let GUI init
-                self.root_gui.after(1500, _show)
+                try:
+                    if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                        return
+                except Exception:
+                    return
+                if getattr(self, "_closing", False):
+                    return
+                try:
+                    self._enospc_hint_id = self.root_gui.after(DELAY_ENOSPC_HINT_MS, _show)
+                except Exception as e:  # debug logged
+                    logger.debug("Suppressed Exception: %s", e, exc_info=True)
             except Exception as e:  # debug logged
                 logger.debug("Suppressed Exception: %s", e, exc_info=True)
         except Exception as e:
             logger.debug(f"Failed to show ENOSPC hint: {e}")
 
-    async def setup(self):
+    def setup(self) -> None:
         self.frame_manager = BinaryFrameManager(self)
 
-        self.root_gui.after(0, self.check_and_update_aio_folder)
-        self.root_gui.after(0, self.update_all_binary_buttons)
-        self.root_gui.after(0, self.update_xbridge_bots_buttons)
+        try:
+            self._setup_ids.append(self.root_gui.after(0, self.check_and_update_aio_folder))
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+        try:
+            self._setup_ids.append(self.root_gui.after(0, self.update_all_binary_buttons))
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+        try:
+            self._setup_ids.append(self.root_gui.after(0, self.update_xbridge_bots_buttons))
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def _start_or_close_binary(
         self,
@@ -325,13 +431,36 @@ class BinaryManager:
                         logger.error(f"Failed to show error dialog: {dlg_e}", exc_info=True)
                 else:
                     # No exception: schedule poll check for early exit (e.g., return code 127)
-                    if handler is not None and app_name:
-                        # use default args to avoid late binding
-                        self.root_gui.after(1500, lambda a=app_name, h=handler: self._check_launch_failure(a, h))
-                        self.root_gui.after(4000, lambda a=app_name, h=handler: self._check_launch_failure(a, h))
+                    if handler is not None and app_name and not getattr(self, "_closing", False):
+                        try:
+                            if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                                pass
+                            else:
+                                aid1 = self.root_gui.after(
+                                    DELAY_LAUNCH_CHECK_FAST_MS,
+                                    lambda a=app_name, h=handler: self._check_launch_failure(a, h),
+                                )
+                                aid2 = self.root_gui.after(
+                                    DELAY_LAUNCH_CHECK_SLOW_MS,
+                                    lambda a=app_name, h=handler: self._check_launch_failure(a, h),
+                                )
+                                self._launch_check_ids.extend([aid1, aid2])
+                        except Exception as e:  # debug logged
+                            logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
             Thread(target=_wrapped_start, daemon=True).start()
-        self.root_gui.after(self.root_gui.time_disable_button, self._enable_binary_start_button, disable_flag)
+        try:
+            if not getattr(self, "_closing", False):
+                if hasattr(self.root_gui, "winfo_exists"):
+                    try:
+                        if not self.root_gui.winfo_exists():
+                            return
+                    except Exception:
+                        return
+                delay = getattr(self.root_gui, "time_disable_button", TIME_DISABLE_BUTTON_MS)
+                self._enable_button_id = self.root_gui.after(delay, self._enable_binary_start_button, disable_flag)
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def _check_launch_failure(self, app_name: str, handler) -> None:
         """Check if a just-launched process has already terminated with error."""
@@ -739,6 +868,13 @@ class BinaryManager:
         Continuously checks for file system events and schedules corresponding
         UI updates in the main thread.
         """
+        if getattr(self, "_closing", False):
+            return
+        try:
+            if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                return
+        except Exception:
+            return
         try:
             while True:
                 msg_type, param = self.file_change_queue.get_nowait()
@@ -746,18 +882,78 @@ class BinaryManager:
                     self.root_gui.after(param, self.handler._execute_scheduled)
         except queue.Empty:
             pass
-        self.root_gui.after(100, self.process_file_changes)
+        if getattr(self, "_closing", False):
+            return
+        try:
+            if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                return
+        except Exception:
+            return
+        try:
+            self._process_file_changes_id = self.root_gui.after(INTERVAL_FILE_QUEUE_MS, self.process_file_changes)
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
-    def update_all_binary_buttons(self):
+    def _snapshot_all(self) -> tuple:
+        """Snapshot state influencing update_all buttons for dirty-check."""
+        try:
+            bm = self.root_gui.blocknet_manager
+            dx = self.root_gui.blockdx_manager
+            xl = self.root_gui.xlite_manager
+            fm = self.frame_manager
+            return (
+                fm.blocknet_installed_boolvar.get() if fm and hasattr(fm, "blocknet_installed_boolvar") else None,
+                fm.blockdx_installed_boolvar.get() if fm and hasattr(fm, "blockdx_installed_boolvar") else None,
+                fm.xlite_installed_boolvar.get() if fm and hasattr(fm, "xlite_installed_boolvar") else None,
+                getattr(bm, "blocknet_process_running", None),
+                getattr(dx, "process_running", None),
+                getattr(xl, "process_running", None),
+                getattr(getattr(bm, "utility", None), "downloading_bin", None),
+                getattr(getattr(dx, "utility", None), "downloading_bin", None),
+                getattr(getattr(xl, "utility", None), "downloading_bin", None),
+                getattr(getattr(bm, "utility", None), "binary_percent_download", None),
+                getattr(getattr(dx, "utility", None), "binary_percent_download", None),
+                getattr(getattr(xl, "utility", None), "binary_percent_download", None),
+                getattr(bm.utility, "bootstrap_checking", None) if bm and hasattr(bm, "utility") else None,
+                getattr(bm.utility, "valid_rpc", None) if bm and hasattr(bm, "utility") else None,
+                getattr(self, "disable_start_blocknet_button", None),
+                getattr(self, "disable_start_blockdx_button", None),
+                getattr(self, "disable_start_xlite_button", None),
+            )
+        except Exception:
+            return (None,)
+
+    def update_all_binary_buttons(self) -> None:
         """
-        Updates all binary-related buttons.
+        Updates all binary-related buttons (single-shot, no rescheduling).
+        Use update_all_if_dirty via UiSyncController for dirty-checked periodic updates.
         """
-        if not self.root_gui.winfo_exists():
+        if getattr(self, "_closing", False):
+            return
+        try:
+            if not self.root_gui.winfo_exists():
+                return
+        except Exception:
             return
         self.update_binary_buttons("blocknet")
         self.update_binary_buttons("blockdx")
         self.update_binary_buttons("xlite")
-        self.root_gui.after(2000, self.update_all_binary_buttons)
+
+    def update_all_if_dirty(self) -> bool:
+        """Dirty-checked wrapper for UiSyncController. Returns True if updated."""
+        try:
+            cur = self._snapshot_all()
+            if cur == self._last_all_snapshot:
+                return False
+            self._last_all_snapshot = cur
+            self.update_all_binary_buttons()
+            return True
+        except Exception as e:
+            logger.debug(f"update_all_if_dirty failed: {e}")
+            # fallback to update
+            with contextlib.suppress(Exception):
+                self.update_all_binary_buttons()
+            return True
 
     def update_blocknet_start_close_button(self):
         var = (
@@ -875,8 +1071,29 @@ class BinaryManager:
             )
             utils.disable_button(self.frame_manager.xlite_toggle_execution_button, img=img)
 
-    def update_xbridge_bots_buttons(self):
-        if not self.root_gui.winfo_exists():
+    def _snapshot_bots(self) -> tuple:
+        try:
+            fm = self.frame_manager
+            bot = fm.xbridge_bot_manager if fm else None
+            return (
+                fm.bots_installed_boolvar.get() if fm and hasattr(fm, "bots_installed_boolvar") else None,
+                getattr(bot, "process", None).poll() if bot and getattr(bot, "process", None) else None,
+                getattr(bot.installer_thread, "is_alive", lambda: False)()
+                if bot and getattr(bot, "installer_thread", None)
+                else False,
+                bool(getattr(getattr(bot, "repo_management", None), "venv", None)) if bot else None,
+            )
+        except Exception:
+            return (None,)
+
+    def update_xbridge_bots_buttons(self) -> None:
+        """Single-shot bots buttons update (no rescheduling)."""
+        if getattr(self, "_closing", False):
+            return
+        try:
+            if not self.root_gui.winfo_exists():
+                return
+        except Exception:
             return
         # XBridge Bots
         self.update_xbridge_bots_start_close_button()
@@ -888,8 +1105,20 @@ class BinaryManager:
         ):
             self.frame_manager.xbridge_bot_manager.process = None
 
-        # Schedule next update
-        self.root_gui.after(2000, self.update_xbridge_bots_buttons)
+    def update_bots_if_dirty(self) -> bool:
+        """Dirty-checked wrapper for UiSyncController."""
+        try:
+            cur = self._snapshot_bots()
+            if cur == self._last_bots_snapshot:
+                return False
+            self._last_bots_snapshot = cur
+            self.update_xbridge_bots_buttons()
+            return True
+        except Exception as e:
+            logger.debug(f"update_bots_if_dirty failed: {e}")
+            with contextlib.suppress(Exception):
+                self.update_xbridge_bots_buttons()
+            return True
 
     def update_xbridge_bots_install_delete_button(self):
         bots_boolvar = self.frame_manager.bots_installed_boolvar.get()

@@ -1,9 +1,10 @@
-import asyncio
 import os
 import signal
 import sys
 import unittest
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import MagicMock, call, mock_open, patch
+
+from gui.constants import TIME_DISABLE_BUTTON_MS
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -35,10 +36,6 @@ class TestBlocknetAioGui(unittest.TestCase):
             "os_path_join": patch("os.path.join", side_effect=os.path.join),
             "utils": patch("blocknet_aio_monitor.utils", autospec=True),
             "container": patch("blocknet_aio_monitor.container", spec=AppContainer),
-            "asyncio_gather": patch("asyncio.gather", return_value=None),
-            "asyncio_run": patch(
-                "asyncio.run", side_effect=lambda coro: asyncio.new_event_loop().run_until_complete(coro)
-            ),
             "signal_signal": patch("signal.signal"),
             "os_exit": patch("os._exit"),
             "logging": patch("blocknet_aio_monitor.logger"),
@@ -104,9 +101,9 @@ class TestBlocknetAioGui(unittest.TestCase):
 
     def setUp(self):
         """Set up test-specific fixtures before each test."""
-        # Reset mock call counts between tests (except logging and asyncio mocks which should persist)
+        # Reset mock call counts between tests (except logging which should persist)
         for name, mock in self.mocks.items():
-            if name not in ["logging", "asyncio_run", "asyncio_gather"] and hasattr(mock, "reset_mock"):
+            if name not in ["logging"] and hasattr(mock, "reset_mock"):
                 mock.reset_mock()
         self.mock_binary_manager.reset_mock()
         self.mock_blockdx_manager.reset_mock()
@@ -120,7 +117,7 @@ class TestBlocknetAioGui(unittest.TestCase):
         self.assertEqual(self.app.custom_path, None)
         self.assertEqual(self.app.stored_password, None)
         self.assertFalse(self.app.disable_daemons_conf_check)
-        self.assertEqual(self.app.time_disable_button, 3000)
+        self.assertEqual(self.app.time_disable_button, TIME_DISABLE_BUTTON_MS)
         self.assertEqual(self.app.tooltip_manager, self.mock_tooltip_manager)
         self.assertEqual(self.app.blocknet_manager, self.mock_blocknet_manager)
         self.assertEqual(self.app.binary_manager, self.mock_binary_manager)
@@ -165,14 +162,14 @@ class TestBlocknetAioGui(unittest.TestCase):
             raise
 
     def test_setup_management_sections(self):
-        """Test that setup_management_sections is an async method."""
-        with patch.object(self.app, "setup_management_sections", new_callable=AsyncMock) as mock_setup:
-            asyncio.run(self.app.setup_management_sections())
+        """Test that setup_management_sections is a sync method."""
+        with patch.object(self.app, "setup_management_sections") as mock_setup:
+            self.app.setup_management_sections()
             mock_setup.assert_called_once()
 
     @patch.object(BlocknetAioGui, "setup_load_images")
     @patch.object(BlocknetAioGui, "check_processes")
-    @patch.object(BlocknetAioGui, "setup_management_sections", new_callable=AsyncMock)
+    @patch.object(BlocknetAioGui, "setup_management_sections")
     @patch.object(BlocknetAioGui, "setup_tooltips")
     @patch.object(BlocknetAioGui, "init_grid")
     def test_init_setup(
@@ -192,7 +189,8 @@ class TestBlocknetAioGui(unittest.TestCase):
         self.app.init_setup()
         self.app.title.assert_called_once_with(widgets_strings.app_title_string)
         mock_setup_load_images.assert_called_once()
-        self.app.after.assert_called_once_with(0, mock_check_processes)
+        # check_processes scheduled via after(0)
+        self.app.after.assert_any_call(0, mock_check_processes)
         mock_setup_management_sections.assert_called_once()
         mock_setup_tooltips.assert_called_once()
         mock_init_grid.assert_called_once()
@@ -200,7 +198,8 @@ class TestBlocknetAioGui(unittest.TestCase):
         self.mocks["signal_signal"].assert_any_call(signal.SIGINT, self.app.handle_signal)
         self.mocks["signal_signal"].assert_any_call(signal.SIGTERM, self.app.handle_signal)
         self.app.resizable.assert_called_once_with(False, False)
-        self.mocks["asyncio_run"].assert_called_once()
+        # ui_sync started, deferred network scheduled — at least 3 afters
+        self.assertGreaterEqual(self.app.after.call_count, 2)
 
     def test_setup_load_images(self):
         """Test image loading during setup."""
@@ -238,21 +237,213 @@ class TestBlocknetAioGui(unittest.TestCase):
             manager.frame_manager.title_frame.grid.assert_called_once()
 
     def test_handle_signal(self):
-        """Test signal handling."""
+        """Test signal handling — schedules on_close via after(0) and deregisters."""
+        self.app._closing = False
+        self.app.after = MagicMock()
+        self.app.winfo_exists = MagicMock(return_value=True)
         original_on_close = self.app.on_close
         self.app.on_close = MagicMock()
-        self.app.handle_signal(signal.SIGINT, None)
-        self.mocks["logging"].info.assert_called_once_with("Signal 2 received.")
-        self.app.on_close.assert_called_once()
+        # mock signal.signal to avoid side effects
+        with patch("blocknet_aio_monitor.signal.signal") as mock_sig:
+            self.app.handle_signal(signal.SIGINT, None)
+            self.mocks["logging"].info.assert_called_with("Signal 2 received.")
+            # should schedule on_close via after(0)
+            self.app.after.assert_called_with(0, self.app.on_close)
         self.app.on_close = original_on_close
+        self.app._closing = False
+
+    def test_handle_signal_idempotent_when_closing(self):
+        """Signal ignored when already closing."""
+        self.app._closing = True
+        self.app.after = MagicMock()
+        self.app.winfo_exists = MagicMock(return_value=True)
+        orig = self.app.on_close
+        self.app.on_close = MagicMock()
+        self.app.handle_signal(signal.SIGINT, None)
+        self.app.after.assert_not_called()
+        self.app.on_close.assert_not_called()
+        self.app.on_close = orig
+        self.app._closing = False
 
     def test_on_close(self):
-        """Test application cleanup on close."""
-        self.app.on_close()
+        """Test application cleanup on close — graceful destroy not os._exit."""
+        # ensure fresh closing state
+        self.app._closing = False
+        self.app.winfo_exists = MagicMock(return_value=True)
+        self.app.after_cancel = MagicMock()
+        self.app.destroy = MagicMock()
+        # ensure managers have stop
+        self.mock_binary_manager.stop = MagicMock()
+        self.mock_blocknet_manager.stop = MagicMock()
+        self.mock_blockdx_manager.stop = MagicMock()
+        self.mock_xlite_manager.stop = MagicMock()
+        # utilities
+        self.app.blocknet_manager.utility.stop = MagicMock()
+        self.app.xlite_manager.utility.stop = MagicMock()
+        # blockdx utility may not have stop but we mock
+        self.app.blockdx_manager.utility = MagicMock()
+        self.app.blockdx_manager.utility.stop = MagicMock()
+        with patch("blocknet_aio_monitor.signal.signal"):
+            self.app.on_close()
         self.mocks["logging"].info.assert_any_call("Closing application...")
         self.mocks["logging"].info.assert_any_call("Threads terminated.")
-        self.mocks["utils"].terminate_all_threads.assert_called_once()
-        self.mocks["os_exit"].assert_called_once_with(0)
+        # new semantics: join_daemon_threads, not terminate
+        self.mocks["utils"].join_daemon_threads.assert_called_once()
+        # destroy called, not os._exit
+        self.app.destroy.assert_called_once()
+        self.mocks["os_exit"].assert_not_called()
+
+    def test_on_close_idempotent(self):
+        """Second on_close is no-op."""
+        self.app._closing = False
+        self.app.winfo_exists = MagicMock(return_value=True)
+        self.app.after_cancel = MagicMock()
+        self.app.destroy = MagicMock()
+        self.mocks["utils"].join_daemon_threads.reset_mock()
+        with patch("blocknet_aio_monitor.signal.signal"):
+            self.app.on_close()
+            first_destroy = self.app.destroy.call_count
+            self.app.on_close()
+        # second call should not destroy again
+        self.assertEqual(self.app.destroy.call_count, first_destroy)
+        # reset for other tests
+        self.app._closing = False
+
+    def test_on_close_cancels_afters(self):
+        """on_close cancels tracked afters via after_cancel."""
+        self.app._closing = False
+        self.app.winfo_exists = MagicMock(return_value=True)
+        self.app.after_cancel = MagicMock()
+        self.app.destroy = MagicMock()
+        self.app._after_ids = ["id1", "id2"]
+        self.app._check_processes_after_id = "chk"
+        with patch("blocknet_aio_monitor.signal.signal"):
+            self.app.on_close()
+        # after_cancel should have been called for each id
+        self.assertTrue(self.app.after_cancel.call_count >= 2)
+        self.assertEqual(self.app._after_ids, [])
+
+    def test_blocknet_handler_stop_sets_event_and_daemon(self):
+        """BlocknetHandler stop sets Event and threads are daemon."""
+        from utilities.bin_handlers.blocknet_handler import BlocknetHandler
+
+        with (
+            patch("utilities.bin_handlers.blocknet_handler.retrieve_xb_manifest"),
+            patch("utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_conf"),
+            patch("utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_xbridge_conf"),
+            patch("utilities.bin_handlers.blocknet_handler.threading.Thread") as mock_thread,
+            patch("utilities.bin_handlers.blocknet_handler.parse_conf_file"),
+            patch("utilities.bin_handlers.blocknet_handler.save_conf_to_file"),
+        ):
+            mock_instance = MagicMock()
+            mock_instance.is_alive.return_value = True
+            mock_thread.return_value = mock_instance
+            container = MagicMock()
+            container.aio_folder = "/tmp"
+            container.conf_data.blocknet_default_paths = {"Linux": "/tmp"}
+            container.system = "Linux"
+            with (
+                patch("utilities.bin_handlers.blocknet_handler.get_container", return_value=container),
+                patch.object(container, "get_blocknet_executable_path", return_value="/tmp/blocknet"),
+            ):
+                h = BlocknetHandler(custom_path="/tmp", container=container)
+                # thread should be daemon
+                mock_thread.assert_called()
+                kwargs = mock_thread.call_args[1]
+                self.assertTrue(kwargs.get("daemon"))
+                # stop sets event
+                self.assertFalse(h._stop.is_set())
+                h.stop()
+                self.assertTrue(h._stop.is_set())
+                mock_instance.join.assert_called_with(timeout=0.5)
+                # running property compat
+                self.assertFalse(h.running)
+                h.running = True
+                self.assertTrue(h.running)
+                self.assertFalse(h._stop.is_set())
+
+    def test_xlite_handler_stop(self):
+        """XliteHandler stop sets Event and daemon threads."""
+        from utilities.bin_handlers.xlite_handler import XliteHandler
+
+        with (
+            patch("utilities.bin_handlers.xlite_handler.threading.Thread") as mock_thread,
+            patch("utilities.bin_handlers.xlite_handler.os.path.exists", return_value=True),
+            patch("utilities.bin_handlers.xlite_handler.os.makedirs"),
+            patch("utilities.bin_handlers.xlite_handler.os.chmod"),
+            patch("utilities.bin_handlers.xlite_handler.subprocess.Popen"),
+            patch("utilities.bin_handlers.xlite_handler.open", mock_open(read_data="{}")),
+            patch("utilities.bin_handlers.xlite_handler.json.load", return_value={}),
+            patch("utilities.bin_handlers.xlite_handler.os.listdir", return_value=[]),
+        ):
+            mock_inst = MagicMock()
+            mock_inst.is_alive.return_value = True
+            mock_thread.return_value = mock_inst
+            container = MagicMock()
+            container.system = "Linux"
+            container.machine = "x86_64"
+            container.aio_folder = "/tmp"
+            container.xlite_volume_name = "vol"
+            container.xlite_release_url = "http://example.com/xlite.tar.gz"
+            container.conf_data = MagicMock()
+            container.conf_data.xlite_bin_path = {"Linux": "x"}
+            container.conf_data.xlite_bin_name = {"Linux": "x"}
+            container.conf_data.xlite_launch_options = {"Linux": []}
+            container.conf_data.xlite_default_paths = {"Linux": "/tmp"}
+            container.conf_data.xlite_daemon_default_paths = {"Linux": "/tmp"}
+            container.conf_data.xlite_releases_urls = {("Linux", "x86_64"): "http://example.com/x"}
+            container.conf_data.vc_redist_win_url = "http://example.com/vc"
+            container.xlite_curpath = "XLite"
+            container.xlite_bin = "xlite"
+            with patch("utilities.app_container.get_container", return_value=container):
+                h = XliteHandler(container)
+                self.assertTrue(mock_thread.call_count >= 2)
+                for call in mock_thread.call_args_list:
+                    self.assertTrue(call[1].get("daemon"))
+                self.assertFalse(h._stop.is_set())
+                h.stop()
+                self.assertTrue(h._stop.is_set())
+
+    def test_binary_manager_stop_cancels_loops(self):
+        """BinaryManager stop cancels afters."""
+        from gui.binary_manager import BinaryManager
+
+        mock_root = MagicMock()
+        mock_root.after = MagicMock(return_value="after_id")
+        mock_root.after_cancel = MagicMock()
+        mock_root.winfo_exists = MagicMock(return_value=True)
+        mock_root.tooltip_manager = MagicMock()
+        for mgr in ["blocknet_manager", "blockdx_manager", "xlite_manager"]:
+            m = MagicMock()
+            m.utility = MagicMock()
+            m.version = ["v1.0.0"]
+            setattr(mock_root, mgr, m)
+        container = MagicMock()
+        container.aio_folder = "/tmp"
+        container.system = "Linux"
+        with (
+            patch("gui.binary_manager.get_container", return_value=container),
+            patch("gui.binary_manager.Observer") as mock_obs,
+            patch("gui.binary_manager.BinaryFileHandler"),
+        ):
+            mock_obs.return_value.schedule = MagicMock()
+            mock_obs.return_value.start = MagicMock()
+            mock_obs.return_value.is_alive.return_value = True
+            mock_obs.return_value.stop = MagicMock()
+            mock_obs.return_value.join = MagicMock()
+            bm = BinaryManager(mock_root)
+            bm._poll_after_id = "poll"
+            bm._process_file_changes_id = "pf"
+            bm._update_all_id = "ua"
+            bm._update_bots_id = "ub"
+            bm._enospc_hint_id = "en"
+            bm._launch_check_ids = ["l1", "l2"]
+            bm._enable_button_id = "eb"
+            bm._setup_ids = ["s1"]
+            bm.stop()
+            self.assertTrue(mock_root.after_cancel.call_count >= 5)
+            mock_obs.return_value.stop.assert_called_once()
+            self.assertTrue(bm._closing)
 
     def test_adjust_theme_no_cfg(self):
         """Test theme adjustment when no config exists."""
@@ -301,8 +492,12 @@ class TestBlocknetAioGui(unittest.TestCase):
 
     def test_check_processes(self):
         """Test process checking and state updates."""
+        from gui.constants import INTERVAL_PROCESS_CHECK_MS
+
         self.mocks["utils"].processes_check.return_value = ([1], [2], [3], [4])
         self.app.after = MagicMock()
+        # ensure ui_sync not driving to test fallback scheduling
+        self.app.ui_sync = None
         self.app.check_processes()
 
         self.mocks["utils"].processes_check.assert_called_once()
@@ -314,7 +509,7 @@ class TestBlocknetAioGui(unittest.TestCase):
         self.assertEqual(self.app.xlite_manager.utility.xlite_pids, [3])
         self.assertTrue(self.app.xlite_manager.daemon_process_running)
         self.assertEqual(self.app.xlite_manager.utility.xlite_daemon_pids, [4])
-        self.app.after.assert_called_once_with(5000, func=self.app.check_processes)
+        self.app.after.assert_called_once_with(INTERVAL_PROCESS_CHECK_MS, func=self.app.check_processes)
 
 
 class TestRunGui(unittest.TestCase):

@@ -9,6 +9,7 @@ Key Name: encryption_key
 """
 
 import base64
+import contextlib
 import json
 import logging
 import os
@@ -81,9 +82,13 @@ class KeyringManager:
         self._ensure_config_dir()
 
     def _ensure_config_dir(self):
-        """Ensure configuration directory exists."""
+        """Ensure configuration directory exists with 0o700."""
         try:
             os.makedirs(self.config_path, exist_ok=True)
+            try:
+                os.chmod(self.config_path, 0o700)
+            except Exception as e:  # pragma: no cover - Windows
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
         except Exception as e:
             logger.error(f"Failed to create config directory: {e}")
 
@@ -109,27 +114,71 @@ class KeyringManager:
         return None
 
     def _save_fallback(self, key: str) -> bool:
-        """Save encryption key to fallback storage (aio_settings.json)."""
+        """Save encryption key to fallback storage (aio_settings.json) atomically with 0o600."""
         try:
             fallback_path = self._get_fallback_path()
 
             # Load existing config if it exists
             if os.path.exists(fallback_path):
-                with open(fallback_path) as f:
-                    data = json.load(f)
+                try:
+                    with open(fallback_path) as f:
+                        data = json.load(f)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Corrupted JSON in fallback file {fallback_path}: {e}, backing up")
+                    try:
+                        from utilities.atomic_write import backup_corrupt_file
+
+                        backup_corrupt_file(fallback_path)
+                    except Exception:  # noqa: S110, SIM105
+                        pass  # noqa: S110, SIM105
+                    data = {}
             else:
                 data = {}
 
             # Update with encryption key (use "salt" for backward compatibility)
             data[self.FALLBACK_KEY_NAME] = key
 
-            # Save to temporary file first (atomic operation)
-            temp_path = fallback_path + ".tmp"
-            with open(temp_path, "w") as f:
-                json.dump(data, f, indent=2)
+            # Atomic write with 0o600 via helper
+            try:
+                from utilities.atomic_write import atomic_write_json
 
-            # Rename temporary file to actual file (atomic)
-            os.replace(temp_path, fallback_path)
+                atomic_write_json(fallback_path, data, indent=2)
+            except Exception:  # noqa: S110, SIM105
+                # Fallback manual atomic with os.open 0o600 if helper fails
+                import time as _time
+
+                dir_path = os.path.dirname(fallback_path) or "."
+                try:
+                    os.makedirs(dir_path, exist_ok=True)
+                    with contextlib.suppress(Exception):
+                        os.chmod(dir_path, 0o700)
+                except Exception:  # noqa: S110, SIM105
+                    pass  # noqa: S110, SIM105
+                tmp_path = fallback_path + f".tmp.{os.getpid()}.{_time.time_ns()}"
+                flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+                try:
+                    flags |= os.O_NOFOLLOW  # type: ignore[attr-defined]
+                except AttributeError:  # noqa: S110, SIM105
+                    pass  # noqa: S110, SIM105
+                fd = os.open(tmp_path, flags, 0o600)
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8") as f:
+                        json.dump(data, f, indent=2)
+                        fd = None
+                    with contextlib.suppress(Exception):
+                        os.chmod(tmp_path, 0o600)
+                    os.replace(tmp_path, fallback_path)
+                    with contextlib.suppress(Exception):
+                        os.chmod(fallback_path, 0o600)
+                finally:
+                    if fd is not None:
+                        with contextlib.suppress(Exception):
+                            os.close(fd)
+                    try:
+                        if os.path.exists(tmp_path):
+                            os.unlink(tmp_path)
+                    except Exception:  # noqa: S110, SIM105
+                        pass  # noqa: S110, SIM105
 
             logger.info("Encryption key saved to fallback storage")
             return True
@@ -138,21 +187,68 @@ class KeyringManager:
             return False
 
     def _delete_fallback(self) -> bool:
-        """Delete encryption key from fallback storage (aio_settings.json)."""
+        """Delete encryption key from fallback storage (aio_settings.json) atomically with 0o600."""
         try:
             fallback_path = self._get_fallback_path()
             if os.path.exists(fallback_path):
-                # Load existing config
-                with open(fallback_path) as f:
-                    data = json.load(f)
+                try:
+                    with open(fallback_path) as f:
+                        data = json.load(f)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Corrupted JSON in fallback file {fallback_path}: {e}, backing up")
+                    try:
+                        from utilities.atomic_write import backup_corrupt_file
+
+                        backup_corrupt_file(fallback_path)
+                    except Exception:  # noqa: S110, SIM105
+                        pass  # noqa: S110, SIM105
+                    logger.info("Encryption key removed from fallback storage (corrupt file backed up)")
+                    return True
 
                 # Remove encryption key (use "salt" for backward compatibility)
                 if self.FALLBACK_KEY_NAME in data:
                     del data[self.FALLBACK_KEY_NAME]
 
-                # Save back to file
-                with open(fallback_path, "w") as f:
-                    json.dump(data, f, indent=2)
+                # Save atomically with 0o600
+                try:
+                    from utilities.atomic_write import atomic_write_json
+
+                    atomic_write_json(fallback_path, data, indent=2)
+                except Exception:  # noqa: S110, SIM105
+                    import time as _time
+
+                    dir_path = os.path.dirname(fallback_path) or "."
+                    try:
+                        os.makedirs(dir_path, exist_ok=True)
+                        with contextlib.suppress(Exception):
+                            os.chmod(dir_path, 0o700)
+                    except Exception:  # noqa: S110, SIM105
+                        pass  # noqa: S110, SIM105
+                    tmp_path = fallback_path + f".tmp.{os.getpid()}.{_time.time_ns()}"
+                    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+                    try:
+                        flags |= os.O_NOFOLLOW  # type: ignore[attr-defined]
+                    except AttributeError:  # noqa: S110, SIM105
+                        pass  # noqa: S110, SIM105
+                    fd = os.open(tmp_path, flags, 0o600)
+                    try:
+                        with os.fdopen(fd, "w", encoding="utf-8") as f:
+                            json.dump(data, f, indent=2)
+                            fd = None
+                        with contextlib.suppress(Exception):
+                            os.chmod(tmp_path, 0o600)
+                        os.replace(tmp_path, fallback_path)
+                        with contextlib.suppress(Exception):
+                            os.chmod(fallback_path, 0o600)
+                    finally:
+                        if fd is not None:
+                            with contextlib.suppress(Exception):
+                                os.close(fd)
+                        try:
+                            if os.path.exists(tmp_path):
+                                os.unlink(tmp_path)
+                        except Exception:  # noqa: S110, SIM105
+                            pass  # noqa: S110, SIM105
 
                 logger.info("Encryption key removed from fallback storage")
             return True
@@ -177,7 +273,7 @@ class KeyringManager:
             # Validate key format (should be base64 encoded)
             try:
                 base64.b64decode(key_str)
-            except Exception:
+            except Exception:  # noqa: S110, SIM105
                 logger.warning(f"Key is not valid base64: {key_str[:20]}...")
 
             # Try keyring first
@@ -301,7 +397,7 @@ class KeyringManager:
                     info["active_storage"] = "fallback"
                 else:
                     info["active_storage"] = "none"
-            except Exception:
+            except Exception:  # noqa: S110, SIM105
                 if os.path.exists(self._get_fallback_path()):
                     info["active_storage"] = "fallback"
                 else:
@@ -370,7 +466,7 @@ class KeyringMigration:
 
     def migrate_config_file(self, config_file_path: str) -> tuple[bool, str]:
         """
-        Migrate a configuration file from old to new format.
+        Migrate a configuration file from old to new format atomically with 0o600.
 
         Args:
             config_file_path: Path to aio_settings.json
@@ -380,8 +476,21 @@ class KeyringMigration:
         """
         try:
             # Read current config
-            with open(config_file_path) as f:
-                config_data = json.load(f)
+            try:
+                with open(config_file_path) as f:
+                    config_data = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted JSON in {config_file_path}: {e}, backing up")
+                try:
+                    from utilities.atomic_write import backup_corrupt_file
+
+                    backup_corrupt_file(config_file_path)
+                except Exception:  # noqa: S110, SIM105
+                    pass  # noqa: S110, SIM105
+                return False, f"Error: corrupted JSON: {e}"
+            except FileNotFoundError as e:
+                self.logger.error(f"Config file migration failed: {e}")
+                return False, f"Error: {str(e)}"
 
             # Check if migration is needed
             if not self.detect_old_format(config_data):
@@ -392,9 +501,46 @@ class KeyringMigration:
             if not success:
                 return False, message
 
-            # Write new config (may or may not include salt depending on keyring availability)
-            with open(config_file_path, "w") as f:
-                json.dump(new_config, f, indent=2)
+            # Write new config atomically with 0o600
+            try:
+                from utilities.atomic_write import atomic_write_json
+
+                atomic_write_json(config_file_path, new_config, indent=2)
+            except Exception:  # noqa: S110, SIM105
+                import time as _time
+
+                dir_path = os.path.dirname(config_file_path) or "."
+                try:
+                    os.makedirs(dir_path, exist_ok=True)
+                    with contextlib.suppress(Exception):
+                        os.chmod(dir_path, 0o700)
+                except Exception:  # noqa: S110, SIM105
+                    pass  # noqa: S110, SIM105
+                tmp_path = config_file_path + f".tmp.{os.getpid()}.{_time.time_ns()}"
+                flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+                try:
+                    flags |= os.O_NOFOLLOW  # type: ignore[attr-defined]
+                except AttributeError:  # noqa: S110, SIM105
+                    pass  # noqa: S110, SIM105
+                fd = os.open(tmp_path, flags, 0o600)
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8") as f:
+                        json.dump(new_config, f, indent=2)
+                        fd = None
+                    with contextlib.suppress(Exception):
+                        os.chmod(tmp_path, 0o600)
+                    os.replace(tmp_path, config_file_path)
+                    with contextlib.suppress(Exception):
+                        os.chmod(config_file_path, 0o600)
+                finally:
+                    if fd is not None:
+                        with contextlib.suppress(Exception):
+                            os.close(fd)
+                    try:
+                        if os.path.exists(tmp_path):
+                            os.unlink(tmp_path)
+                    except Exception:  # noqa: S110, SIM105
+                        pass  # noqa: S110, SIM105
 
             return True, message
 

@@ -10,6 +10,7 @@ import zipfile
 
 import requests
 
+from gui.constants import DOWNLOAD_CHUNK_SIZE, RPC_TIMEOUT_S
 from utilities.app_container import AppContainer, get_container
 from utilities.rpc_client import RPCClient
 
@@ -40,18 +41,37 @@ class BlocknetHandler(BaseBinUtil):
         self.blocknet_process = None
         self.blocknet_rpc = None
         self.valid_rpc = False
-        self.running = True  # flag for async funcs
+        self._stop = threading.Event()
+        self._rpc_thread: threading.Thread | None = None
         self.parse_blocknet_conf()
         self.parse_xbridge_conf()
         self.init_blocknet_rpc()
         self.start_rpc_check_thread()
 
+    @property
+    def running(self) -> bool:
+        return not self._stop.is_set()
+
+    @running.setter
+    def running(self, value: bool) -> None:
+        if value:
+            self._stop.clear()
+        else:
+            self._stop.set()
+
+    def stop(self) -> None:
+        """Signal RPC checker to stop and join thread."""
+        self._stop.set()
+        thr = getattr(self, "_rpc_thread", None)
+        if thr is not None and thr.is_alive():
+            thr.join(timeout=0.5)
+
     def start_rpc_check_thread(self):
-        thread = threading.Thread(target=self.check_blocknet_rpc)
-        thread.start()
+        self._rpc_thread = threading.Thread(target=self.check_blocknet_rpc, daemon=True, name="BlocknetRPCCheck")
+        self._rpc_thread.start()
 
     def check_blocknet_rpc(self):
-        while self.running:
+        while not self._stop.is_set():
             valid = False
             if self.blocknet_rpc:
                 result = self.blocknet_rpc.send_rpc_request("getnetworkinfo")
@@ -59,7 +79,15 @@ class BlocknetHandler(BaseBinUtil):
                     valid = True
             self.valid_rpc = valid
 
-            time.sleep(1)
+            # Cooperative wait: use Event.wait for immediate stop, fallback to sleep for test mocks
+            if self._stop.wait(1):
+                break
+            try:
+                time.sleep(0)
+            except KeyboardInterrupt:
+                break
+            except Exception as e:  # debug logged
+                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
 
     def init_blocknet_rpc(self):
         if self.blocknet_conf_local and "global" in self.blocknet_conf_local:
@@ -418,7 +446,9 @@ class BlocknetHandler(BaseBinUtil):
             if need_to_download:
                 with open(local_file_path, "wb") as f:
                     response = requests.get(
-                        self.container.conf_data.blocknet_bootstrap_url, stream=True, timeout=(10, 30)
+                        self.container.conf_data.blocknet_bootstrap_url,
+                        stream=True,
+                        timeout=(RPC_TIMEOUT_S, 30),
                     )
                     response.raise_for_status()
                     if response.status_code == 200:
@@ -427,7 +457,7 @@ class BlocknetHandler(BaseBinUtil):
                             f"{local_file_path}, remote size: {int(remote_file_size / 1024)} kb"
                         )
                         bytes_downloaded = 0
-                        for chunk in response.iter_content(chunk_size=8192):
+                        for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
                             if chunk:
                                 f.write(chunk)
                                 bytes_downloaded += len(chunk)
@@ -484,7 +514,7 @@ class BlocknetHandler(BaseBinUtil):
 
 
 def get_remote_file_size(url):
-    r = requests.head(url, timeout=10)
+    r = requests.head(url, timeout=RPC_TIMEOUT_S)
     r.raise_for_status()
     return int(r.headers.get("content-length", 0))
 
@@ -540,7 +570,7 @@ def retrieve_remote_conf(remote_url: str, subfolder: str, expected_filename: str
 
 def download_remote_conf(url, filepath):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=RPC_TIMEOUT_S)
         if response.status_code == 200:
             conf_data = response.text
             parsed_conf = parse_conf_file(input_string=conf_data)
@@ -569,7 +599,7 @@ def retrieve_xb_manifest():
     local_manifest_file = os.path.join(aio_folder, folder, filename)
 
     try:
-        response = requests.get(container.conf_data.remote_manifest_url, timeout=10)
+        response = requests.get(container.conf_data.remote_manifest_url, timeout=RPC_TIMEOUT_S)
         if response.status_code == 200:
             parsed_json = response.json()
             os.makedirs(os.path.dirname(local_manifest_file), exist_ok=True)

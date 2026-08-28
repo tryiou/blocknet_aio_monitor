@@ -8,6 +8,7 @@ import traceback
 
 import requests
 
+from gui.constants import RPC_TIMEOUT_S
 from utilities.app_container import AppContainer
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 from utilities.rpc_client import RPCClient
@@ -46,7 +47,7 @@ def install_vc_redist(url):
         installer_name = os.path.basename(url)
 
         with open(installer_name, "wb") as file:
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=RPC_TIMEOUT_S)
             file.write(response.content)
 
         command = f"{installer_name} /install /quiet /norestart"
@@ -90,12 +91,31 @@ class XliteHandler(BaseBinUtil):
         self.xlite_process = None
         self.xlite_daemon_process = None
         self.xlite_conf_local = {}
-        self.running = True  # flag for async funcs
+        self._stop = threading.Event()
+        self._xlite_threads: list[threading.Thread] = []
         self.xlite_pids = []
         self.xlite_daemon_pids = []
         self.parse_xlite_conf()
         self.parse_xlite_daemon_conf()
         self.start_threads()
+
+    @property
+    def running(self) -> bool:
+        return not self._stop.is_set()
+
+    @running.setter
+    def running(self, value: bool) -> None:
+        if value:
+            self._stop.clear()
+        else:
+            self._stop.set()
+
+    def stop(self) -> None:
+        """Signal threads to stop and join."""
+        self._stop.set()
+        for thr in getattr(self, "_xlite_threads", []):
+            if thr.is_alive():
+                thr.join(timeout=0.5)
 
     def check_xlite_daemon_confs_sequence(self, silent=True):
         self.parse_xlite_daemon_conf(silent)
@@ -107,12 +127,19 @@ class XliteHandler(BaseBinUtil):
                 self.coins_rpc[coin] = RPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
 
     def check_xlite_daemon_confs(self):
-        while self.running and not self.valid_coins_rpc:
+        while not self._stop.is_set() and not self.valid_coins_rpc:
             self.check_xlite_daemon_confs_sequence(silent=True)
-            time.sleep(1)
+            if self._stop.wait(1):
+                break
+            try:
+                time.sleep(0)
+            except KeyboardInterrupt:
+                break
+            except Exception as e:  # debug logged
+                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
 
     def check_valid_xlite_coins_rpc(self, runonce=False):
-        while self.running:
+        while not self._stop.is_set():
             valid = False
             if self.coins_rpc:
                 for coin, rpc_server in self.coins_rpc.items():
@@ -130,13 +157,21 @@ class XliteHandler(BaseBinUtil):
             if runonce:
                 return
 
-            time.sleep(1)
+            if self._stop.wait(1):
+                break
+            try:
+                time.sleep(0)
+            except KeyboardInterrupt:
+                break
+            except Exception as e:  # debug logged
+                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
 
     def start_threads(self):
-        thread = threading.Thread(target=self.check_xlite_daemon_confs)
-        thread.start()
-        thread = threading.Thread(target=self.check_valid_xlite_coins_rpc)
-        thread.start()
+        t1 = threading.Thread(target=self.check_xlite_daemon_confs, daemon=True, name="XliteDaemonCheck")
+        t1.start()
+        t2 = threading.Thread(target=self.check_valid_xlite_coins_rpc, daemon=True, name="XliteCoinsRPC")
+        t2.start()
+        self._xlite_threads = [t1, t2]
 
     def parse_xlite_conf(self):
         data_folder = self.container.conf_data.xlite_default_paths.get(self.container.system, None)

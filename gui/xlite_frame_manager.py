@@ -118,6 +118,11 @@ class XliteFrameManager:
             # Delete CC_WALLET_AUTOLOGIN variable
             if "CC_WALLET_AUTOLOGIN" in os.environ:
                 os.environ.pop("CC_WALLET_AUTOLOGIN")
+            # Eager UI refresh — instant feedback, not waiting for poll
+            try:
+                self.update_xlite_store_password_button()
+            except Exception as e:  # debug logged
+                logger.debug(f"Eager password button update failed: {e}")
             return "break"
 
         # For left-click event
@@ -146,6 +151,11 @@ class XliteFrameManager:
                 utils.save_cfg_json(key="xl_pass", data=salted_pass)
                 # Store the password in a variable
                 self.root_gui.stored_password = password
+                # Eager UI refresh — instant feedback
+                try:
+                    self.update_xlite_store_password_button()
+                except Exception as e:  # debug logged
+                    logger.debug(f"Eager password button update failed: {e}")
             else:
                 logger.info("No password entered.")
             # Perform actions for left-click (if needed)

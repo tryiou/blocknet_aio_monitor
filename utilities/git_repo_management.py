@@ -9,6 +9,7 @@ from pathlib import Path
 
 import requests
 
+from gui.constants import DOWNLOAD_CHUNK_SIZE, GIT_COMMAND_TIMEOUT_S, RPC_TIMEOUT_S
 from utilities.app_container import get_container
 
 try:
@@ -35,7 +36,9 @@ class BranchSwitchBlockedError(Exception):
         self.blocked_paths = blocked_paths or []
 
 
-def run_command(cmd_list: list[str], cwd: Path | None = None, timeout: int = 300) -> tuple[int, str, str]:
+def run_command(
+    cmd_list: list[str], cwd: Path | None = None, timeout: int = GIT_COMMAND_TIMEOUT_S
+) -> tuple[int, str, str]:
     """
     Execute a command and capture its output.
 
@@ -104,7 +107,11 @@ class VirtualEnvironment:
         if not self.is_windows:
             try:
                 if pip_path.is_file():
-                    data = pip_path.read_bytes().split(b"\n", 1)[0] if pip_path.stat().st_size < 8192 else b""
+                    data = (
+                        pip_path.read_bytes().split(b"\n", 1)[0]
+                        if pip_path.stat().st_size < DOWNLOAD_CHUNK_SIZE
+                        else b""
+                    )
                     if data.startswith(b"#!"):
                         interp = data[2:].strip().split(b" ")[0].decode(errors="ignore")
                         if interp and not Path(interp).exists():
@@ -116,7 +123,7 @@ class VirtualEnvironment:
                 logger.debug(f"pip shebang check skipped: {e}")
         # Verify pip is actually runnable via venv python (cheap)
         try:
-            rc, _, _ = run_command([str(venv_python), "-m", "pip", "--version"], timeout=10)
+            rc, _, _ = run_command([str(venv_python), "-m", "pip", "--version"], timeout=RPC_TIMEOUT_S)
             if rc != 0:
                 return True, "pip not runnable"
         except Exception as e:
@@ -169,7 +176,7 @@ class VirtualEnvironment:
         real_python_path = self._resolve_python()
         try:
             returncode, stdout, stderr = run_command(
-                [str(real_python_path), "-m", "venv", str(self.venv_dir)], timeout=300
+                [str(real_python_path), "-m", "venv", str(self.venv_dir)], timeout=GIT_COMMAND_TIMEOUT_S
             )
             if returncode != 0:
                 logger.error(f"venv creation failed: {stderr}")
@@ -233,7 +240,7 @@ class VirtualEnvironment:
         for attempt in range(2):
             try:
                 cmd = [str(python_path), "-m", "pip", "install", "-r", str(requirements_path)]
-                returncode, stdout, stderr = run_command(cmd, self.target_dir, timeout=300)
+                returncode, stdout, stderr = run_command(cmd, self.target_dir, timeout=GIT_COMMAND_TIMEOUT_S)
                 if returncode != 0:
                     raise ExecutionError(f"Requirements installation failed: {stderr}")
                 logger.info("Requirements installed successfully")
@@ -296,7 +303,7 @@ class GitRepository:
         self.target_dir = target_dir
         self.remote_branch = remote_branch
         self.repo = None
-        self.git_timeout = 300
+        self.git_timeout = GIT_COMMAND_TIMEOUT_S
         self.backup_base = Path(backup_base) if backup_base else None
 
     def _get_backup_base(self) -> Path:
@@ -588,7 +595,7 @@ class GitRepository:
                 if repo_name.endswith(".git"):
                     repo_name = repo_name[:-4]
 
-            response = requests.get(f"https://api.github.com/repos/{owner}/{repo_name}/branches", timeout=10)
+            response = requests.get(f"https://api.github.com/repos/{owner}/{repo_name}/branches", timeout=RPC_TIMEOUT_S)
             response.raise_for_status()
             branches = [branch["name"] for branch in response.json()]
             logger.info(f"Found {len(branches)} remote branches")
@@ -626,6 +633,10 @@ class GitRepoManagement:
         backup_base = self.workdir / "backups" if self.workdir else None
         self.git_repo = GitRepository(repo_url, self.target_dir, branch, backup_base=backup_base)
         self.venv = None
+        self._reader_threads: list[threading.Thread] = []
+        self._watcher_thread: threading.Thread | None = None
+        self._stop_event = threading.Event()
+        self._process: subprocess.Popen | None = None
 
     def _migrate_legacy_venv(self) -> None:
         """Move legacy in-tree venv to relocated location if needed."""
@@ -730,35 +741,47 @@ class GitRepoManagement:
             logger.error(f"Script not found: {abs_script_path}")
             return None
 
+        if self.venv is None:
+            logger.error("Cannot run script - venv not initialized")
+            return None
         python_path = self.venv.get_python_path()
         cmd = [str(python_path), str(abs_script_path)] + script_args
 
         logger.info(f"Running script with venv Python: {' '.join(cmd)}")
 
         try:
+            self._stop_event.clear()
             process = subprocess.Popen(
                 cmd, cwd=self.target_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
             )
+            self._process = process
 
             def stream_reader(stream, prefix):
                 try:
                     for line in iter(stream.readline, ""):
+                        if self._stop_event.is_set():
+                            break
                         if line:
                             print(f"{prefix}: {line.strip()}")
                 except (OSError, ValueError) as e:
                     logger.debug(f"Stream reader stopped: {e}")
 
-            stdout_thread = threading.Thread(target=stream_reader, args=(process.stdout, "STDOUT"), daemon=True)
-            stderr_thread = threading.Thread(target=stream_reader, args=(process.stderr, "STDERR"), daemon=True)
+            stdout_thread = threading.Thread(
+                target=stream_reader, args=(process.stdout, "STDOUT"), daemon=True, name="GitRepoStdoutReader"
+            )
+            stderr_thread = threading.Thread(
+                target=stream_reader, args=(process.stderr, "STDERR"), daemon=True, name="GitRepoStderrReader"
+            )
 
             stdout_thread.start()
             stderr_thread.start()
+            self._reader_threads = [stdout_thread, stderr_thread]
 
             if timeout:
 
                 def timeout_watcher():
                     start_time = time.time()
-                    while process.poll() is None:
+                    while process.poll() is None and not self._stop_event.is_set():
                         if time.time() - start_time > timeout:
                             logger.warning(f"Script execution timed out after {timeout} seconds")
                             process.terminate()
@@ -766,15 +789,52 @@ class GitRepoManagement:
                             if process.poll() is None:
                                 process.kill()
                             break
-                        time.sleep(1)
+                        self._stop_event.wait(1)
 
-                threading.Thread(target=timeout_watcher, daemon=True).start()
+                self._watcher_thread = threading.Thread(
+                    target=timeout_watcher, daemon=True, name="GitRepoTimeoutWatcher"
+                )
+                self._watcher_thread.start()
 
             return process
 
         except Exception as e:
             logger.error(f"Failed to run script: {e}")
             return None
+
+    def stop(self) -> None:
+        """Terminate running script and join cooperative reader/watcher threads."""
+        self._stop_event.set()
+        proc = getattr(self, "_process", None)
+        if proc is not None:
+            try:
+                if proc.poll() is None:
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=2)
+                    except Exception:
+                        try:
+                            proc.kill()
+                        except Exception as e:  # debug logged
+                            logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+            except Exception as e:  # debug logged
+                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+        for thr in getattr(self, "_reader_threads", []):
+            try:
+                if thr.is_alive():
+                    thr.join(timeout=0.5)
+            except Exception as e:  # debug logged
+                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+        watcher = getattr(self, "_watcher_thread", None)
+        if watcher is not None:
+            try:
+                if watcher.is_alive():
+                    watcher.join(timeout=0.5)
+            except Exception as e:  # debug logged
+                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+        self._reader_threads = []
+        self._watcher_thread = None
+        self._process = None
 
     def get_remote_branches(self) -> list[str] | None:
         """Fetch list of remote branch names. Returns None on failure."""

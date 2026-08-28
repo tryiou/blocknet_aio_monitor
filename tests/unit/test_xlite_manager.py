@@ -1,6 +1,6 @@
-import asyncio
 import os
 import sys
+import threading
 from unittest.mock import MagicMock, patch
 
 # Add the project root to the sys.path to allow imports
@@ -74,7 +74,7 @@ class TestXliteManager:
         manager, _ = self._create_xlite_manager_with_mocks(mock_root_gui, mock_container)
 
         with patch("gui.xlite_manager.XliteFrameManager") as mock_xlite_frame_manager:
-            asyncio.run(manager.setup())
+            manager.setup()
             mock_xlite_frame_manager.assert_called_once_with(manager)
             mock_root_gui.after.assert_called_once_with(0, manager.update_status_xlite)
 
@@ -102,12 +102,27 @@ class TestXliteManager:
         mock_root_gui.blocknet_manager.utility.valid_rpc = True
         manager.utility.xlite_daemon_confs_local = {"test": "conf"}
 
-        manager.detect_new_xlite_install_and_add_to_xbridge()
+        # dxload is now off main thread via Thread; run inline for test
+        with patch("gui.xlite_manager.threading.Thread") as mock_thread:
 
-        mock_root_gui.blocknet_manager.utility.check_xbridge_conf.assert_called_once_with({"test": "conf"})
-        mock_root_gui.blocknet_manager.utility.blocknet_rpc.send_rpc_request.assert_called_once_with(
-            "dxloadxbridgeConf"
-        )
+            def _run_thread(*args, **kwargs):
+                target = kwargs.get("target")
+                if target:
+                    target()
+                m = MagicMock()
+                m.start = MagicMock()
+                return m
+
+            mock_thread.side_effect = _run_thread
+            # Also need to handle form Thread(target=..., daemon=True, name=...)
+            # side_effect already covers; ensure start is tracked
+            manager.detect_new_xlite_install_and_add_to_xbridge()
+            # Give thread target time if not inline
+            # Check that check_xbridge_conf called
+            mock_root_gui.blocknet_manager.utility.check_xbridge_conf.assert_called_once_with({"test": "conf"})
+            mock_root_gui.blocknet_manager.utility.blocknet_rpc.send_rpc_request.assert_called_once_with(
+                "dxloadxbridgeConf"
+            )
         assert mock_root_gui.disable_daemons_conf_check is True
 
     def test_detect_new_xlite_install_and_add_to_xbridge_invalid_coins_rpc(self):
@@ -127,7 +142,7 @@ class TestXliteManager:
         assert mock_root_gui.disable_daemons_conf_check is False
 
     def test_update_status_xlite(self):
-        """Test update_status_xlite calls all frame manager updates and schedules next update."""
+        """Test update_status_xlite calls all frame manager updates (single-shot)."""
         mock_root_gui = self._create_mock_root_gui()
         mock_container = self._create_mock_container()
 
@@ -135,6 +150,7 @@ class TestXliteManager:
 
         manager.reverse_proxy = MagicMock()
         manager.reverse_proxy_running = False
+        mock_root_gui.after.reset_mock()
 
         with patch.object(manager, "detect_new_xlite_install_and_add_to_xbridge") as mock_detect:
             manager.update_status_xlite()
@@ -146,4 +162,4 @@ class TestXliteManager:
             manager.frame_manager.update_xlite_valid_config_checkbox.assert_called_once()
             manager.frame_manager.update_xlite_daemon_valid_config_checkbox.assert_called_once()
             manager.frame_manager.update_xlite_reverse_proxy_process_status.assert_called_once()
-            mock_root_gui.after.assert_called_once_with(2000, manager.update_status_xlite)
+            mock_root_gui.after.assert_not_called()

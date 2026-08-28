@@ -113,7 +113,7 @@ def test_stop_cleans_observer():
         mgr = BinaryManager(mock_root)
         mgr.stop()
         mock_instance.stop.assert_called_once()
-        mock_instance.join.assert_called_once_with(1)
+        mock_instance.join.assert_called_once_with(0.5)
         assert mgr.observer is None
 
 

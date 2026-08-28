@@ -1,10 +1,18 @@
 import logging
+import threading
 
 import customtkinter as ctk
 
 import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import utilities.utils
-from gui.constants import BINS_BUTTONS_WIDTH, BINS_FRAME_WIDTH, CORNER_RADIUS, HEADER_FRAMES_STICKY
+from gui.constants import (
+    BINS_BUTTONS_WIDTH,
+    BINS_FRAME_WIDTH,
+    CORNER_RADIUS,
+    HEADER_FRAMES_STICKY,
+    INTERVAL_BOTS_RETRY_MS,
+    MAX_BOTS_RETRY,
+)
 from gui.xbridge_bot_manager import XBridgeBotManager
 
 logger = logging.getLogger(__name__)
@@ -50,22 +58,20 @@ class BinaryFrameManager:
         self.xlite_version_optionmenu = ctk.CTkOptionMenu(
             self.master_frame, values=self.root_gui.xlite_manager.version, state="disabled", width=option_menu_width
         )
-        # Branch persistence: validate saved choice against remote list
-        _remote_branches = self.xbridge_bot_manager.get_available_branches()
-        if _remote_branches is None:
-            _values = [self.xbridge_bot_manager.get_saved_branch()]
-            _initial = self.xbridge_bot_manager.get_saved_branch()
-        else:
-            _values = _remote_branches
-            _initial = self.xbridge_bot_manager.resolve_startup_branch(_remote_branches)
+        # Branch persistence: defer remote fetch off UI thread
+        _saved = self.xbridge_bot_manager.get_saved_branch()
+        _initial_values = [_saved]
+        _initial = _saved
         self.bots_version_optionmenu = ctk.CTkOptionMenu(
             self.master_frame,
-            values=_values,
+            values=_initial_values,
             state="normal",
             width=option_menu_width,
             command=self.on_bots_branch_selected,
         )
         self.bots_version_optionmenu.set(_initial)
+        # Deferred fetch of remote branches (non-blocking)
+        self._defer_branch_fetch()
         # Checkboxes BoolVars
         self.blocknet_installed_boolvar = ctk.BooleanVar(value=False)
         self.blockdx_installed_boolvar = ctk.BooleanVar(value=False)
@@ -188,6 +194,48 @@ class BinaryFrameManager:
 
         # Bots buttons
 
+    def _defer_branch_fetch(self) -> None:
+        """Fetch remote branches in background thread, update UI on main thread."""
+
+        def _fetch():
+            try:
+                branches = self.xbridge_bot_manager.get_available_branches()
+            except Exception as e:
+                logger.debug(f"Branch fetch failed: {e}")
+                branches = None
+            if branches is None:
+                return
+
+            def _apply():
+                try:
+                    if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                        return
+                    if getattr(self.root_gui, "_closing", False):
+                        return
+                    resolved = self.xbridge_bot_manager.resolve_startup_branch(branches)
+                    self.bots_version_optionmenu.configure(values=branches)
+                    self.bots_version_optionmenu.set(resolved)
+                except Exception as e:
+                    logger.debug(f"Branch apply failed: {e}")
+
+            try:
+                if hasattr(self.root_gui, "after"):
+                    self.root_gui.after(0, _apply)
+                else:
+                    _apply()
+            except Exception as e:
+                logger.debug(f"Branch after failed: {e}")
+
+        try:
+            # Schedule fetch off main thread via after(0 Thread)
+            if hasattr(self.root_gui, "after"):
+                self.root_gui.after(0, lambda: threading.Thread(target=_fetch, daemon=True).start())
+            else:
+                threading.Thread(target=_fetch, daemon=True).start()
+        except Exception as e:
+            logger.debug(f"Defer branch fetch failed: {e}")
+            threading.Thread(target=_fetch, daemon=True).start()
+
     def on_bots_branch_selected(self, choice: str) -> None:
         """Persist user branch choice immediately."""
         try:
@@ -209,14 +257,49 @@ class BinaryFrameManager:
             utilities.utils.disable_button(self.install_delete_bots_button, self.root_gui.install_greyed_img)
             utilities.utils.disable_button(self.bots_toggle_execution_button, self.root_gui.start_greyed_img)
             self.xbridge_bot_manager.toggle_execution(branch)
-            if not self.xbridge_bot_manager.repo_management.venv:
-                self.run_after_setup()
+            # Let UiSyncController handle bounded retry; keep fallback for non-controller use
+            try:
+                rm = getattr(self.xbridge_bot_manager, "repo_management", None)
+                if rm is None or not getattr(rm, "venv", None):
+                    self.run_after_setup()
+            except Exception as e:
+                logger.debug(f"toggle post-check failed: {e}")
 
-    def run_after_setup(self):
-        if self.xbridge_bot_manager.repo_management.venv:
-            self.xbridge_bot_manager.toggle_execution()
-        else:
-            self.root_gui.after(1000, self.run_after_setup)
+    def run_after_setup(self, _retries: int = 0, max_retries: int = MAX_BOTS_RETRY):
+        # Bound recursion and check closing/venv to avoid infinite loop
+        try:
+            if getattr(self.root_gui, "_closing", False) is True:
+                return
+            if getattr(getattr(self, "parent", None), "_closing", False) is True:
+                return
+            if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                return
+        except Exception as e:  # debug logged
+            logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+            return
+        if self.xbridge_bot_manager.repo_management and self.xbridge_bot_manager.repo_management.venv:
+            try:
+                self.xbridge_bot_manager.toggle_execution()
+            except Exception as e:  # debug logged
+                logger.debug("Suppressed Exception: %s", e, exc_info=True)
+            return
+        if _retries >= max_retries:
+            logger.debug(f"run_after_setup max retries {max_retries} reached, giving up")
+            return
+        # If UiSyncController is active, let it handle retries (bounded via controller)
+        try:
+            if (
+                hasattr(self.root_gui, "ui_sync")
+                and getattr(self.root_gui, "ui_sync", None)
+                and getattr(self.root_gui.ui_sync, "_closing", False) is False
+            ):
+                return
+        except Exception as e:
+            logger.debug(f"UiSync check failed: {e}")
+        try:
+            self.root_gui.after(INTERVAL_BOTS_RETRY_MS, lambda: self.run_after_setup(_retries + 1, max_retries))
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
 
     def grid_widgets(self, x, y):
         # bin

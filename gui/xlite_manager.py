@@ -1,4 +1,6 @@
+import contextlib
 import logging
+import threading
 
 from gui.xlite_frame_manager import XliteFrameManager
 from utilities.app_container import get_container
@@ -24,15 +26,42 @@ class XliteManager:
             self.version = ["unknown"]
         self.process_running = False
         self.daemon_process_running = False
+        self._status_after_id: str | None = None
+        self._setup_after_id: str | None = None
+        self._closing: bool = False
+        self._last_snapshot: tuple | None = None
+        self._dxload_pending: bool = False
 
-    async def setup(self):
+    def stop(self) -> None:
+        """Cancel scheduled updates (idempotent)."""
+        self._closing = True
+        for aid in [self._status_after_id, self._setup_after_id]:
+            if aid is not None:
+                try:
+                    if hasattr(self.root_gui, "winfo_exists"):
+                        try:
+                            if not self.root_gui.winfo_exists():
+                                continue
+                        except Exception as e:  # debug logged
+                            logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+                            continue
+                    self.root_gui.after_cancel(aid)
+                except Exception as e:  # debug logged
+                    logger.debug(f"after_cancel failed: {e}")
+        self._status_after_id = None
+        self._setup_after_id = None
+
+    def setup(self) -> None:
         self.frame_manager = XliteFrameManager(self)
         # TEMP DISABLE xlite-reverse-proxy — keep handler for restore
         self.reverse_proxy = None  # was: XliteReverseProxyHandler()
         self.reverse_proxy_running = False
         # TEMP DISABLE: self.reverse_proxy = XliteReverseProxyHandler()
         # TEMP DISABLE: try: self.reverse_proxy.start() except Exception as e: logger.error(f"Proxy init failed: {e}")
-        self.root_gui.after(0, self.update_status_xlite)
+        try:
+            self._setup_after_id = self.root_gui.after(0, self.update_status_xlite)
+        except Exception as e:  # debug logged
+            logger.debug(f"Suppressed Exception: {e}", exc_info=True)
 
     def refresh_xlite_confs(self):
         self.utility.parse_xlite_conf()
@@ -44,14 +73,52 @@ class XliteManager:
             if (
                 self.root_gui.blocknet_manager.blocknet_process_running
                 and self.root_gui.blocknet_manager.utility.valid_rpc
-            ):
-                logger.debug("dxloadxbridgeConf")
-                self.root_gui.blocknet_manager.utility.blocknet_rpc.send_rpc_request("dxloadxbridgeConf")
+            ) and not self._dxload_pending:
+                self._dxload_pending = True
+
+                def _do_dxload():
+                    try:
+                        logger.debug("dxloadxbridgeConf")
+                        self.root_gui.blocknet_manager.utility.blocknet_rpc.send_rpc_request("dxloadxbridgeConf")
+                    except Exception as e:
+                        logger.debug(f"dxloadxbridgeConf failed: {e}")
+                    finally:
+                        self._dxload_pending = False
+
+                try:
+                    threading.Thread(target=_do_dxload, daemon=True, name="XliteDxLoad").start()
+                except Exception as e:
+                    logger.debug(f"Failed to start dxload thread: {e}")
+                    self._dxload_pending = False
             self.root_gui.disable_daemons_conf_check = True
         if self.root_gui.disable_daemons_conf_check and not self.utility.valid_coins_rpc:
             self.root_gui.disable_daemons_conf_check = False
 
-    def update_status_xlite(self):
+    def _snapshot(self) -> tuple:
+        try:
+            return (
+                getattr(self, "process_running", None),
+                getattr(self, "daemon_process_running", None),
+                getattr(self.utility, "valid_coins_rpc", None),
+                getattr(self.utility, "downloading_bin", None),
+                tuple(sorted(getattr(self.utility, "xlite_daemon_confs_local", {}).keys()))
+                if isinstance(getattr(self.utility, "xlite_daemon_confs_local", None), dict)
+                else None,
+                getattr(getattr(self, "root_gui", None), "stored_password", None),
+            )
+        except Exception:
+            return (None,)
+
+    def update_status_xlite(self) -> None:
+        """Single-shot update (no rescheduling)."""
+        if getattr(self, "_closing", False):
+            return
+        try:
+            if hasattr(self.root_gui, "winfo_exists") and not self.root_gui.winfo_exists():
+                return
+        except Exception as e:  # debug logged
+            logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+            return
         self.detect_new_xlite_install_and_add_to_xbridge()
         self.frame_manager.update_xlite_process_status_checkbox()
         self.frame_manager.update_xlite_store_password_button()
@@ -63,4 +130,17 @@ class XliteManager:
         self.reverse_proxy_running = False
         # Keep UI sync for hidden widget (grid hidden) so tests stay green; remove if fully disabling
         self.frame_manager.update_xlite_reverse_proxy_process_status()
-        self.root_gui.after(2000, self.update_status_xlite)
+
+    def update_status_if_dirty(self) -> bool:
+        try:
+            cur = self._snapshot()
+            if cur == getattr(self, "_last_snapshot", None):
+                return False
+            self._last_snapshot = cur  # type: ignore
+            self.update_status_xlite()
+            return True
+        except Exception as e:
+            logger.debug(f"update_status_if_dirty failed: {e}")
+            with contextlib.suppress(Exception):
+                self.update_status_xlite()
+            return True

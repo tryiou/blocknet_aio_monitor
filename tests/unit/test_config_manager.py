@@ -249,6 +249,28 @@ class TestEdgeCases(ConfigManagerTestCase):
             {("Windows", "AMD64"): "xlite-daemon-win64.exe", ("Linux", "x86_64"): "xlite-daemon-linux64"},
         )
 
+    def test_atomic_yaml_0600_and_0700(self):
+        """Test _save_config atomic write uses 0o600 and dir 0o700."""
+        cfg = self._create_config_for_platform("Linux", "x86_64")
+        cfg._save_config()
+        config_file = self.test_dir_path / "aio_config.yaml"
+        self.assertTrue(config_file.exists())
+        if os.name != "nt":
+            self.assertEqual(oct(config_file.stat().st_mode & 0o777), oct(0o600))
+            self.assertEqual(oct(self.test_dir_path.stat().st_mode & 0o777), oct(0o700))
+        # No tmp file left behind
+        self.assertEqual(list(self.test_dir_path.glob("*.tmp.*")), [])
+
+    def test_corrupted_yaml_self_heal(self):
+        """Corrupted aio_config.yaml is backed up and self-heals."""
+        config_file = self.test_dir_path / "aio_config.yaml"
+        config_file.write_text("{invalid: yaml: : [", encoding="utf-8")
+        cfg = self._create_config_for_platform("Linux", "x86_64")
+        # Should self-heal to template, not crash
+        self.assertIsNotNone(cfg._get_system_value("blocknet_releases_urls"))
+        backups = list(self.test_dir_path.glob("aio_config.yaml.corrupt.*"))
+        self.assertEqual(len(backups), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

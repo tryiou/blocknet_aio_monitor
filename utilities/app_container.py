@@ -5,6 +5,7 @@ This module provides a thread-safe singleton container offering better
 encapsulation, dependency injection, and testability.
 """
 
+import contextlib
 import logging
 import os
 import platform
@@ -185,7 +186,7 @@ class AppContainer:
     """
 
     _instance = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
     _initialized = False
 
     def __new__(cls) -> "AppContainer":
@@ -229,6 +230,9 @@ class AppContainer:
     def system(self, value: str) -> None:
         """Set the operating system name (for testing)."""
         self._system_info.system = value
+        # Invalidate cached computed paths that depend on system.
+        with contextlib.suppress(Exception):
+            self._computed_cache.clear()
 
     @property
     def machine(self) -> str:
@@ -239,6 +243,8 @@ class AppContainer:
     def machine(self, value: str) -> None:
         """Set the machine architecture (for testing)."""
         self._system_info.machine = value
+        with contextlib.suppress(Exception):
+            self._computed_cache.clear()
 
     @property
     def dirpath(self) -> str:
@@ -249,6 +255,8 @@ class AppContainer:
     def dirpath(self, value: str) -> None:
         """Set the application directory path (for testing)."""
         self._system_info.dirpath = value
+        with contextlib.suppress(Exception):
+            self._computed_cache.clear()
 
     @property
     def aio_folder(self) -> str | None:
@@ -259,6 +267,8 @@ class AppContainer:
     def aio_folder(self, value: str | None) -> None:
         """Set the AIO data folder path (for testing)."""
         self._path_config.aio_folder = value
+        with contextlib.suppress(Exception):
+            self._computed_cache.clear()
 
     @property
     def theme_path(self) -> str | None:
@@ -524,17 +534,19 @@ class AppContainer:
 
 
 # Global container instance
-_container = None
+_container: AppContainer | None = None
 
 
 def get_container() -> AppContainer:
     """
-    Get the singleton AppContainer instance.
+    Get the singleton AppContainer instance (thread-safe double-checked lock).
 
     Returns:
         The global AppContainer instance.
     """
     global _container
     if _container is None:
-        _container = AppContainer()
+        with AppContainer._lock:
+            if _container is None:
+                _container = AppContainer()
     return _container

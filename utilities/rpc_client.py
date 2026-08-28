@@ -2,6 +2,8 @@ import logging
 
 import requests
 
+from gui.constants import RPC_TIMEOUT_S
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,7 +54,7 @@ class RPCClient:
         }
 
         try:
-            response = self.session.post(url, json=data, headers=headers, auth=auth, timeout=10)
+            response = self.session.post(url, json=data, headers=headers, auth=auth, timeout=RPC_TIMEOUT_S)
             if response.status_code != 200:
                 return None
 

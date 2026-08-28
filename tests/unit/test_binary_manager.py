@@ -1,4 +1,3 @@
-import asyncio
 import os
 import queue
 import sys
@@ -264,7 +263,7 @@ class TestBinaryManager(unittest.TestCase):
     def test_setup(self):
         """Test BinaryManager setup method."""
         with patch("gui.binary_manager.BinaryFrameManager") as mock_binary_frame_manager:
-            asyncio.run(self.binary_manager.setup())
+            self.binary_manager.setup()
             mock_binary_frame_manager.assert_called_once_with(self.binary_manager)
             self.mock_root_gui.after.assert_has_calls(
                 [
@@ -637,11 +636,13 @@ class TestBinaryManager(unittest.TestCase):
             self.mock_utils.disable_button.assert_called()
 
     def test_update_all_binary_buttons(self):
-        """Test update_all_binary_buttons method."""
+        """Test update_all_binary_buttons method (single-shot, scheduler handles poll)."""
+        self.mock_root_gui.after.reset_mock()
+        self.mock_root_gui.winfo_exists.return_value = True
         with patch.object(self.binary_manager, "update_binary_buttons") as mock_update_binary_buttons:
             self.binary_manager.update_all_binary_buttons()
             mock_update_binary_buttons.assert_has_calls([call("blocknet"), call("blockdx"), call("xlite")])
-            self.assertEqual(self.mock_root_gui.after.call_count, 2)
+            self.mock_root_gui.after.assert_not_called()
 
     def test_update_all_binary_buttons_winfo_exists_false(self):
         """Test update_all_binary_buttons when winfo_exists returns False."""
@@ -653,11 +654,12 @@ class TestBinaryManager(unittest.TestCase):
     def test_update_all_binary_buttons_winfo_exists_true(self):
         """Test update_all_binary_buttons when winfo_exists returns True."""
         self.mock_root_gui.winfo_exists.return_value = True
+        self.mock_root_gui.after.reset_mock()
         with patch.object(self.binary_manager, "update_binary_buttons") as mock_update:
             self.binary_manager.update_all_binary_buttons()
             mock_update.assert_called()
-            # Should schedule next update
-            self.mock_root_gui.after.assert_called_with(2000, self.binary_manager.update_all_binary_buttons)
+            # Single-shot: no periodic rescheduling (UiSyncController handles it)
+            self.mock_root_gui.after.assert_not_called()
 
     # ==================== Start/Close Button Update Tests ====================
 

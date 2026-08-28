@@ -177,6 +177,65 @@ class TestDarwinArm64Config(unittest.TestCase):
             self.assertTrue(mgr._is_item_match(app_info, "BLOCK-DX-1.9.5-mac.dmg", "/tmp/BLOCK-DX-1.9.5-mac.dmg"))
             self.assertFalse(mgr._is_item_match(app_info, "OTHER.dmg", "/tmp/OTHER.dmg"))
 
+    def test_app_container_cache_invalidation(self):
+        """System/machine/aio_folder setters must clear _computed_cache."""
+        from utilities.app_container import AppContainer as AppContainer2  # noqa: F811
+
+        # Use fresh container via reset
+        tmp = tempfile.mkdtemp()
+        c = AppContainer2()
+        # Ensure cache is clean then populate
+        c._computed_cache.clear()
+        c.system = "Linux"
+        c.machine = "x86_64"
+        c.aio_folder = tmp
+        # Force cache population
+        c._computed_cache["blocknet_executable_path"] = "stale"
+        # Changing system should clear
+        c.system = "Darwin"
+        self.assertNotIn("blocknet_executable_path", c._computed_cache)
+        c._computed_cache["blocknet_executable_path"] = "stale2"
+        c.machine = "arm64"
+        self.assertNotIn("blocknet_executable_path", c._computed_cache)
+        c._computed_cache["blocknet_executable_path"] = "stale3"
+        c.aio_folder = tmp + "_new"
+        self.assertNotIn("blocknet_executable_path", c._computed_cache)
+        c._computed_cache["blocknet_executable_path"] = "stale4"
+        c.dirpath = "/tmp/newdir"
+        self.assertNotIn("blocknet_executable_path", c._computed_cache)
+
+    def test_get_container_thread_safety(self):
+        """get_container double-checked lock returns same instance across threads."""
+        import threading
+
+        from utilities.app_container import AppContainer as AppContainer3  # noqa: F811
+        from utilities.app_container import get_container as get_container3  # noqa: F811
+
+        # Reset global
+        AppContainer3._instance = None
+        AppContainer3._initialized = False
+        import utilities.app_container as ac_mod
+
+        ac_mod._container = None
+
+        instances = []
+
+        def target():
+            instances.append(get_container3())
+
+        threads = [threading.Thread(target=target) for _ in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=2)
+        # All should be same object
+        self.assertEqual(len(instances), 20)
+        first = instances[0]
+        for inst in instances[1:]:
+            self.assertIs(inst, first)
+        # Cleanup reset for other tests
+        first.reset()
+
 
 if __name__ == "__main__":
     unittest.main()

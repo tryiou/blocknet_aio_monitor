@@ -225,7 +225,22 @@ class XBridgeBotManager:
             self.deferred_start = True
             return
 
-        needs_install = not self.repo_exists() or self.repo_management is None or branch != self.current_branch
+        # Also need install if venv missing/not ready
+        venv_missing = False
+        try:
+            rm = self.repo_management
+            venv_missing = rm is None or getattr(rm, "venv", None) is None
+            if not venv_missing and rm and rm.venv:
+                # check if venv actually exists on disk
+                try:
+                    venv_missing = rm.venv._is_broken()[0] or not rm.venv.venv_bin_path.exists()
+                except Exception:
+                    venv_missing = False
+        except Exception:
+            venv_missing = False
+        needs_install = (
+            not self.repo_exists() or self.repo_management is None or use_branch != self.current_branch or venv_missing
+        )
 
         if needs_install:
             logger.info("Starting installation before execution")

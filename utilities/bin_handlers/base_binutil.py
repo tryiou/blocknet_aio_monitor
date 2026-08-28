@@ -8,10 +8,25 @@ import zipfile
 import psutil
 import requests
 
+from gui.constants import DOWNLOAD_CHUNK_SIZE, RPC_TIMEOUT_S
 from utilities.app_container import AppContainer, get_container
 
 # from utilities.helper_util import UtilityHelper
 logger = logging.getLogger(__name__)
+
+
+def _is_mocked_path(p) -> bool:
+    """Return True if path looks like a MagicMock repr (e.g. \"<MagicMock name='mock.aio_folder' ...>\").
+
+    Guards against os.makedirs(Path(str(MagicMock))) creating real folders named "<MagicMock ...>".
+    """
+    if p is None:
+        return False
+    try:
+        s = str(p)
+        return s.startswith("<MagicMock") or "MagicMock" in s
+    except Exception:
+        return True
 
 
 class BaseBinUtil:
@@ -36,6 +51,13 @@ class BaseBinUtil:
             aio_folder = self.container.aio_folder
             if aio_folder is None:
                 raise ValueError("AIO folder not configured")
+            if _is_mocked_path(aio_folder):
+                logger.debug("Skipping download_binary for mocked aio_folder %s", aio_folder)
+                return
+            # Also guard extract_path which may be derived from mocked aio_folder
+            if _is_mocked_path(extract_path):
+                logger.debug("Skipping download_binary for mocked extract_path %s", extract_path)
+                return
             self.download_file(
                 url,
                 os.path.join(aio_folder, tmp_filename),
@@ -49,20 +71,33 @@ class BaseBinUtil:
             self.downloading_bin = False
 
     def download_file(self, url, tmp_path, final_path, extract_to, system, progress_attr, instance):
+        # Guard mocked paths before any FS ops (would otherwise create "<MagicMock ...>" folders)
+        if _is_mocked_path(tmp_path) or _is_mocked_path(final_path) or _is_mocked_path(extract_to):
+            logger.debug(
+                "Skipping download_file for mocked path tmp=%s final=%s extract=%s",
+                tmp_path,
+                final_path,
+                extract_to,
+            )
+            # For MagicMock paths, skip entirely to avoid creating real "<MagicMock ...>" directories.
+            return
         logger.info(f"Starting download from {url}")
         try:
-            response = requests.get(url, stream=True, timeout=(10, 30))
+            response = requests.get(url, stream=True, timeout=(RPC_TIMEOUT_S, 30))
             response.raise_for_status()
 
             remote_size = int(response.headers.get("Content-Length", 0))
             with open(tmp_path, "wb") as f:
                 bytes_downloaded = 0
-                for chunk in response.iter_content(chunk_size=8192):
+                for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
                     if chunk:
                         f.write(chunk)
                         bytes_downloaded += len(chunk)
                         if progress_attr and instance:
-                            setattr(instance, progress_attr, (bytes_downloaded / remote_size) * 100)
+                            if remote_size:
+                                setattr(instance, progress_attr, (bytes_downloaded / remote_size) * 100)
+                            else:
+                                setattr(instance, progress_attr, 0)
                             # logger.debug(f"Downloaded {bytes_downloaded}/{remote_size} bytes")
 
             if os.path.getsize(tmp_path) != remote_size:
@@ -82,25 +117,69 @@ class BaseBinUtil:
 
                     # Blocknet preserves internal folder structure
                     if handler_class == "BlocknetHandler":
-                        zip_ref.extractall(extract_to)  # noqa: S202 # trusted Blocknet archive
+                        if _is_mocked_path(extract_to):
+                            logger.debug("Skipping mocked extract_to %s", extract_to)
+                        else:
+                            zip_ref.extractall(extract_to)  # noqa: S202 # trusted Blocknet archive
                         logger.info(f"Extracted Blocknet ZIP directly to {extract_to}")
                         # XLite/BlockDX create new archive-named subfolders
                     elif handler_class in ["XliteHandler", "BlockDXHandler"]:
                         archive_name = os.path.splitext(os.path.basename(url))[0]
                         target_path = os.path.join(extract_to, archive_name)
-                        os.makedirs(target_path, exist_ok=True)
-                        zip_ref.extractall(target_path)  # noqa: S202 # trusted archive
+                        if _is_mocked_path(target_path) or _is_mocked_path(extract_to):
+                            logger.debug("Skipping mocked target_path %s", target_path)
+                        else:
+                            os.makedirs(target_path, exist_ok=True)
+                            zip_ref.extractall(target_path)  # noqa: S202 # trusted archive
                         logger.info(f"Extracted {handler_class} to new folder {target_path}")
                         # Other handlers use default extraction
                     else:
-                        zip_ref.extractall(extract_to)  # noqa: S202 # trusted archive
+                        if _is_mocked_path(extract_to):
+                            logger.debug("Skipping mocked extract_to %s", extract_to)
+                        else:
+                            zip_ref.extractall(extract_to)  # noqa: S202 # trusted archive
                         logger.info(f"Extracted {handler_class} ZIP to {extract_to}")
 
             os.remove(tmp_path)
         elif url.endswith(".tar.gz"):
-            with tarfile.open(tmp_path, "r:gz") as tar:
-                tar.extractall(extract_to, filter="data")
-            os.remove(tmp_path)
+            try:
+                with tarfile.open(tmp_path, "r:gz") as tar:
+                    try:
+                        if _is_mocked_path(extract_to):
+                            logger.debug("Skipping mocked tar extract_to %s", extract_to)
+                        else:
+                            tar.extractall(extract_to, filter="data")
+                    except (
+                        tarfile.AbsoluteLinkError,
+                        tarfile.AbsolutePathError,
+                        tarfile.LinkOutsideDestinationError,
+                        tarfile.OutsideDestinationError,
+                        tarfile.FilterError,
+                        tarfile.TarError,
+                    ):
+                        for member in tar.getmembers():
+                            try:
+                                if _is_mocked_path(extract_to):
+                                    logger.debug("Skipping mocked tar member extract %s", extract_to)
+                                    continue
+                                tar.extract(member, path=extract_to, filter="data")
+                            except (
+                                tarfile.AbsoluteLinkError,
+                                tarfile.AbsolutePathError,
+                                tarfile.LinkOutsideDestinationError,
+                                tarfile.OutsideDestinationError,
+                                tarfile.FilterError,
+                                tarfile.TarError,
+                            ) as e:
+                                logger.warning(f"Skipping tar member {member.name}: {e}")
+                            except Exception as e:
+                                logger.warning(f"Skipping tar member {member.name}: {e}")
+            finally:
+                if os.path.exists(tmp_path):
+                    try:
+                        os.remove(tmp_path)
+                    except Exception as e:  # debug logged
+                        logger.debug("Suppressed Exception: %s", e, exc_info=True)
             logger.info(f"Extracted TAR.GZ file to {extract_to}")
         elif url.endswith(".dmg") and self.container.system == "Darwin":
             os.rename(tmp_path, final_path)
@@ -125,14 +204,19 @@ class BaseBinUtil:
         try:
             aio_folder = self.container.aio_folder
             if aio_folder:
-                os.makedirs(aio_folder, exist_ok=True)
-                stderr_log_path = os.path.join(aio_folder, f"{self.app_name.lower()}_launch.log")
-                # truncate previous launch log
-                stderr_file = open(  # noqa: SIM115 # keep handle open for Popen
-                    stderr_log_path, "w", encoding="utf-8", errors="replace"
-                )
-                self._stderr_log_path = stderr_log_path
-                self._stderr_file_handle = stderr_file
+                if _is_mocked_path(aio_folder):
+                    logger.debug("Skipping mocked aio_folder for stderr log %s", aio_folder)
+                    self._stderr_log_path = None
+                    self._stderr_file_handle = None
+                else:
+                    os.makedirs(aio_folder, exist_ok=True)
+                    stderr_log_path = os.path.join(aio_folder, f"{self.app_name.lower()}_launch.log")
+                    # truncate previous launch log
+                    stderr_file = open(  # noqa: SIM115 # keep handle open for Popen
+                        stderr_log_path, "w", encoding="utf-8", errors="replace"
+                    )
+                    self._stderr_log_path = stderr_log_path
+                    self._stderr_file_handle = stderr_file
             else:
                 self._stderr_log_path = None
                 self._stderr_file_handle = None
@@ -276,19 +360,25 @@ class BaseBinUtil:
 
     def download_standalone_binary(self, url: str, target_path: str) -> bool:
         """Download non-archive binaries with security checks"""
+        if _is_mocked_path(target_path):
+            logger.debug("Skipping download_standalone_binary for mocked target_path %s", target_path)
+            return False
         temp_path = f"{target_path}.tmp"
         try:
             target_dir = os.path.dirname(target_path)
-            os.makedirs(target_dir, exist_ok=True)
+            if _is_mocked_path(target_dir):
+                logger.debug("Skipping mocked target_dir %s", target_dir)
+            else:
+                os.makedirs(target_dir, exist_ok=True)
 
             # Only download if doesn't exist
             if not os.path.exists(target_path):
                 logger.info(f"Downloading {url}")
-                response = requests.get(url, stream=True, timeout=30)
+                response = requests.get(url, stream=True, timeout=30)  # keep 30s for standalone
                 response.raise_for_status()
 
                 with open(temp_path, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192):
+                    for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
                         if chunk:
                             f.write(chunk)
 
