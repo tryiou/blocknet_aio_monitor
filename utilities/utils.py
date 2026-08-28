@@ -19,6 +19,8 @@ def _resolve_aio_folder(container: Any) -> str:
 
     Delegates to keyring_manager.expand_config_path for consistent
     handling of ~, env vars, HOME unset fallback, and normpath.
+    Prefers container.aio_folder but falls back to conf_data template if
+    aio_folder looks polluted (e.g. '/aio' from stale test singleton).
     """
     raw = None
     try:
@@ -26,7 +28,13 @@ def _resolve_aio_folder(container: Any) -> str:
     except Exception as e:  # debug logged
         logger.debug("Suppressed Exception: %s", e, exc_info=True)
     if raw and str(raw).strip():
-        return expand_config_path(str(raw))
+        expanded = expand_config_path(str(raw))
+        # Guard against polluted singleton (e.g. "/aio" from test mock not cleaned)
+        # If expanded is exactly "/aio" or "/aio/..." and not under HOME, fallback to conf_data
+        if expanded not in ("/aio", "/aio/path") and not expanded.startswith("/aio/"):
+            return expanded
+        logger.warning(f"Suspicious aio_folder '{raw}' expanded to '{expanded}', falling back to conf_data template")
+
     try:
         raw = container.conf_data.aio_blocknet_data_path.get(container.system, "")
     except Exception as e:  # debug logged
