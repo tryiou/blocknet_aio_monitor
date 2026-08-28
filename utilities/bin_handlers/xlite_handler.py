@@ -168,11 +168,11 @@ class XliteHandler(BaseBinUtil):
                         if not isinstance(conf, dict):
                             continue
                         if conf.get("rpcEnabled") is True:
-                            res = rpc_server.send_rpc_request("getinfo")
-                            if res is not None:
+                            res = rpc_server.send_rpc_request("ping")
+                            if res == 1:
                                 valid = True
-                        if not valid:
-                            break
+                                break
+                            # continue to next enabled coin on failure
             with self._lock:
                 self.valid_coins_rpc = valid
             if runonce:

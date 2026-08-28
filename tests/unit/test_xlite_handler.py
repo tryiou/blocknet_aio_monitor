@@ -331,7 +331,7 @@ class TestXliteHandler(unittest.TestCase):
     def test_check_valid_xlite_coins_rpc_valid(self):
         """Test checking valid coins RPC with valid data."""
         mock_rpc_server = MagicMock()
-        mock_rpc_server.send_rpc_request.return_value = {"result": "success"}
+        mock_rpc_server.send_rpc_request.return_value = 1
 
         with patch("time.sleep", side_effect=KeyboardInterrupt):
             handler = self._create_handler_with_os("Linux")
@@ -343,13 +343,13 @@ class TestXliteHandler(unittest.TestCase):
             except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
-            mock_rpc_server.send_rpc_request.assert_called_once_with("getinfo")
+            mock_rpc_server.send_rpc_request.assert_called_once_with("ping")
             self.assertTrue(handler.valid_coins_rpc)
 
     def test_check_valid_xlite_coins_rpc_master_ignored(self):
         """Test that master and TBLOCK coins are ignored."""
         mock_rpc_server = MagicMock()
-        mock_rpc_server.send_rpc_request.return_value = {"result": "success"}
+        mock_rpc_server.send_rpc_request.return_value = 1
 
         with patch("time.sleep", side_effect=KeyboardInterrupt):
             handler = self._create_handler_with_os("Linux")
@@ -410,8 +410,26 @@ class TestXliteHandler(unittest.TestCase):
             except KeyboardInterrupt:  # noqa: S110, SIM105
                 pass
 
-            mock_rpc_server.send_rpc_request.assert_called_once_with("getinfo")
+            mock_rpc_server.send_rpc_request.assert_called_once_with("ping")
             self.assertFalse(handler.valid_coins_rpc)
+
+    def test_check_valid_xlite_coins_rpc_fallback_to_next_coin(self):
+        """Test that ping failure on first coin falls through to next enabled coin."""
+        mock_rpc_fail = MagicMock()
+        mock_rpc_fail.send_rpc_request.return_value = None
+        mock_rpc_ok = MagicMock()
+        mock_rpc_ok.send_rpc_request.return_value = 1
+
+        handler = self._create_handler_with_os("Linux")
+        # Ordered dict - first fails, second succeeds -> valid should be True
+        handler.coins_rpc = {"coinA": mock_rpc_fail, "coinB": mock_rpc_ok}
+        handler.xlite_daemon_confs_local = {"coinA": {"rpcEnabled": True}, "coinB": {"rpcEnabled": True}}
+        handler.running = True
+        handler.check_valid_xlite_coins_rpc(runonce=True)
+
+        mock_rpc_fail.send_rpc_request.assert_called_once_with("ping")
+        mock_rpc_ok.send_rpc_request.assert_called_once_with("ping")
+        self.assertTrue(handler.valid_coins_rpc)
 
     # ============================================================================
     # Start/Stop Tests
