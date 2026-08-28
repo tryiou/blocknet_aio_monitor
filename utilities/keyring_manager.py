@@ -12,6 +12,7 @@ import base64
 import json
 import logging
 import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,42 @@ try:
 except ImportError:
     KEYRING_AVAILABLE = False
     logger.warning("keyring library not available. Using fallback storage.")
+
+
+def expand_config_path(path: str | None) -> str:
+    """Expand user/env vars and normalize path.
+
+    Prevents creation of literal '~' directory in CWD when a template
+    path like '~/.AIO_Blocknet' is passed without expansion.
+    Handles HOME unset fallback via Path.home() and normalizes with normpath.
+    Idempotent — safe to call twice.
+    """
+    if not path or not str(path).strip():
+        return os.getcwd()
+    expanded = os.path.expandvars(os.path.expanduser(str(path)))
+    # If expanduser failed (e.g. HOME unset), it still starts with ~ — resolve via Path.home()
+    # Only handle "~" and "~/..." — leave "~user" forms untouched to avoid mis-join
+    if expanded == "~" or expanded.startswith("~/"):
+        try:
+            home = str(Path.home())
+            # strip leading ~/ or ~ and join
+            suffix = expanded[1:].lstrip("/\\")
+            expanded = os.path.join(home, suffix) if suffix else home
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+        # Re-expand in case home contained vars (unlikely)
+        expanded = os.path.expandvars(expanded)
+    elif expanded.startswith("~"):
+        # "~user" that failed to expand — avoid creating literal "~user" in CWD
+        logger.warning(f"Unresolvable user path '{expanded}', falling back to HOME")
+        try:
+            expanded = os.path.join(str(Path.home()), expanded.lstrip("~/"))
+            expanded = os.path.expandvars(expanded)
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+            return os.path.join(os.getcwd(), expanded.lstrip("~/").lstrip("/\\"))
+    # Normalize to avoid trailing slash issues
+    return os.path.normpath(expanded)
 
 
 class KeyringManager:
@@ -39,7 +76,7 @@ class KeyringManager:
         Args:
             config_path: Path to configuration directory for fallback storage
         """
-        self.config_path = config_path or os.getcwd()
+        self.config_path = expand_config_path(config_path)
         self.fallback_path = os.path.join(self.config_path, self.FALLBACK_FILE)
         self._ensure_config_dir()
 
@@ -279,7 +316,7 @@ class KeyringMigration:
     """Handles migration from old format (JSON with salt) to new format (keyring)."""
 
     def __init__(self, config_path: str, keyring_manager: KeyringManager):
-        self.config_path = config_path
+        self.config_path = expand_config_path(config_path)
         self.keyring_manager = keyring_manager
         self.logger = logging.getLogger(__name__)
 

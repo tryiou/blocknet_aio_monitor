@@ -2,15 +2,37 @@ import json
 import logging
 import os
 from threading import current_thread, enumerate
+from typing import Any
 
 import customtkinter as ctk
 import psutil
 from cryptography.fernet import Fernet
 
 from utilities.app_container import get_container
-from utilities.keyring_manager import KeyringManager, KeyringMigration
+from utilities.keyring_manager import KeyringManager, KeyringMigration, expand_config_path
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_aio_folder(container: Any) -> str:
+    """Return expanded absolute AIO folder, never a raw '~' template.
+
+    Delegates to keyring_manager.expand_config_path for consistent
+    handling of ~, env vars, HOME unset fallback, and normpath.
+    """
+    raw = None
+    try:
+        raw = container.aio_folder
+    except Exception as e:  # debug logged
+        logger.debug("Suppressed Exception: %s", e, exc_info=True)
+    if raw and str(raw).strip():
+        return expand_config_path(str(raw))
+    try:
+        raw = container.conf_data.aio_blocknet_data_path.get(container.system, "")
+    except Exception as e:  # debug logged
+        logger.debug("Suppressed Exception: %s", e, exc_info=True)
+        raw = ""
+    return expand_config_path(str(raw) if raw else None)
 
 
 def configure_tooltip_text(tooltip, msg):
@@ -23,9 +45,9 @@ def load_cfg_json():
     old_local_filename = "cfg.json"
 
     container = get_container()
-    local_conf_path = container.aio_folder  # define this early
-    full_old_path = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), old_local_filename)
-    full_new_path = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
+    local_conf_path = _resolve_aio_folder(container)
+    full_old_path = os.path.join(local_conf_path, old_local_filename)
+    full_new_path = os.path.join(local_conf_path, local_filename)
 
     if os.path.exists(full_old_path):
         # migrate old config file
@@ -72,8 +94,8 @@ def terminate_all_threads():
 def remove_cfg_json_key(key):
     container = get_container()
     local_filename = "aio_settings.json"
-    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
-    filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
+    local_conf_path = _resolve_aio_folder(container)
+    filename = os.path.join(local_conf_path, local_filename)
 
     # Try loading the existing JSON file
     try:
@@ -101,8 +123,8 @@ def remove_cfg_json_key(key):
 def save_cfg_json(key, data):
     container = get_container()
     local_filename = "aio_settings.json"
-    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
-    filename = os.path.join(os.path.expandvars(os.path.expanduser(local_conf_path)), local_filename)
+    local_conf_path = _resolve_aio_folder(container)
+    filename = os.path.join(local_conf_path, local_filename)
 
     # Try loading the existing JSON file
     try:
@@ -123,7 +145,7 @@ def save_cfg_json(key, data):
 def save_encryption_key(key):
     """Save encryption key to keyring (or fallback storage)."""
     container = get_container()
-    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
+    local_conf_path = _resolve_aio_folder(container)
     keyring_manager = KeyringManager(local_conf_path)
     success, message = keyring_manager.store_key(key)
     if success:
@@ -136,7 +158,7 @@ def save_encryption_key(key):
 def load_encryption_key():
     """Load encryption key from keyring (or fallback storage)."""
     container = get_container()
-    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
+    local_conf_path = _resolve_aio_folder(container)
     keyring_manager = KeyringManager(local_conf_path)
     key, message = keyring_manager.retrieve_key()
     if key:
@@ -150,7 +172,7 @@ def load_encryption_key():
 def delete_encryption_key():
     """Delete encryption key from keyring and fallback storage."""
     container = get_container()
-    local_conf_path = container.conf_data.aio_blocknet_data_path.get(container.system)
+    local_conf_path = _resolve_aio_folder(container)
     keyring_manager = KeyringManager(local_conf_path)
     success, message = keyring_manager.delete_key()
     if success:
