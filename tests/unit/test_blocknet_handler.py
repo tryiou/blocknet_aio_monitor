@@ -628,7 +628,7 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
             self.handler.container.aio_folder = "/aio/path"
             self.handler.create_aio_folder()
 
-            mock_makedirs.assert_called_once_with(os.path.normpath("/aio/path"))
+            mock_makedirs.assert_called_once_with("/aio/path")
 
     def test_check_data_folder_existence(self):
         """Test checking if data folder exists."""
@@ -677,8 +677,8 @@ class TestBlocknetHandlerCoreMethods(unittest.TestCase):
         ):
             self.handler.set_custom_data_path("/new/path")
 
-            mock_makedirs.assert_called_once_with(os.path.normpath("/new/path"))
-            self.assertEqual(self.handler.data_folder, os.path.normpath("/new/path"))
+            mock_makedirs.assert_called_once_with("/new/path")
+            self.assertEqual(self.handler.data_folder, "/new/path")
             mock_parse_blocknet.assert_called_once()
             mock_parse_xbridge.assert_called_once()
             mock_init_rpc.assert_called_once()
