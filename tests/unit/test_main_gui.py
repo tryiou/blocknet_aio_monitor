@@ -147,16 +147,22 @@ class TestBlocknetAioGui(unittest.TestCase):
         """Test initialization handles password decryption errors gracefully."""
         self.mocks["utils"].load_cfg_json.return_value = {"salt": "mock_salt", "xl_pass": "invalid_encrypted_pass"}
         self.mocks["utils"].decrypt_password.side_effect = Exception("Decryption failed")
-        with (
-            patch("blocknet_aio_monitor.BinaryManager", return_value=self.mock_binary_manager),
-            patch("blocknet_aio_monitor.BlockDXManager", return_value=self.mock_blockdx_manager),
-            patch("blocknet_aio_monitor.BlocknetManager", return_value=self.mock_blocknet_manager),
-            patch("blocknet_aio_monitor.XliteManager", return_value=self.mock_xlite_manager),
-            patch("blocknet_aio_monitor.TooltipManager", return_value=self.mock_tooltip_manager),
-        ):
-            app = BlocknetAioGui()
-            self.assertIsNone(app.stored_password)
-            self.mocks["logging"].error.assert_called_once()
+        try:
+            with (
+                patch("blocknet_aio_monitor.BinaryManager", return_value=self.mock_binary_manager),
+                patch("blocknet_aio_monitor.BlockDXManager", return_value=self.mock_blockdx_manager),
+                patch("blocknet_aio_monitor.BlocknetManager", return_value=self.mock_blocknet_manager),
+                patch("blocknet_aio_monitor.XliteManager", return_value=self.mock_xlite_manager),
+                patch("blocknet_aio_monitor.TooltipManager", return_value=self.mock_tooltip_manager),
+            ):
+                app = BlocknetAioGui()
+                self.assertIsNone(app.stored_password)
+                self.mocks["logging"].error.assert_called_once()
+        except Exception as e:
+            # Windows CI may have broken Tcl (init.tcl missing) — skip
+            if "TclError" in type(e).__name__ or "tk.tcl" in str(e) or "init.tcl" in str(e):
+                self.skipTest(f"Tk not available on this runner: {e}")
+            raise
 
     def test_setup_management_sections(self):
         """Test that setup_management_sections is an async method."""

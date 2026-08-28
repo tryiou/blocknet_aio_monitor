@@ -13,9 +13,16 @@ class TestBinaryFrameManager(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        # Create a hidden root window for tkinter variables
-        self.root = tk.Tk()
-        self.root.withdraw()
+        # Create a hidden root window for tkinter variables (skip if Tcl missing on Windows CI)
+        try:
+            self.root = tk.Tk()
+            self.root.withdraw()
+        except Exception as e:
+            # Windows CI may have broken Tcl (init.tcl missing) — skip GUI tests
+            self.skipTest(f"Tk not available on this runner: {e}")
+            self.root = MagicMock()
+            self.root.withdraw = MagicMock()
+            self.root.destroy = MagicMock()
 
         # Mock the parent and root_gui
         self.mock_parent = MagicMock()
@@ -89,7 +96,10 @@ class TestBinaryFrameManager(unittest.TestCase):
         self.patcher_get_remote_branches.stop()
 
         if hasattr(self, "root"):
-            self.root.destroy()
+            try:  # noqa: SIM105
+                self.root.destroy()
+            except Exception:  # noqa: S110
+                pass
 
     def _create_frame_manager(self):
         """Helper to create a BinaryFrameManager instance."""
