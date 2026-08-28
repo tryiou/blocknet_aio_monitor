@@ -42,6 +42,7 @@ class BlocknetHandler(BaseBinUtil):
         self.blocknet_rpc = None
         self.valid_rpc = False
         self._stop = threading.Event()
+        self._lock = threading.RLock()
         self._rpc_thread: threading.Thread | None = None
         self.parse_blocknet_conf()
         self.parse_xbridge_conf()
@@ -72,12 +73,15 @@ class BlocknetHandler(BaseBinUtil):
 
     def check_blocknet_rpc(self):
         while not self._stop.is_set():
+            with self._lock:
+                rpc = self.blocknet_rpc
             valid = False
-            if self.blocknet_rpc:
-                result = self.blocknet_rpc.send_rpc_request("getnetworkinfo")
+            if rpc:
+                result = rpc.send_rpc_request("getnetworkinfo")
                 if result:
                     valid = True
-            self.valid_rpc = valid
+            with self._lock:
+                self.valid_rpc = valid
 
             # Cooperative wait: use Event.wait for immediate stop, fallback to sleep for test mocks
             if self._stop.wait(1):
@@ -282,14 +286,16 @@ class BlocknetHandler(BaseBinUtil):
                     logger.info(f"Added config option: {key}={str_value}")
 
     def retrieve_coin_conf(self, coin):
-        if not self.xb_manifest:
+        with self._lock:
+            xb_manifest = list(self.xb_manifest) if self.xb_manifest else None
+        if not xb_manifest:
             logger.error("XB manifest not available")
             return
 
         latest_version = None
         highest_version_id = None
 
-        for entry in self.xb_manifest:
+        for entry in xb_manifest:
             if "ticker" in entry and entry["ticker"] == coin.upper():
                 ver_id = entry["ver_id"]
                 if latest_version is None or ver_id > highest_version_id:
@@ -307,36 +313,42 @@ class BlocknetHandler(BaseBinUtil):
             )
             parsed_xbridge_conf = retrieve_remote_conf(xbridge_url, "xbridge-confs", xbridge_conf)
             parsed_wallet_conf = retrieve_remote_conf(wallet_conf_url, "wallet-confs", wallet_conf)
-            self.parsed_xbridge_confs[coin] = parsed_xbridge_conf
-            self.parsed_wallet_confs[coin] = parsed_wallet_conf
+            with self._lock:
+                self.parsed_xbridge_confs[coin] = parsed_xbridge_conf
+                self.parsed_wallet_confs[coin] = parsed_wallet_conf
         else:
             logger.error("No entries found in the manifest. " + coin)
 
     def check_xbridge_conf(self, xlite_daemon_conf):
         self.parse_xbridge_conf()
-        old_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
-
-        if self.xbridge_conf_local is None:
-            self.xbridge_conf_local = {}
-
-        if "Main" not in self.xbridge_conf_local:
-            self.xbridge_conf_local["Main"] = self.container.conf_data.base_xbridge_conf
+        with self._lock:
+            old_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
+            if self.xbridge_conf_local is None:
+                self.xbridge_conf_local = {}
+            if "Main" not in self.xbridge_conf_local:
+                self.xbridge_conf_local["Main"] = self.container.conf_data.base_xbridge_conf
 
         if self.blocknet_xbridge_conf_remote is None:
             logger.error("Remote xbridge.conf not available.")
             return False
         if xlite_daemon_conf:
-            for coin in xlite_daemon_conf:
+            for coin in list(xlite_daemon_conf.keys()):
                 if coin == "master":
                     continue
                 self.retrieve_coin_conf(coin)
-                if coin in self.parsed_xbridge_confs:
-                    if coin not in self.xbridge_conf_local:
-                        self.xbridge_conf_local[coin] = {}
-                    for section, options in self.parsed_xbridge_confs[coin].items():
+                with self._lock:
+                    parsed = dict(self.parsed_xbridge_confs.get(coin, {}) or {})
+                if not parsed:
+                    continue
+                for section, options in parsed.items():
+                    with self._lock:
                         if section not in self.xbridge_conf_local:
                             self.xbridge_conf_local[section] = {}
-                        for key, value in options.items():
+                        # ensure coin entry exists
+                        if coin not in self.xbridge_conf_local:
+                            self.xbridge_conf_local[coin] = {}
+                    for key, value in options.items():
+                        with self._lock:
                             if key == "Username":
                                 self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]["rpcUsername"])
                             elif key == "Password":
@@ -352,54 +364,59 @@ class BlocknetHandler(BaseBinUtil):
 
         if not (xlite_daemon_conf and "BLOCK" in xlite_daemon_conf):
             for section, options in self.blocknet_xbridge_conf_remote.items():
-                if section not in self.xbridge_conf_local:
-                    self.xbridge_conf_local[section] = {}
+                with self._lock:
+                    if section not in self.xbridge_conf_local:
+                        self.xbridge_conf_local[section] = {}
                 logger.info(f"section: {section}, options: {options}")
                 for key, value in options.items():
-                    if key == "Username":
-                        if (
-                            self.blocknet_conf_local
-                            and "global" in self.blocknet_conf_local
-                            and "rpcuser" in self.blocknet_conf_local["global"]
-                        ):
-                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local["global"]["rpcuser"])
-                    elif key == "Password":
-                        if (
-                            self.blocknet_conf_local
-                            and "global" in self.blocknet_conf_local
-                            and "rpcpassword" in self.blocknet_conf_local["global"]
-                        ):
-                            self.xbridge_conf_local[section][key] = str(
-                                self.blocknet_conf_local["global"]["rpcpassword"]
-                            )
-                    elif key == "Port":
-                        if (
-                            self.blocknet_conf_local
-                            and "global" in self.blocknet_conf_local
-                            and "rpcport" in self.blocknet_conf_local["global"]
-                        ):
-                            self.xbridge_conf_local[section][key] = str(self.blocknet_conf_local["global"]["rpcport"])
-                    else:
-                        if (
-                            key not in self.xbridge_conf_local[section]
-                            or self.xbridge_conf_local[section][key] != value
-                        ):
-                            self.xbridge_conf_local[section][key] = str(value)
+                    with self._lock:
+                        if key == "Username":
+                            if (
+                                self.blocknet_conf_local
+                                and "global" in self.blocknet_conf_local
+                                and "rpcuser" in self.blocknet_conf_local["global"]
+                            ):
+                                self.xbridge_conf_local[section][key] = str(
+                                    self.blocknet_conf_local["global"]["rpcuser"]
+                                )
+                        elif key == "Password":
+                            if (
+                                self.blocknet_conf_local
+                                and "global" in self.blocknet_conf_local
+                                and "rpcpassword" in self.blocknet_conf_local["global"]
+                            ):
+                                self.xbridge_conf_local[section][key] = str(
+                                    self.blocknet_conf_local["global"]["rpcpassword"]
+                                )
+                        elif key == "Port":
+                            if (
+                                self.blocknet_conf_local
+                                and "global" in self.blocknet_conf_local
+                                and "rpcport" in self.blocknet_conf_local["global"]
+                            ):
+                                self.xbridge_conf_local[section][key] = str(
+                                    self.blocknet_conf_local["global"]["rpcport"]
+                                )
+                        else:
+                            if (
+                                key not in self.xbridge_conf_local[section]
+                                or self.xbridge_conf_local[section][key] != value
+                            ):
+                                self.xbridge_conf_local[section][key] = str(value)
 
-        if self.xbridge_conf_local is None:
-            self.xbridge_conf_local = {}
-        sections_string = ",".join(section for section in self.xbridge_conf_local if section != "Main")
-
-        if "Main" in self.xbridge_conf_local:
-            self.xbridge_conf_local["Main"]["ExchangeWallets"] = sections_string
-        else:
-            self.xbridge_conf_local["Main"] = {
-                "ExchangeWallets": sections_string,
-                "FullLog": self.container.conf_data.base_xbridge_conf["FullLog"],
-                "ShowAllOrders": self.container.conf_data.base_xbridge_conf["ShowAllOrders"],
-            }
-
-        new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
+        with self._lock:
+            if self.xbridge_conf_local is None:
+                self.xbridge_conf_local = {}
+            sections_string = ",".join(section for section in self.xbridge_conf_local if section != "Main")
+            if "Main" in self.xbridge_conf_local:
+                self.xbridge_conf_local["Main"]["ExchangeWallets"] = sections_string
+            else:
+                self.xbridge_conf_local["Main"] = {
+                    "ExchangeWallets": sections_string,
+                    "FullLog": self.container.conf_data.base_xbridge_conf["FullLog"],
+                    "ShowAllOrders": self.container.conf_data.base_xbridge_conf["ShowAllOrders"],
+                }
+            new_local_json = json.dumps(self.xbridge_conf_local, sort_keys=True)
         if old_local_json != new_local_json:
             logger.info("Local xbridge.conf has been updated. Saving...")
             self.save_xbridge_conf()

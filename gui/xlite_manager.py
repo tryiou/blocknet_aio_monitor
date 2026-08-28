@@ -68,8 +68,12 @@ class XliteManager:
         self.utility.parse_xlite_daemon_conf()
 
     def detect_new_xlite_install_and_add_to_xbridge(self):
-        if not self.root_gui.disable_daemons_conf_check and self.utility.valid_coins_rpc:
-            self.root_gui.blocknet_manager.utility.check_xbridge_conf(self.utility.xlite_daemon_confs_local)
+        with self.utility._lock:
+            valid = self.utility.valid_coins_rpc
+        if not self.root_gui.disable_daemons_conf_check and valid:
+            with self.utility._lock:
+                snapshot = dict(self.utility.xlite_daemon_confs_local)
+            self.root_gui.blocknet_manager.utility.check_xbridge_conf(snapshot)
             if (
                 self.root_gui.blocknet_manager.blocknet_process_running
                 and self.root_gui.blocknet_manager.utility.valid_rpc
@@ -91,19 +95,26 @@ class XliteManager:
                     logger.debug(f"Failed to start dxload thread: {e}")
                     self._dxload_pending = False
             self.root_gui.disable_daemons_conf_check = True
-        if self.root_gui.disable_daemons_conf_check and not self.utility.valid_coins_rpc:
+        with self.utility._lock:
+            valid2 = self.utility.valid_coins_rpc
+        if self.root_gui.disable_daemons_conf_check and not valid2:
             self.root_gui.disable_daemons_conf_check = False
 
     def _snapshot(self) -> tuple:
         try:
+            with self.utility._lock:
+                valid = self.utility.valid_coins_rpc
+                daemon_confs = (
+                    dict(self.utility.xlite_daemon_confs_local)
+                    if isinstance(self.utility.xlite_daemon_confs_local, dict)
+                    else None
+                )
             return (
                 getattr(self, "process_running", None),
                 getattr(self, "daemon_process_running", None),
-                getattr(self.utility, "valid_coins_rpc", None),
+                valid,
                 getattr(self.utility, "downloading_bin", None),
-                tuple(sorted(getattr(self.utility, "xlite_daemon_confs_local", {}).keys()))
-                if isinstance(getattr(self.utility, "xlite_daemon_confs_local", None), dict)
-                else None,
+                tuple(sorted(daemon_confs.keys())) if isinstance(daemon_confs, dict) else None,
                 getattr(getattr(self, "root_gui", None), "stored_password", None),
             )
         except Exception:

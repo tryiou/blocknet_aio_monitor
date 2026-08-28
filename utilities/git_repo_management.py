@@ -637,6 +637,7 @@ class GitRepoManagement:
         self._watcher_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._process: subprocess.Popen | None = None
+        self._lock = threading.RLock()
 
     def _migrate_legacy_venv(self) -> None:
         """Move legacy in-tree venv to relocated location if needed."""
@@ -750,51 +751,52 @@ class GitRepoManagement:
         logger.info(f"Running script with venv Python: {' '.join(cmd)}")
 
         try:
-            self._stop_event.clear()
-            process = subprocess.Popen(
-                cmd, cwd=self.target_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
-            )
-            self._process = process
-
-            def stream_reader(stream, prefix):
-                try:
-                    for line in iter(stream.readline, ""):
-                        if self._stop_event.is_set():
-                            break
-                        if line:
-                            print(f"{prefix}: {line.strip()}")
-                except (OSError, ValueError) as e:
-                    logger.debug(f"Stream reader stopped: {e}")
-
-            stdout_thread = threading.Thread(
-                target=stream_reader, args=(process.stdout, "STDOUT"), daemon=True, name="GitRepoStdoutReader"
-            )
-            stderr_thread = threading.Thread(
-                target=stream_reader, args=(process.stderr, "STDERR"), daemon=True, name="GitRepoStderrReader"
-            )
-
-            stdout_thread.start()
-            stderr_thread.start()
-            self._reader_threads = [stdout_thread, stderr_thread]
-
-            if timeout:
-
-                def timeout_watcher():
-                    start_time = time.time()
-                    while process.poll() is None and not self._stop_event.is_set():
-                        if time.time() - start_time > timeout:
-                            logger.warning(f"Script execution timed out after {timeout} seconds")
-                            process.terminate()
-                            time.sleep(1)
-                            if process.poll() is None:
-                                process.kill()
-                            break
-                        self._stop_event.wait(1)
-
-                self._watcher_thread = threading.Thread(
-                    target=timeout_watcher, daemon=True, name="GitRepoTimeoutWatcher"
+            with self._lock:
+                self._stop_event.clear()
+                process = subprocess.Popen(
+                    cmd, cwd=self.target_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
                 )
-                self._watcher_thread.start()
+                self._process = process
+
+                def stream_reader(stream, prefix):
+                    try:
+                        for line in iter(stream.readline, ""):
+                            if self._stop_event.is_set():
+                                break
+                            if line:
+                                print(f"{prefix}: {line.strip()}")
+                    except (OSError, ValueError) as e:
+                        logger.debug(f"Stream reader stopped: {e}")
+
+                stdout_thread = threading.Thread(
+                    target=stream_reader, args=(process.stdout, "STDOUT"), daemon=True, name="GitRepoStdoutReader"
+                )
+                stderr_thread = threading.Thread(
+                    target=stream_reader, args=(process.stderr, "STDERR"), daemon=True, name="GitRepoStderrReader"
+                )
+
+                stdout_thread.start()
+                stderr_thread.start()
+                self._reader_threads = [stdout_thread, stderr_thread]
+
+                if timeout:
+
+                    def timeout_watcher():
+                        start_time = time.time()
+                        while process.poll() is None and not self._stop_event.is_set():
+                            if time.time() - start_time > timeout:
+                                logger.warning(f"Script execution timed out after {timeout} seconds")
+                                process.terminate()
+                                time.sleep(1)
+                                if process.poll() is None:
+                                    process.kill()
+                                break
+                            self._stop_event.wait(1)
+
+                    self._watcher_thread = threading.Thread(
+                        target=timeout_watcher, daemon=True, name="GitRepoTimeoutWatcher"
+                    )
+                    self._watcher_thread.start()
 
             return process
 
@@ -805,36 +807,37 @@ class GitRepoManagement:
     def stop(self) -> None:
         """Terminate running script and join cooperative reader/watcher threads."""
         self._stop_event.set()
-        proc = getattr(self, "_process", None)
-        if proc is not None:
-            try:
-                if proc.poll() is None:
-                    proc.terminate()
-                    try:
-                        proc.wait(timeout=2)
-                    except Exception:
+        with self._lock:
+            proc = getattr(self, "_process", None)
+            if proc is not None:
+                try:
+                    if proc.poll() is None:
+                        proc.terminate()
                         try:
-                            proc.kill()
-                        except Exception as e:  # debug logged
-                            logger.debug(f"Suppressed Exception: {e}", exc_info=True)
-            except Exception as e:  # debug logged
-                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
-        for thr in getattr(self, "_reader_threads", []):
-            try:
-                if thr.is_alive():
-                    thr.join(timeout=0.5)
-            except Exception as e:  # debug logged
-                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
-        watcher = getattr(self, "_watcher_thread", None)
-        if watcher is not None:
-            try:
-                if watcher.is_alive():
-                    watcher.join(timeout=0.5)
-            except Exception as e:  # debug logged
-                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
-        self._reader_threads = []
-        self._watcher_thread = None
-        self._process = None
+                            proc.wait(timeout=2)
+                        except Exception:
+                            try:
+                                proc.kill()
+                            except Exception as e:  # debug logged
+                                logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+                except Exception as e:  # debug logged
+                    logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+            for thr in getattr(self, "_reader_threads", []):
+                try:
+                    if thr.is_alive():
+                        thr.join(timeout=0.5)
+                except Exception as e:  # debug logged
+                    logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+            watcher = getattr(self, "_watcher_thread", None)
+            if watcher is not None:
+                try:
+                    if watcher.is_alive():
+                        watcher.join(timeout=0.5)
+                except Exception as e:  # debug logged
+                    logger.debug(f"Suppressed Exception: {e}", exc_info=True)
+            self._reader_threads = []
+            self._watcher_thread = None
+            self._process = None
 
     def get_remote_branches(self) -> list[str] | None:
         """Fetch list of remote branch names. Returns None on failure."""

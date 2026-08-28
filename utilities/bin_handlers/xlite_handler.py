@@ -92,6 +92,7 @@ class XliteHandler(BaseBinUtil):
         self.xlite_daemon_process = None
         self.xlite_conf_local = {}
         self._stop = threading.Event()
+        self._lock = threading.RLock()
         self._xlite_threads: list[threading.Thread] = []
         self.xlite_pids = []
         self.xlite_daemon_pids = []
@@ -119,15 +120,31 @@ class XliteHandler(BaseBinUtil):
 
     def check_xlite_daemon_confs_sequence(self, silent=True):
         self.parse_xlite_daemon_conf(silent)
-        if self.xlite_daemon_confs_local:
-            for coin in self.xlite_daemon_confs_local:
-                port = self.xlite_daemon_confs_local[coin]["rpcPort"]
-                user = self.xlite_daemon_confs_local[coin]["rpcUsername"]
-                password = self.xlite_daemon_confs_local[coin]["rpcPassword"]
-                self.coins_rpc[coin] = RPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
+        with self._lock:
+            snapshot = dict(self.xlite_daemon_confs_local)
+        if not snapshot:
+            with self._lock:
+                self.coins_rpc = {}
+            return
+        new_coins: dict = {}
+        for coin, data in snapshot.items():
+            if not isinstance(data, dict):
+                continue
+            try:
+                port = data["rpcPort"]
+                user = data["rpcUsername"]
+                password = data["rpcPassword"]
+            except Exception:  # noqa: S112 — skip malformed coin conf
+                continue
+            new_coins[coin] = RPCClient(rpc_user=user, rpc_password=password, rpc_port=port)
+        with self._lock:
+            self.coins_rpc = new_coins
 
     def check_xlite_daemon_confs(self):
-        while not self._stop.is_set() and not self.valid_coins_rpc:
+        while not self._stop.is_set():
+            with self._lock:
+                if self.valid_coins_rpc:
+                    break
             self.check_xlite_daemon_confs_sequence(silent=True)
             if self._stop.wait(1):
                 break
@@ -140,20 +157,24 @@ class XliteHandler(BaseBinUtil):
 
     def check_valid_xlite_coins_rpc(self, runonce=False):
         while not self._stop.is_set():
+            with self._lock:
+                coins = dict(self.coins_rpc)
+                confs = dict(self.xlite_daemon_confs_local)
             valid = False
-            if self.coins_rpc:
-                for coin, rpc_server in self.coins_rpc.items():
+            if coins:
+                for coin, rpc_server in coins.items():
                     if coin != "master" and coin != "TBLOCK":
-                        if self.xlite_daemon_confs_local[coin]["rpcEnabled"] is True:
+                        conf = confs.get(coin)
+                        if not isinstance(conf, dict):
+                            continue
+                        if conf.get("rpcEnabled") is True:
                             res = rpc_server.send_rpc_request("getinfo")
                             if res is not None:
                                 valid = True
                         if not valid:
                             break
-            if valid:
-                self.valid_coins_rpc = True
-            else:
-                self.valid_coins_rpc = False
+            with self._lock:
+                self.valid_coins_rpc = valid
             if runonce:
                 return
 
@@ -176,7 +197,8 @@ class XliteHandler(BaseBinUtil):
     def parse_xlite_conf(self):
         data_folder = self.container.conf_data.xlite_default_paths.get(self.container.system, None)
         if data_folder is None:
-            self.xlite_conf_local = {}
+            with self._lock:
+                self.xlite_conf_local = {}
             return
 
         data_folder = os.path.expandvars(os.path.expanduser(data_folder))
@@ -191,39 +213,43 @@ class XliteHandler(BaseBinUtil):
                     logger.info(f"XLITE: Loaded JSON data from [{file_path}]")
             except Exception as e:
                 logger.error(f"Error parsing {file_path}: {e}, repairing file")
-        self.xlite_conf_local = meta_data
+        with self._lock:
+            self.xlite_conf_local = meta_data
 
     def parse_xlite_daemon_conf(self, silent=False):
         daemon_data_path = self.container.conf_data.xlite_daemon_default_paths.get(self.container.system, None)
         if daemon_data_path is None:
-            self.xlite_daemon_confs_local = {}
+            with self._lock:
+                self.xlite_daemon_confs_local = {}
             return
 
         daemon_data_path = os.path.expandvars(os.path.expanduser(daemon_data_path))
         confs_folder = os.path.join(daemon_data_path, "settings")
 
         if not os.path.exists(confs_folder):
-            self.xlite_daemon_confs_local = {}
+            with self._lock:
+                self.xlite_daemon_confs_local = {}
             return
 
         files_in_folder = os.listdir(confs_folder)
 
         json_files = [file for file in files_in_folder if file.endswith(".json")]
 
+        new_dict: dict = {}
         for json_file in json_files:
             json_file_path = os.path.join(confs_folder, json_file)
             coin = str(json_file).split("-")[1].split(".")[0]
             try:
                 with open(json_file_path) as file:
                     data = json.load(file)
-                self.xlite_daemon_confs_local[coin] = data
+                new_dict[coin] = data
             except Exception as e:
-                self.xlite_daemon_confs_local[coin] = "ERROR PARSING"
+                new_dict[coin] = "ERROR PARSING"
                 logger.error(f"Error parsing {json_file_path}: {e}")
         if not silent:
-            logger.info(
-                f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(self.xlite_daemon_confs_local.keys())}"
-            )
+            logger.info(f"XLITE-DAEMON: Parsed coins confs from [{confs_folder}] {list(new_dict.keys())}")
+        with self._lock:
+            self.xlite_daemon_confs_local = new_dict
 
     def start_xlite(self, env_vars=None):
         if env_vars is None:

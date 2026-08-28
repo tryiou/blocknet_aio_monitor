@@ -63,8 +63,11 @@ class BlocknetManager:
             logger.debug(f"Suppressed Exception: {e}", exc_info=True)
 
     def check_config(self):
-        use_xlite = bool(self.root_gui.xlite_manager.utility.xlite_daemon_confs_local)
-        xlite_daemon_conf = self.root_gui.xlite_manager.utility.xlite_daemon_confs_local if use_xlite else None
+        with self.root_gui.xlite_manager.utility._lock:
+            raw = self.root_gui.xlite_manager.utility.xlite_daemon_confs_local
+            snapshot = dict(raw) if isinstance(raw, dict) else {}
+        use_xlite = bool(snapshot)
+        xlite_daemon_conf = snapshot if use_xlite else None
         self.utility.compare_and_update_local_conf(xlite_daemon_conf)
 
     def _snapshot(self) -> tuple:

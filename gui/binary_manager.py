@@ -52,24 +52,25 @@ class BinaryFileHandler(FileSystemEventHandler):
         self.max_delay: float = FILE_WATCHER_DEBOUNCE_S
         self.last_run: float = 0
         self.scheduled: bool = False
+        self._lock = threading.Lock()
 
     def on_modified(self, event: "FileSystemEvent") -> None:
         """
         Called when a file is modified. Schedules binary update after delay.
         """
-        if self.scheduled:
-            return
-
-        time_since_last = time.time() - self.last_run
-        delay_seconds = max(0, self.max_delay - time_since_last)
-        delay_ms = int(delay_seconds * 1000)
-
-        self.scheduled = True
+        # Watchdog Observer thread: check-then-act under lock, queue put outside (thread-safe)
+        with self._lock:
+            if self.scheduled:
+                return
+            time_since_last = time.time() - self.last_run
+            delay_seconds = max(0, self.max_delay - time_since_last)
+            delay_ms = int(delay_seconds * 1000)
+            self.scheduled = True
         # Use thread-safe queue instead of direct after() call
         self.binary_manager.file_change_queue.put(("delayed_update", delay_ms))
 
     def schedule_delayed_task(self, delay_ms):
-        # Only the main thread should execute after()
+        # Only the main thread should execute after() — dead code path kept for compat, queue is thread-safe
         if threading.current_thread().name == "MainThread":
             self.binary_manager.root_gui.after(delay_ms, self._execute_scheduled)
         else:
@@ -80,10 +81,12 @@ class BinaryFileHandler(FileSystemEventHandler):
         """
         Executes the scheduled update and resets the schedule flag.
         """
-        # Run file handling through main thread only
+        # Main thread via after(): reset debounce under lock, I/O outside lock
+        with self._lock:
+            self.last_run = time.time()
+            self.scheduled = False
+        # Run file handling through main thread only — no lock across I/O
         self.binary_manager.check_and_update_aio_folder()
-        self.last_run = time.time()
-        self.scheduled = False
 
 
 class BinaryManager:
