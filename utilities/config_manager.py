@@ -122,9 +122,9 @@ class ConfigManager:
                 "Darwin": "~/Library/Application Support/xlite",
             },
             "xlite_daemon_default_paths": {
-                "Windows": "%appdata%\\CloudChains",
-                "Linux": "~/.config/CloudChains",
-                "Darwin": "~/Library/Application Support/CloudChains",
+                "Windows": "%appdata%\\xlite-daemon",
+                "Linux": "~/.config/xlite-daemon",
+                "Darwin": "~/Library/Application Support/xlite-daemon",
             },
             "blocknet_bin_name": {"Windows": "blocknet-qt.exe", "Linux": "blocknet-qt", "Darwin": "blocknet-qt"},
             "blockdx_bin_name": {
