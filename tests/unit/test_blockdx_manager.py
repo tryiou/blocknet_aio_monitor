@@ -96,3 +96,24 @@ class TestBlockDXManager(unittest.TestCase):
 
         # Single-shot: no periodic rescheduling
         self.mock_root_gui.after.assert_not_called()
+
+    def test_snapshot_tracks_core_rpc_drop(self):
+        """Core stopping (valid_rpc True->False) must dirty the snapshot.
+
+        Regression: the second Block-DX checkbox stayed ticked after Core
+        stopped because valid_rpc was not part of the snapshot, so the
+        refresh was skipped as 'not dirty'.
+        """
+        core_utility = self.mock_root_gui.blocknet_manager.utility
+        core_utility.valid_rpc = True
+        core_utility.data_folder = "/mock/blocknet_data"
+        core_utility.blocknet_conf_local = {"global": {}}
+
+        self.blockdx_manager.update_status_if_dirty()
+        self.assertTrue(self.blockdx_manager.frame_manager.update_blockdx_config_button_checkbox.called)
+
+        self.blockdx_manager.frame_manager.reset_mock()
+        core_utility.valid_rpc = False
+
+        self.assertTrue(self.blockdx_manager.update_status_if_dirty())
+        self.blockdx_manager.frame_manager.update_blockdx_config_button_checkbox.assert_called_once()

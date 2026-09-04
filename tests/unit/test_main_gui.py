@@ -4,7 +4,7 @@ import sys
 import unittest
 from unittest.mock import MagicMock, call, mock_open, patch
 
-from gui.constants import TIME_DISABLE_BUTTON_MS
+from utilities.timing import TIME_DISABLE_BUTTON_MS
 
 # Add the project root to the sys.path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -221,21 +221,22 @@ class TestBlocknetAioGui(unittest.TestCase):
         """Test grid initialization for all manager frames."""
         self.app.init_grid()
 
-        # Verify grid_widgets calls
-        self.mock_binary_manager.frame_manager.grid_widgets.assert_called_once_with(0, 0)
-        self.mock_blocknet_manager.frame_manager.grid_widgets.assert_called_once_with(0, 0)
-        self.mock_blockdx_manager.frame_manager.grid_widgets.assert_called_once_with(0, 0)
-        self.mock_xlite_manager.frame_manager.grid_widgets.assert_called_once_with(0, 0)
+        # Verify grid_widgets calls (no x/y args: rows are manager-local)
+        self.mock_binary_manager.frame_manager.grid_widgets.assert_called_once_with()
+        self.mock_blocknet_manager.frame_manager.grid_widgets.assert_called_once_with()
+        self.mock_blockdx_manager.frame_manager.grid_widgets.assert_called_once_with()
+        self.mock_xlite_manager.frame_manager.grid_widgets.assert_called_once_with()
 
-        # Verify grid_frames calls for all managers
-        for manager in [
-            self.mock_binary_manager,
-            self.mock_blocknet_manager,
-            self.mock_blockdx_manager,
-            self.mock_xlite_manager,
-        ]:
-            manager.frame_manager.master_frame.grid.assert_called_once()
-            manager.frame_manager.title_frame.grid.assert_called_once()
+        # Verify shell gridding for all managers, one row per panel
+        for row, manager in enumerate(
+            [
+                self.mock_binary_manager,
+                self.mock_blocknet_manager,
+                self.mock_blockdx_manager,
+                self.mock_xlite_manager,
+            ]
+        ):
+            manager.frame_manager.grid_shell.assert_called_once_with(row)
 
     def test_handle_signal(self):
         """Test signal handling — schedules on_close via after(0) and deregisters."""
@@ -493,7 +494,7 @@ class TestBlocknetAioGui(unittest.TestCase):
 
     def test_check_processes(self):
         """Test process checking and state updates."""
-        from gui.constants import INTERVAL_PROCESS_CHECK_MS
+        from utilities.timing import INTERVAL_PROCESS_CHECK_MS
 
         self.mocks["utils"].processes_check.return_value = ([1], [2], [3], [4])
         self.app.after = MagicMock()

@@ -1,6 +1,6 @@
 import logging
 
-from gui.constants import (
+from utilities.timing import (
     INTERVAL_PROCESS_CHECK_MS,
     INTERVAL_UI_POLL_MS,
     MAX_BOTS_RETRY,

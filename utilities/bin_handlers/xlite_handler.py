@@ -8,10 +8,10 @@ import traceback
 
 import requests
 
-from gui.constants import RPC_TIMEOUT_S
 from utilities.app_container import AppContainer
 from utilities.bin_handlers.base_binutil import BaseBinUtil
 from utilities.rpc_client import RPCClient
+from utilities.timing import RPC_TIMEOUT_S
 
 logger = logging.getLogger(__name__)
 

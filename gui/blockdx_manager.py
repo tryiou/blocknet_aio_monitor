@@ -68,10 +68,16 @@ class BlockDXManager:
 
     def _snapshot(self) -> tuple:
         try:
+            core_utility = getattr(getattr(self.root_gui, "blocknet_manager", None), "utility", None)
             return (
                 getattr(self, "process_running", None),
                 getattr(self, "is_config_sync", None),
                 getattr(getattr(self, "utility", None), "downloading_bin", None),
+                # Core-side inputs of update_blockdx_config_button_checkbox: when Core
+                # stops (RPC drops) the tick must refresh instead of going stale.
+                getattr(core_utility, "valid_rpc", None),
+                bool(getattr(core_utility, "data_folder", None)),
+                bool(getattr(core_utility, "blocknet_conf_local", None)),
             )
         except Exception:
             return (None,)

@@ -10,9 +10,10 @@ import zipfile
 
 import requests
 
-from gui.constants import DOWNLOAD_CHUNK_SIZE, RPC_TIMEOUT_S
+from utilities import utils
 from utilities.app_container import AppContainer, get_container
 from utilities.rpc_client import RPCClient
+from utilities.timing import DOWNLOAD_CHUNK_SIZE, RPC_TIMEOUT_S
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,8 @@ class BlocknetHandler(BaseBinUtil):
         self.blocknet_process = None
         self.blocknet_rpc = None
         self.valid_rpc = False
+        self.xbridge_block_effective: str | None = None
+        self.xbridge_block_fallback = False
         self._stop = threading.Event()
         self._lock = threading.RLock()
         self._rpc_thread: threading.Thread | None = None
@@ -319,6 +322,63 @@ class BlocknetHandler(BaseBinUtil):
         else:
             logger.error("No entries found in the manifest. " + coin)
 
+    XBRIDGE_BLOCK_SOURCE_CORE = "core"
+    XBRIDGE_BLOCK_SOURCE_XLITE = "xlite"
+
+    @staticmethod
+    def _daemon_has_block_settings(xlite_daemon_conf) -> bool:
+        """True iff daemon conf holds a BLOCK entry with RPC settings all present."""
+        if not isinstance(xlite_daemon_conf, dict):
+            return False
+        block = xlite_daemon_conf.get("BLOCK")
+        if not isinstance(block, dict):
+            return False
+        return bool(block.get("rpcUsername") and block.get("rpcPassword") and block.get("rpcPort"))
+
+    def _core_has_block_settings(self) -> bool:
+        """True iff local blocknet.conf holds usable rpcuser/rpcpassword/rpcport (mirrors write guards)."""
+        conf = self.blocknet_conf_local
+        if not isinstance(conf, dict) or "global" not in conf:
+            return False
+        g = conf["global"]
+        if not isinstance(g, dict):
+            return False
+        port = g.get("rpcport")
+        port_ok = port is not None and str(port).strip() not in ("", "0")
+        return bool(g.get("rpcuser") and g.get("rpcpassword") and port_ok)
+
+    def resolve_xbridge_block_source(self, xlite_daemon_conf) -> str:
+        """Resolve which wallet feeds the xbridge.conf BLOCK section: 'core' | 'xlite'.
+
+        Preference is read fresh from aio_settings.json (absent/invalid = auto:
+        xlite iff the daemon holds BLOCK settings, else core). An explicit pick
+        whose source is unavailable falls back to the live one with a warning —
+        an XBridge instance must never silently lose its BLOCK wallet.
+        """
+        try:
+            pref = (utils.load_cfg_json() or {}).get("xbridge_block_source")
+        except Exception as e:  # debug logged
+            logger.debug(f"xbridge_block_source pref unreadable, using auto: {e}")
+            pref = None
+        daemon_ok = self._daemon_has_block_settings(xlite_daemon_conf)
+        core_ok = self._core_has_block_settings()
+        if pref in (self.XBRIDGE_BLOCK_SOURCE_CORE, self.XBRIDGE_BLOCK_SOURCE_XLITE):
+            wanted = pref
+        else:
+            wanted = self.XBRIDGE_BLOCK_SOURCE_XLITE if daemon_ok else self.XBRIDGE_BLOCK_SOURCE_CORE
+        fallback = False
+        if wanted == self.XBRIDGE_BLOCK_SOURCE_XLITE and not daemon_ok:
+            if core_ok:
+                logger.warning("XBridge BLOCK: XLite selected but daemon has no BLOCK settings — falling back to Core")
+                wanted, fallback = self.XBRIDGE_BLOCK_SOURCE_CORE, True
+        elif wanted == self.XBRIDGE_BLOCK_SOURCE_CORE and not core_ok and daemon_ok:
+            logger.warning("XBridge BLOCK: Core selected but blocknet.conf RPC unavailable — falling back to XLite")
+            wanted, fallback = self.XBRIDGE_BLOCK_SOURCE_XLITE, True
+        with self._lock:
+            self.xbridge_block_effective = wanted
+            self.xbridge_block_fallback = fallback
+        return wanted
+
     def check_xbridge_conf(self, xlite_daemon_conf):
         self.parse_xbridge_conf()
         with self._lock:
@@ -331,9 +391,21 @@ class BlocknetHandler(BaseBinUtil):
         if self.blocknet_xbridge_conf_remote is None:
             logger.error("Remote xbridge.conf not available.")
             return False
+        source = self.resolve_xbridge_block_source(xlite_daemon_conf)
         if xlite_daemon_conf:
             for coin in list(xlite_daemon_conf.keys()):
                 if coin == "master":
+                    continue
+                if coin == "BLOCK" and source == self.XBRIDGE_BLOCK_SOURCE_CORE:
+                    continue
+                coin_conf = xlite_daemon_conf[coin]
+                if (
+                    not isinstance(coin_conf, dict)
+                    or not coin_conf.get("rpcUsername")
+                    or not coin_conf.get("rpcPassword")
+                    or not coin_conf.get("rpcPort")
+                ):
+                    logger.warning(f"XBridge: skipping {coin} with incomplete daemon settings")
                     continue
                 self.retrieve_coin_conf(coin)
                 with self._lock:
@@ -350,11 +422,11 @@ class BlocknetHandler(BaseBinUtil):
                     for key, value in options.items():
                         with self._lock:
                             if key == "Username":
-                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]["rpcUsername"])
+                                self.xbridge_conf_local[section][key] = str(coin_conf["rpcUsername"])
                             elif key == "Password":
-                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]["rpcPassword"])
+                                self.xbridge_conf_local[section][key] = str(coin_conf["rpcPassword"])
                             elif key == "Port":
-                                self.xbridge_conf_local[section][key] = str(xlite_daemon_conf[coin]["rpcPort"])
+                                self.xbridge_conf_local[section][key] = str(coin_conf["rpcPort"])
                             else:
                                 if (
                                     key not in self.xbridge_conf_local[section]
@@ -362,7 +434,7 @@ class BlocknetHandler(BaseBinUtil):
                                 ):
                                     self.xbridge_conf_local[section][key] = str(value)
 
-        if not (xlite_daemon_conf and "BLOCK" in xlite_daemon_conf):
+        if source == self.XBRIDGE_BLOCK_SOURCE_CORE:
             for section, options in self.blocknet_xbridge_conf_remote.items():
                 with self._lock:
                     if section not in self.xbridge_conf_local:
@@ -407,6 +479,18 @@ class BlocknetHandler(BaseBinUtil):
         with self._lock:
             if self.xbridge_conf_local is None:
                 self.xbridge_conf_local = {}
+            block = self.xbridge_conf_local.get("BLOCK")
+            if (
+                not isinstance(block, dict)
+                or not block.get("Username")
+                or not block.get("Password")
+                or not block.get("Port")
+            ):
+                # No writable BLOCK section from either source: report no effective source.
+                # (Key presence alone is not enough — the core path creates the section
+                # even when every credential guard fails.)
+                self.xbridge_block_effective = None
+                self.xbridge_block_fallback = False
             sections_string = ",".join(section for section in self.xbridge_conf_local if section != "Main")
             if "Main" in self.xbridge_conf_local:
                 self.xbridge_conf_local["Main"]["ExchangeWallets"] = sections_string

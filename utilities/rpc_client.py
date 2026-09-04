@@ -2,7 +2,7 @@ import logging
 
 import requests
 
-from gui.constants import RPC_TIMEOUT_S
+from utilities.timing import RPC_TIMEOUT_S
 
 logger = logging.getLogger(__name__)
 

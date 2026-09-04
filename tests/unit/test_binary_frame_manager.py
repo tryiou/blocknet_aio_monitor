@@ -197,7 +197,7 @@ class TestBinaryFrameManager(unittest.TestCase):
         frame_manager.bots_toggle_execution_button = MagicMock()
 
         # Call grid_widgets
-        frame_manager.grid_widgets(0, 0)
+        frame_manager.grid_widgets()
 
         # Verify grid calls for header and theme button
         frame_manager.header_label.grid.assert_called_once()

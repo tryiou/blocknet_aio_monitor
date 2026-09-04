@@ -21,7 +21,9 @@ import contextlib
 
 import widgets_strings
 from gui.binary_frame_manager import BinaryFrameManager
-from gui.constants import (
+from utilities import utils
+from utilities.app_container import get_container
+from utilities.timing import (
     DELAY_ENOSPC_HINT_MS,
     DELAY_LAUNCH_CHECK_FAST_MS,
     DELAY_LAUNCH_CHECK_SLOW_MS,
@@ -31,8 +33,6 @@ from gui.constants import (
     POLLING_OBSERVER_TIMEOUT_S,
     TIME_DISABLE_BUTTON_MS,
 )
-from utilities import utils
-from utilities.app_container import get_container
 
 logger = logging.getLogger(__name__)
 

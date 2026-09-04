@@ -29,24 +29,25 @@ class TestXliteFrameManager(unittest.TestCase):
         self.mock_root_gui.stored_password = None
         self.mock_parent.root_gui = self.mock_root_gui
 
-        # Create mock patches to avoid tkinter issues
+        # Create mock patches to avoid tkinter issues (factories yield fresh mocks per widget)
         self.mock_ctk = MagicMock()
-        self.mock_ctk_frame = MagicMock()
-        self.mock_ctk_label = MagicMock()
-        self.mock_ctk_button = MagicMock()
         self.mock_ctk_boolean_var = MagicMock()
         self.mock_ctk_string_var = MagicMock()
-        self.mock_ctk_checkbox = MagicMock()
+
+        def _fresh(*args, **kwargs):
+            return MagicMock()
 
         # Patch tkinter components
         self.patches = [
             patch("gui.xlite_frame_manager.ctk", self.mock_ctk),
-            patch("gui.xlite_frame_manager.ctk.CTkFrame", self.mock_ctk_frame),
-            patch("gui.xlite_frame_manager.ctk.CTkLabel", self.mock_ctk_label),
-            patch("gui.xlite_frame_manager.ctk.CTkButton", self.mock_ctk_button),
+            patch("gui.layout.widgets.make_frame", side_effect=_fresh),
+            patch("gui.xlite_frame_manager.make_caption", side_effect=_fresh),
+            patch("gui.xlite_frame_manager.make_label", side_effect=_fresh),
+            patch("gui.xlite_frame_manager.make_button", side_effect=_fresh),
+            patch("gui.xlite_frame_manager.make_checkbox", side_effect=_fresh),
+            patch("gui.xlite_frame_manager.SegmentedPills"),
             patch("gui.xlite_frame_manager.ctk.BooleanVar", self.mock_ctk_boolean_var),
             patch("gui.xlite_frame_manager.ctk.StringVar", self.mock_ctk_string_var),
-            patch("gui.xlite_frame_manager.ctkCheckBoxMod.CTkCheckBox", self.mock_ctk_checkbox),
         ]
 
         for p in self.patches:
@@ -73,12 +74,25 @@ class TestXliteFrameManager(unittest.TestCase):
         self.assertIsNotNone(self.manager.title_frame)
 
     def test_grid_widgets(self):
-        """Test grid_widgets method"""
-        self.manager.grid_widgets(0, 0)
+        """Title row order caption/label/pills/button; 2x2 checkbox grid (XLITE_SPEC)."""
+        self.manager.grid_widgets()
 
-        # Verify all 5 checkboxes were created and gridded
-        self.assertEqual(self.mock_ctk_checkbox.call_count, 5)
-        self.manager.store_password_button.grid.assert_called_once()
+        self.manager.xlite_label.grid.assert_called_once_with(row=0, column=0, padx=2, pady=2, sticky="w")
+        self.manager.xbridge_block_source_label.grid.assert_called_once_with(
+            row=0, column=1, padx=2, pady=2, sticky="e"
+        )
+        self.manager.xbridge_block_pills.widget.grid.assert_called_once_with(
+            row=0, column=2, padx=2, pady=2, sticky="w"
+        )
+        self.manager.store_password_button.grid.assert_called_once_with(row=0, column=3, padx=2, pady=2, sticky="e")
+        self.manager.process_status_checkbox.grid.assert_called_once_with(row=1, column=0, padx=5, pady=5, sticky="ew")
+        self.manager.daemon_process_status_checkbox.grid.assert_called_once_with(
+            row=1, column=1, padx=5, pady=5, sticky="ew"
+        )
+        self.manager.valid_config_checkbox.grid.assert_called_once_with(row=2, column=0, padx=5, pady=5, sticky="ew")
+        self.manager.daemon_valid_config_checkbox.grid.assert_called_once_with(
+            row=2, column=1, padx=5, pady=5, sticky="ew"
+        )
 
     def test_update_process_status(self):
         """Test update_xlite_process_status_checkbox with both running states"""
@@ -194,24 +208,8 @@ class TestXliteFrameManager(unittest.TestCase):
         )
 
     def test_update_reverse_proxy_process_status(self):
-        """Test update_xlite_reverse_proxy_process_status with both running states"""
-        # Test running state
-        self.mock_parent.reverse_proxy_running = True
+        """Reverse-proxy panel removed; the manager poll hook remains a harmless no-op."""
         self.manager.update_xlite_reverse_proxy_process_status()
-        self.manager.reverse_proxy_status_str.set.assert_called_with(widgets_strings.xlite_reverse_proxy_running_string)
-        self.manager.reverse_proxy_process_status_checkbox_state.set.assert_called_with(True)
-
-        # Reset mocks
-        self.manager.reverse_proxy_status_str.set.reset_mock()
-        self.manager.reverse_proxy_process_status_checkbox_state.set.reset_mock()
-
-        # Test not running state
-        self.mock_parent.reverse_proxy_running = False
-        self.manager.update_xlite_reverse_proxy_process_status()
-        self.manager.reverse_proxy_status_str.set.assert_called_with(
-            widgets_strings.xlite_reverse_proxy_not_running_string
-        )
-        self.manager.reverse_proxy_process_status_checkbox_state.set.assert_called_with(False)
 
     @patch("gui.xlite_frame_manager.utils.wipe_stored_password")
     @patch("gui.xlite_frame_manager.os.environ")
@@ -343,6 +341,158 @@ class TestXliteFrameManager(unittest.TestCase):
         mock_ctk_input_dialog.assert_called_once()
         self.assertEqual(self.mock_root_gui.stored_password, None)
         self.assertEqual(result, "break")
+
+    def test_xbridge_block_source_widget_created(self):
+        """Pills offer Core/XLite via the SegmentedPills adapter, left of Password Stored."""
+        from gui.xlite_frame_manager import SegmentedPills
+
+        SegmentedPills.assert_called_once()
+        _, kwargs = SegmentedPills.call_args
+        self.assertEqual(
+            kwargs["values"],
+            [widgets_strings.xbridge_block_source_core_string, widgets_strings.xbridge_block_source_xlite_string],
+        )
+        self.assertIs(kwargs["variable"], self.manager.xbridge_block_source_var)
+        self.manager.grid_widgets()
+        self.manager.xbridge_block_pills.widget.grid.assert_called_once_with(
+            row=0, column=2, padx=2, pady=2, sticky="w"
+        )
+        self.manager.store_password_button.grid.assert_called_once_with(row=0, column=3, padx=2, pady=2, sticky="e")
+
+    def _string_var_initial_values(self):
+        return [c.kwargs.get("value") for c in self.mock_ctk.StringVar.call_args_list]
+
+    def test_xbridge_block_source_initial_auto_core_without_daemon_block(self):
+        """No stored pref + daemon without BLOCK: selector starts on Core."""
+        self.mock_root_gui.xbridge_block_source = None
+        self.mock_parent.utility.xlite_daemon_confs_local = {"BTC": {}}
+        XliteFrameManager(self.mock_parent)
+
+        self.assertIn(widgets_strings.xbridge_block_source_core_string, self._string_var_initial_values())
+
+    def test_xbridge_block_source_initial_auto_xlite_with_daemon_block(self):
+        """No stored pref + daemon holding BLOCK settings: selector starts on XLite."""
+        self.mock_root_gui.xbridge_block_source = None
+        self.mock_parent.utility.xlite_daemon_confs_local = {
+            "BLOCK": {"rpcUsername": "u", "rpcPassword": "p", "rpcPort": "1"},
+            "master": {},
+        }
+        XliteFrameManager(self.mock_parent)
+
+        self.assertIn(widgets_strings.xbridge_block_source_xlite_string, self._string_var_initial_values())
+
+    def test_xbridge_block_source_initial_auto_core_with_incomplete_daemon_block(self):
+        """No stored pref + daemon BLOCK entry without RPC settings: selector starts on Core."""
+        self.mock_root_gui.xbridge_block_source = None
+        self.mock_parent.utility.xlite_daemon_confs_local = {"BLOCK": {}, "master": {}}
+        XliteFrameManager(self.mock_parent)
+
+        self.assertIn(widgets_strings.xbridge_block_source_core_string, self._string_var_initial_values())
+
+    def test_xbridge_block_source_initial_honors_stored_pref(self):
+        """Stored pref wins over auto-resolution at startup."""
+        self.mock_root_gui.xbridge_block_source = "xlite"
+        self.mock_parent.utility.xlite_daemon_confs_local = None
+        XliteFrameManager(self.mock_parent)
+
+        self.assertIn(widgets_strings.xbridge_block_source_xlite_string, self._string_var_initial_values())
+
+    def test_paint_delegates_to_pills_adapter(self):
+        """Per-state pill text lives in SegmentedPills; the frame only triggers repaint."""
+        self.manager._paint_xbridge_pills()
+
+        self.manager.xbridge_block_pills.repaint.assert_called_once()
+
+    def test_on_xbridge_block_source_changed_repaints(self):
+        """User pick repaints pill text after persisting."""
+        self.manager.xbridge_block_pills.repaint.reset_mock()
+        with (
+            patch("utilities.utils.save_cfg_json"),
+            patch.object(self.manager, "_paint_xbridge_pills") as mock_paint,
+        ):
+            self.manager.on_xbridge_block_source_changed(widgets_strings.xbridge_block_source_core_string)
+
+        mock_paint.assert_called_once()
+
+    def test_on_xbridge_block_source_changed_persists_and_rearms(self):
+        """User pick persists like theme and re-arms the conf check."""
+        with patch("utilities.utils.save_cfg_json") as mock_save:
+            self.manager.on_xbridge_block_source_changed(widgets_strings.xbridge_block_source_core_string)
+
+        mock_save.assert_called_once_with("xbridge_block_source", "core")
+        self.assertEqual(self.mock_root_gui.xbridge_block_source, "core")
+        self.assertFalse(self.mock_root_gui.disable_daemons_conf_check)
+
+        with patch("utilities.utils.save_cfg_json") as mock_save:
+            self.manager.on_xbridge_block_source_changed(widgets_strings.xbridge_block_source_xlite_string)
+
+        mock_save.assert_called_once_with("xbridge_block_source", "xlite")
+        self.assertEqual(self.mock_root_gui.xbridge_block_source, "xlite")
+
+    def test_on_xbridge_block_source_changed_ignores_garbage(self):
+        """Unknown selection values never persist and never dirty the sync snapshot."""
+        self.mock_parent._last_snapshot = ("steady", "state")
+        with patch("utilities.utils.save_cfg_json") as mock_save:
+            self.manager.on_xbridge_block_source_changed("banana")
+
+        mock_save.assert_not_called()
+        self.assertEqual(self.mock_parent._last_snapshot, ("steady", "state"))
+
+    def _set_daemon_confs(self, daemon_confs):
+        self.mock_parent.utility.xlite_daemon_confs_local = daemon_confs
+
+    def test_update_widget_disabled_without_daemon_block(self):
+        """Daemon without BLOCK: no choice to make, control disabled."""
+        self._set_daemon_confs({"BTC": {}})
+
+        self.manager.update_xbridge_block_source_widget()
+
+        self.manager.xbridge_block_segmented.configure.assert_called_with(state="disabled")
+
+    def test_update_widget_enabled_with_daemon_block(self):
+        """Daemon holding BLOCK settings: control enabled."""
+        self._set_daemon_confs({"BLOCK": {"rpcUsername": "u", "rpcPassword": "p", "rpcPort": "1"}})
+
+        self.manager.update_xbridge_block_source_widget()
+
+        self.manager.xbridge_block_segmented.configure.assert_called_with(state="normal")
+
+    def test_on_xbridge_block_source_changed_dirties_sync_snapshot(self):
+        """The pick must actually apply: UiSync only runs update_status_xlite on snapshot change."""
+        self.mock_parent._last_snapshot = ("steady", "state")
+        with patch("utilities.utils.save_cfg_json"):
+            self.manager.on_xbridge_block_source_changed(widgets_strings.xbridge_block_source_xlite_string)
+
+        self.assertIsNone(self.mock_parent._last_snapshot)
+        self.assertFalse(self.mock_root_gui.disable_daemons_conf_check)
+
+    def test_update_widget_resyncs_selection_under_auto(self):
+        """No stored pref: selection tracks auto-resolution as daemon BLOCK appears/disappears."""
+        self.mock_root_gui.xbridge_block_source = None
+        self._set_daemon_confs({"BLOCK": {"rpcUsername": "u", "rpcPassword": "p", "rpcPort": "1"}})
+
+        self.manager.update_xbridge_block_source_widget()
+
+        self.manager.xbridge_block_pills.set.assert_called_with(widgets_strings.xbridge_block_source_xlite_string)
+
+    def test_update_widget_resync_skipped_when_already_correct(self):
+        """No stored pref + selection already matching auto: no redundant set()."""
+        self.mock_root_gui.xbridge_block_source = None
+        self._set_daemon_confs({"BTC": {}})
+        self.manager.xbridge_block_pills.get.return_value = widgets_strings.xbridge_block_source_core_string
+
+        self.manager.update_xbridge_block_source_widget()
+
+        self.manager.xbridge_block_pills.set.assert_not_called()
+
+    def test_update_widget_keeps_stored_selection(self):
+        """Stored pref: selection never moves."""
+        self.mock_root_gui.xbridge_block_source = "core"
+        self._set_daemon_confs({"BLOCK": {"rpcUsername": "u", "rpcPassword": "p", "rpcPort": "1"}})
+
+        self.manager.update_xbridge_block_source_widget()
+
+        self.manager.xbridge_block_pills.set.assert_not_called()
 
 
 if __name__ == "__main__":

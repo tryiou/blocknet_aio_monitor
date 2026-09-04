@@ -3,70 +3,66 @@ import threading
 
 import customtkinter as ctk
 
-import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import utilities.utils
-from gui.constants import (
-    BINS_BUTTONS_WIDTH,
-    BINS_FRAME_WIDTH,
-    CORNER_RADIUS,
-    HEADER_FRAMES_STICKY,
-    INTERVAL_BOTS_RETRY_MS,
-    MAX_BOTS_RETRY,
+import widgets_strings
+from gui.layout import tokens
+from gui.layout.base_frame import BaseFrameManager
+from gui.layout.widgets import (
+    make_button,
+    make_caption,
+    make_checkbox,
+    make_icon_button,
+    make_label,
+    make_optionmenu,
 )
 from gui.xbridge_bot_manager import XBridgeBotManager
+from utilities.timing import INTERVAL_BOTS_RETRY_MS, MAX_BOTS_RETRY
 
 logger = logging.getLogger(__name__)
 
 
-class BinaryFrameManager:
+class BinaryFrameManager(BaseFrameManager):
+    panel = "binary"
+
     def __init__(self, parent):
-        self.root_gui = parent.root_gui
-        self.parent = parent
-        self.master_frame = ctk.CTkFrame(master=self.root_gui)
-        self.title_frame = ctk.CTkFrame(self.master_frame)
+        super().__init__(parent)
 
         self.xbridge_bot_manager = XBridgeBotManager()
-        self.header_label = ctk.CTkLabel(
-            self.title_frame, text="Binaries Control panel:", anchor=HEADER_FRAMES_STICKY, width=BINS_FRAME_WIDTH
+        self.header_label = make_caption(
+            self.title_frame,
+            widgets_strings.binaries_control_panel_string,
+            width=tokens.HEADER_W,
         )
-        self.title_frame.columnconfigure(1, weight=1)
-        self.found_label = ctk.CTkLabel(self.title_frame, text="Found:", anchor="s")
-        self.button_switch_theme = ctk.CTkButton(
+        self.button_switch_theme = make_icon_button(
             self.title_frame,
             image=self.root_gui.theme_img,
             command=self.root_gui.switch_theme_command,
-            text="",
-            fg_color="transparent",
-            hover=False,
-            width=1,
         )
 
         # Bins labels
-        self.blocknet_label = ctk.CTkLabel(self.master_frame, text="Blocknet Core:")
-        self.blockdx_label = ctk.CTkLabel(self.master_frame, text="Block-DX:")
-        self.xlite_label = ctk.CTkLabel(self.master_frame, text="Xlite:")
-        self.bots_label = ctk.CTkLabel(self.master_frame, text="XBridge Bots:")
+        self.blocknet_label = make_label(self.master_frame, text=widgets_strings.binaries_blocknet_core_label_string)
+        self.blockdx_label = make_label(self.master_frame, text=widgets_strings.binaries_blockdx_label_string)
+        self.xlite_label = make_label(self.master_frame, text=widgets_strings.binaries_xlite_label_string)
+        self.bots_label = make_label(self.master_frame, text=widgets_strings.binaries_bots_label_string)
 
         # Bins option_menus
-        option_menu_width = 200
-        self.blocknet_version_optionmenu = ctk.CTkOptionMenu(
-            self.master_frame, values=self.root_gui.blocknet_manager.version, state="disabled", width=option_menu_width
+        self.blocknet_version_optionmenu = make_optionmenu(
+            self.master_frame, values=self.root_gui.blocknet_manager.version, state="disabled"
         )
-        self.blockdx_version_optionmenu = ctk.CTkOptionMenu(
-            self.master_frame, values=self.root_gui.blockdx_manager.version, state="disabled", width=option_menu_width
+        self.blockdx_version_optionmenu = make_optionmenu(
+            self.master_frame, values=self.root_gui.blockdx_manager.version, state="disabled"
         )
-        self.xlite_version_optionmenu = ctk.CTkOptionMenu(
-            self.master_frame, values=self.root_gui.xlite_manager.version, state="disabled", width=option_menu_width
+        self.xlite_version_optionmenu = make_optionmenu(
+            self.master_frame, values=self.root_gui.xlite_manager.version, state="disabled"
         )
         # Branch persistence: defer remote fetch off UI thread
         _saved = self.xbridge_bot_manager.get_saved_branch()
         _initial_values = [_saved]
         _initial = _saved
-        self.bots_version_optionmenu = ctk.CTkOptionMenu(
+        self.bots_version_optionmenu = make_optionmenu(
             self.master_frame,
             values=_initial_values,
             state="normal",
-            width=option_menu_width,
             command=self.on_bots_branch_selected,
         )
         self.bots_version_optionmenu.set(_initial)
@@ -79,117 +75,98 @@ class BinaryFrameManager:
         self.bots_installed_boolvar = ctk.BooleanVar(value=False)
 
         # Bins checkboxes
-        self.blocknet_found_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.blocknet_found_checkbox = make_checkbox(
             self.master_frame,
-            text="",
             variable=self.blocknet_installed_boolvar,
-            state="disabled",
-            corner_radius=CORNER_RADIUS,
-            width=1,
+            width=tokens.ICON_W,
         )
-        self.blockdx_found_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.blockdx_found_checkbox = make_checkbox(
             self.master_frame,
-            text="",
             variable=self.blockdx_installed_boolvar,
-            state="disabled",
-            corner_radius=CORNER_RADIUS,
         )
-        self.xlite_found_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.xlite_found_checkbox = make_checkbox(
             self.master_frame,
-            text="",
             variable=self.xlite_installed_boolvar,
-            state="disabled",
-            corner_radius=CORNER_RADIUS,
         )
-        self.bots_found_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.bots_found_checkbox = make_checkbox(
             self.master_frame,
-            text="",
             variable=self.bots_installed_boolvar,
-            state="disabled",
-            corner_radius=CORNER_RADIUS,
         )
         # install/delete buttons
-        # bin_button_width = 90
         self.install_delete_blocknet_string_var = ctk.StringVar(value="")
-        self.install_delete_blocknet_button = ctk.CTkButton(
+        self.install_delete_blocknet_button = make_button(
             self.master_frame,
             state="normal",
             image=self.root_gui.transparent_img,
             command=self.parent.install_delete_blocknet_command,
-            # text="",
-            width=BINS_BUTTONS_WIDTH,
+            width=tokens.BIN_BUTTON_W,
             textvariable=self.install_delete_blocknet_string_var,
-            corner_radius=CORNER_RADIUS,
+            corner_radius=tokens.CORNER_R,
         )
         self.install_delete_blockdx_string_var = ctk.StringVar(value="")
-        self.install_delete_blockdx_button = ctk.CTkButton(
+        self.install_delete_blockdx_button = make_button(
             self.master_frame,
             state="normal",
             image=self.root_gui.transparent_img,
             command=self.parent.install_delete_blockdx_command,
             textvariable=self.install_delete_blockdx_string_var,
-            width=BINS_BUTTONS_WIDTH,
-            # text="",
-            corner_radius=CORNER_RADIUS,
+            width=tokens.BIN_BUTTON_W,
+            corner_radius=tokens.CORNER_R,
         )
         self.install_delete_xlite_string_var = ctk.StringVar(value="")
-        self.install_delete_xlite_button = ctk.CTkButton(
+        self.install_delete_xlite_button = make_button(
             self.master_frame,
             state="normal",
             image=self.root_gui.transparent_img,
             command=self.parent.install_delete_xlite_command,
             textvariable=self.install_delete_xlite_string_var,
-            width=BINS_BUTTONS_WIDTH,
-            # text="",
-            corner_radius=CORNER_RADIUS,
+            width=tokens.BIN_BUTTON_W,
+            corner_radius=tokens.CORNER_R,
         )
-        self.install_delete_bots_button = ctk.CTkButton(
+        self.install_delete_bots_button = make_button(
             self.master_frame,
             state="normal",
             text="",
             image=self.root_gui.transparent_img,
             command=self.install_update_bots_command,
-            width=BINS_BUTTONS_WIDTH,
-            corner_radius=CORNER_RADIUS,
+            width=tokens.BIN_BUTTON_W,
+            corner_radius=tokens.CORNER_R,
         )
         # start/close buttons
         self.blocknet_start_close_button_string_var = ctk.StringVar(value="")
-        self.blocknet_start_close_button = ctk.CTkButton(
+        self.blocknet_start_close_button = make_button(
             self.master_frame,
             image=self.root_gui.transparent_img,
-            # textvariable=self.blocknet_start_close_button_string_var,
-            width=BINS_BUTTONS_WIDTH,
+            width=tokens.BIN_BUTTON_W,
             text="",
             command=self.parent.start_or_close_blocknet,
-            corner_radius=CORNER_RADIUS,
+            corner_radius=tokens.CORNER_R,
         )
         self.blockdx_start_close_button_string_var = ctk.StringVar(value="")
-        self.blockdx_start_close_button = ctk.CTkButton(
+        self.blockdx_start_close_button = make_button(
             self.master_frame,
             image=self.root_gui.transparent_img,
-            # textvariable=self.blockdx_start_close_button_string_var,
-            width=BINS_BUTTONS_WIDTH,
+            width=tokens.BIN_BUTTON_W,
             text="",
             command=self.parent.start_or_close_blockdx,
-            corner_radius=CORNER_RADIUS,
+            corner_radius=tokens.CORNER_R,
         )
         self.xlite_toggle_execution_string_var = ctk.StringVar(value="")
-        self.xlite_toggle_execution_button = ctk.CTkButton(
+        self.xlite_toggle_execution_button = make_button(
             self.master_frame,
             image=self.root_gui.transparent_img,
-            # textvariable=self.xlite_start_close_button_string_var,
-            width=BINS_BUTTONS_WIDTH,
+            width=tokens.BIN_BUTTON_W,
             text="",
             command=self.parent.start_or_close_xlite,
-            corner_radius=CORNER_RADIUS,
+            corner_radius=tokens.CORNER_R,
         )
-        self.bots_toggle_execution_button = ctk.CTkButton(
+        self.bots_toggle_execution_button = make_button(
             self.master_frame,
             image=self.root_gui.transparent_img,
             text="",
             command=self.toggle_bots_execution_command,
-            width=BINS_BUTTONS_WIDTH,
-            corner_radius=CORNER_RADIUS,
+            width=tokens.BIN_BUTTON_W,
+            corner_radius=tokens.CORNER_R,
         )
 
         # Bots buttons
@@ -300,38 +277,3 @@ class BinaryFrameManager:
             self.root_gui.after(INTERVAL_BOTS_RETRY_MS, lambda: self.run_after_setup(_retries + 1, max_retries))
         except Exception as e:  # debug logged
             logger.debug("Suppressed Exception: %s", e, exc_info=True)
-
-    def grid_widgets(self, x, y):
-        # bin
-        self.header_label.grid(row=x, column=y, padx=5, pady=5, sticky="nw")
-        self.button_switch_theme.grid(row=x, column=y + 5, padx=5, pady=5, sticky="e")
-        label_sticky = "e"
-        self.blocknet_label.grid(row=x + 1, column=y, padx=5, pady=5, sticky=label_sticky)
-        self.blockdx_label.grid(row=x + 2, column=y, padx=5, pady=5, sticky=label_sticky)
-        self.xlite_label.grid(row=x + 3, column=y, padx=5, pady=5, sticky=label_sticky)
-        self.bots_label.grid(row=x + 4, column=y, padx=5, pady=5, sticky=label_sticky)
-        sticky = "ew"
-        self.blocknet_version_optionmenu.grid(row=x + 1, column=y + 1, sticky=sticky)
-        self.blockdx_version_optionmenu.grid(row=x + 2, column=y + 1, sticky=sticky)
-        self.xlite_version_optionmenu.grid(row=x + 3, column=y + 1, sticky=sticky)
-        self.bots_version_optionmenu.grid(row=x + 4, column=y + 1, sticky=sticky)
-
-        self.blocknet_found_checkbox.grid(row=x + 1, column=y + 2, padx=5, sticky=sticky)
-        self.blockdx_found_checkbox.grid(row=x + 2, column=y + 2, padx=5, sticky=sticky)
-        self.xlite_found_checkbox.grid(row=x + 3, column=y + 2, padx=5, sticky=sticky)
-        self.bots_found_checkbox.grid(row=x + 4, column=y + 2, padx=5, sticky=sticky)
-        button_sticky = "ew"
-        padx_main_frame = (70, 8)
-        # padx_main_frame = 5
-        self.install_delete_blocknet_button.grid(row=x + 1, column=y + 3, padx=padx_main_frame, sticky=button_sticky)
-        self.install_delete_blockdx_button.grid(row=x + 2, column=y + 3, padx=padx_main_frame, sticky=button_sticky)
-        self.install_delete_xlite_button.grid(row=x + 3, column=y + 3, padx=padx_main_frame, sticky=button_sticky)
-        self.install_delete_bots_button.grid(row=x + 4, column=y + 3, padx=padx_main_frame, sticky=button_sticky)
-        padx_main_frame = (8, 8)
-        padx_main_frame = 5
-        self.blocknet_start_close_button.grid(row=x + 1, column=y + 4, padx=padx_main_frame, sticky="e")
-        # Button for starting or closing Block-dx
-        self.blockdx_start_close_button.grid(row=x + 2, column=y + 4, padx=padx_main_frame, sticky="e")
-        # Button for starting or closing Xlite
-        self.xlite_toggle_execution_button.grid(row=x + 3, column=y + 4, padx=padx_main_frame, sticky="e")
-        self.bots_toggle_execution_button.grid(row=x + 4, column=y + 4, padx=padx_main_frame, sticky="e")

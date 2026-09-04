@@ -3,95 +3,64 @@ import os
 
 import customtkinter as ctk
 
-import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
 from custom_tk_mods import ctkInputDialogMod
-from gui.constants import (
-    BUTTON_WIDTH,
-    CHECK_BOXES_STICKY,
-    CORNER_RADIUS,
-    HEADER_FRAMES_STICKY,
-    PANEL_CHECKBOXES_WIDTH,
-    XLITE_FRAME_WIDTH,
-)
+from gui.layout import tokens
+from gui.layout.base_frame import BaseFrameManager
+from gui.layout.widgets import SegmentedPills, make_button, make_caption, make_checkbox, make_label
 from utilities import utils
+from utilities.bin_handlers.blocknet_handler import BlocknetHandler
 
 logger = logging.getLogger(__name__)
 
 
-class XliteFrameManager:
-    def __init__(self, parent):
-        self.root_gui = parent.root_gui
-        self.parent = parent
-        self.master_frame = ctk.CTkFrame(master=self.root_gui)
-        self.title_frame = ctk.CTkFrame(self.master_frame)
+class XliteFrameManager(BaseFrameManager):
+    panel = "xlite"
 
-        self.xlite_label = ctk.CTkLabel(
-            self.title_frame,
-            text=widgets_strings.xlite_frame_title_string,
-            anchor=HEADER_FRAMES_STICKY,
-            width=XLITE_FRAME_WIDTH,
-        )
+    def __init__(self, parent):
+        super().__init__(parent)
+        # Pin the title to the golden width: caption + pills + button content is
+        # narrower than the sibling titles; the pin keeps identical checkbox
+        # columns in every panel (replaces legacy XLITE_TITLE_WIDTH).
+        self.title_frame.configure(width=tokens.TITLE_W)
+
+        self.xlite_label = make_caption(self.title_frame, widgets_strings.xlite_frame_title_string)
         # Checkboxes
         self.process_status_checkbox_state = ctk.BooleanVar()
         self.process_status_checkbox_string_var = ctk.StringVar(value="")
-        self.process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.process_status_checkbox = make_checkbox(
             self.master_frame,
-            textvariable=self.process_status_checkbox_string_var,
             variable=self.process_status_checkbox_state,
-            corner_radius=CORNER_RADIUS,
-            state="disabled",
-            width=PANEL_CHECKBOXES_WIDTH,
+            textvariable=self.process_status_checkbox_string_var,
         )
 
         self.daemon_process_status_checkbox_state = ctk.BooleanVar()
         self.daemon_process_status_checkbox_string_var = ctk.StringVar(value="")
-        self.daemon_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.daemon_process_status_checkbox = make_checkbox(
             self.master_frame,
-            textvariable=self.daemon_process_status_checkbox_string_var,
             variable=self.daemon_process_status_checkbox_state,
-            corner_radius=CORNER_RADIUS,
-            state="disabled",
-            width=PANEL_CHECKBOXES_WIDTH,
+            textvariable=self.daemon_process_status_checkbox_string_var,
         )
 
-        self.reverse_proxy_process_status_checkbox_state = ctk.BooleanVar()
-        self.reverse_proxy_status_str = ctk.StringVar(value=widgets_strings.xlite_reverse_proxy_not_running_string)
-        self.reverse_proxy_process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(
-            self.master_frame,
-            textvariable=self.reverse_proxy_status_str,
-            variable=self.reverse_proxy_process_status_checkbox_state,
-            corner_radius=CORNER_RADIUS,
-            state="disabled",
-            width=PANEL_CHECKBOXES_WIDTH,
-        )
         self.valid_config_checkbox_state = ctk.BooleanVar()
         self.valid_config_checkbox_string_var = ctk.StringVar(value="")
-        self.valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.valid_config_checkbox = make_checkbox(
             self.master_frame,
-            textvariable=self.valid_config_checkbox_string_var,
             variable=self.valid_config_checkbox_state,
-            corner_radius=CORNER_RADIUS,
-            state="disabled",
-            width=PANEL_CHECKBOXES_WIDTH,
+            textvariable=self.valid_config_checkbox_string_var,
         )
 
         self.daemon_valid_config_checkbox_state = ctk.BooleanVar()
         self.daemon_valid_config_checkbox_string_var = ctk.StringVar(value="")
-        self.daemon_valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.daemon_valid_config_checkbox = make_checkbox(
             self.master_frame,
-            textvariable=self.daemon_valid_config_checkbox_string_var,
             variable=self.daemon_valid_config_checkbox_state,
-            corner_radius=CORNER_RADIUS,
-            state="disabled",
-            width=PANEL_CHECKBOXES_WIDTH,
+            textvariable=self.daemon_valid_config_checkbox_string_var,
         )
 
         # Create the Button widget with a text variable
         self.store_password_button_string_var = ctk.StringVar(value="")
-        self.store_password_button = ctk.CTkButton(
-            self.title_frame, textvariable=self.store_password_button_string_var, width=BUTTON_WIDTH
-        )
+        self.store_password_button = make_button(self.title_frame, textvariable=self.store_password_button_string_var)
 
         # Bind left-click event
         self.store_password_button.bind("<Button-1>", lambda event: self.xlite_store_password_button_mouse_click(event))
@@ -101,6 +70,85 @@ class XliteFrameManager:
 
         # Set button command for normal button clicks
         self.store_password_button.configure(command=self.xlite_store_password_button_mouse_click)
+
+        # XBridge BLOCK source selector: which wallet feeds the xbridge.conf BLOCK section.
+        self.xbridge_block_source_var = ctk.StringVar(value=self._initial_xbridge_block_source())
+        self.xbridge_block_source_label = make_label(
+            self.title_frame, text=widgets_strings.xbridge_block_source_label_string
+        )
+        self.xbridge_block_pills = SegmentedPills(
+            self.title_frame,
+            values=[
+                widgets_strings.xbridge_block_source_core_string,
+                widgets_strings.xbridge_block_source_xlite_string,
+            ],
+            variable=self.xbridge_block_source_var,
+            command=self.on_xbridge_block_source_changed,
+        )
+        # Spec-referenced alias: renderer grids this attr in the title middle slot.
+        self.xbridge_block_segmented = self.xbridge_block_pills.widget
+
+    def _paint_xbridge_pills(self) -> None:
+        """Repaint per-state pill text (kept for the existing test/poll call sites)."""
+        self.xbridge_block_pills.repaint()
+
+    def _initial_xbridge_block_source(self) -> str:
+        """Display value at startup: stored pref, else auto (same BLOCK-settings test as the handler)."""
+        stored = getattr(self.root_gui, "xbridge_block_source", None)
+        if stored == "core":
+            return widgets_strings.xbridge_block_source_core_string
+        if stored == "xlite":
+            return widgets_strings.xbridge_block_source_xlite_string
+        try:
+            with self.parent.utility._lock:
+                raw = self.parent.utility.xlite_daemon_confs_local
+            if BlocknetHandler._daemon_has_block_settings(raw):
+                return widgets_strings.xbridge_block_source_xlite_string
+        except Exception as e:  # debug logged
+            logger.debug(f"xbridge_block_source auto-resolve failed: {e}")
+        return widgets_strings.xbridge_block_source_core_string
+
+    def on_xbridge_block_source_changed(self, value: str) -> None:
+        """Persist the user pick (like theme); the 1s poll applies it via the normal check path."""
+        if value == widgets_strings.xbridge_block_source_core_string:
+            source = "core"
+        elif value == widgets_strings.xbridge_block_source_xlite_string:
+            source = "xlite"
+        else:
+            logger.warning(f"Ignoring unknown XBridge BLOCK source selection: {value!r}")
+            return
+        utils.save_cfg_json("xbridge_block_source", source)
+        self.root_gui.xbridge_block_source = source
+        self.root_gui.disable_daemons_conf_check = False
+        # Dirty the UiSync snapshot: update_status_xlite only runs on snapshot change,
+        # and neither the flag nor the pref is part of it — without this the pick would never apply.
+        self.parent._last_snapshot = None
+        self._paint_xbridge_pills()
+        logger.info(f"XBridge BLOCK source set to {source} — will apply on next conf check")
+
+    def update_xbridge_block_source_widget(self) -> None:
+        """Sync enabled state; auto selection tracks daemon BLOCK while no explicit pref stored."""
+        try:
+            with self.parent.utility._lock:
+                raw = self.parent.utility.xlite_daemon_confs_local
+                snapshot = dict(raw) if isinstance(raw, dict) else {}
+            daemon_has_block = BlocknetHandler._daemon_has_block_settings(snapshot)
+        except Exception as e:  # debug logged
+            logger.debug(f"xbridge_block_source widget update failed: {e}")
+            return
+        try:
+            # No choice to make while the daemon holds no BLOCK: Core is the sole source.
+            self.xbridge_block_segmented.configure(state="disabled" if not daemon_has_block else "normal")
+            if getattr(self.root_gui, "xbridge_block_source", None) not in ("core", "xlite"):
+                auto_display = (
+                    widgets_strings.xbridge_block_source_xlite_string
+                    if daemon_has_block
+                    else widgets_strings.xbridge_block_source_core_string
+                )
+                if self.xbridge_block_pills.get() != auto_display:
+                    self.xbridge_block_pills.set(auto_display)
+        except Exception as e:  # debug logged
+            logger.debug(f"xbridge_block_source widget update failed: {e}")
 
     def xlite_store_password_button_mouse_click(self, event=None):
         # Single-route file store: millisecond I/O, runs synchronously on the GUI thread.
@@ -130,7 +178,10 @@ class XliteFrameManager:
             logger.info("Left click detected")
             fg_color = self.master_frame.cget("fg_color")
             password = ctkInputDialogMod.CTkInputDialog(
-                title="Store XLite Password", text="Enter XLite password:", show="*", fg_color=fg_color
+                title=widgets_strings.xlite_store_password_dialog_title_string,
+                text=widgets_strings.xlite_store_password_dialog_text_string,
+                show="*",
+                fg_color=fg_color,
             ).get_input()
             if password:
                 if utils.store_password(password):
@@ -147,19 +198,6 @@ class XliteFrameManager:
                 logger.info("No password entered.")
             # Perform actions for left-click (if needed)
             return "break"
-
-    def grid_widgets(self, x, y):
-        # xlite
-        self.xlite_label.grid(row=x, column=y, padx=5, pady=5)
-        self.process_status_checkbox.grid(row=x + 1, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
-        self.daemon_process_status_checkbox.grid(row=x + 2, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
-        self.valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
-        self.daemon_valid_config_checkbox.grid(row=x + 2, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
-        # TEMP DISABLE xlite-reverse-proxy widget — keep for restore:
-        # self.reverse_proxy_process_status_checkbox.grid(
-        #     row=x + 3, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY
-        # )
-        self.store_password_button.grid(row=x, column=y + 3, padx=2, pady=2, sticky="e")
 
     def update_xlite_process_status_checkbox(self):
         # xlite_process_status_checkbox_state
@@ -220,9 +258,4 @@ class XliteFrameManager:
         self.daemon_valid_config_checkbox_string_var.set(var)
 
     def update_xlite_reverse_proxy_process_status(self):
-        if self.parent.reverse_proxy_running:
-            self.reverse_proxy_status_str.set(widgets_strings.xlite_reverse_proxy_running_string)
-            self.reverse_proxy_process_status_checkbox_state.set(True)
-        else:
-            self.reverse_proxy_status_str.set(widgets_strings.xlite_reverse_proxy_not_running_string)
-            self.reverse_proxy_process_status_checkbox_state.set(False)
+        """No-op keeper: reverse-proxy panel removed; XliteManager still polls this hook."""

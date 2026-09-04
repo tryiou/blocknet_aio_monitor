@@ -96,15 +96,11 @@ urllib3_logger.setLevel(logging.WARNING)
 urllib3_logger = logging.getLogger("watchdog")
 urllib3_logger.setLevel(logging.WARNING)
 
-from gui.constants import (
-    INTERVAL_PROCESS_CHECK_MS,
-    MAIN_FRAMES_STICKY,
-    TIME_DISABLE_BUTTON_MS,
-    TITLE_FRAMES_STICKY,
-    tooltip_bg_color,
-)
+from gui.layout.specs import PANEL_ORDER
+from gui.layout.tokens import TOOLTIP_BG
 from gui.ui_sync_controller import UiSyncController
 from utilities.logging_setup import setup_file_logging
+from utilities.timing import INTERVAL_PROCESS_CHECK_MS, TIME_DISABLE_BUTTON_MS
 
 container = get_container()
 # Rotating file log (5MB x 3 files) for cold checks; never blocks startup.
@@ -139,9 +135,13 @@ class BlocknetAioGui(ctk.CTk):
         self.adjust_theme()
         self.custom_path: str = None
         self.stored_password: str = None
+        self.xbridge_block_source: str | None = None
         if self.cfg:
             if "custom_path" in self.cfg:
                 self.custom_path = self.cfg["custom_path"]
+            # Explicit user pick (core/xlite); absent/invalid = auto-resolve at check time.
+            if "xbridge_block_source" in self.cfg and self.cfg["xbridge_block_source"] in ("core", "xlite"):
+                self.xbridge_block_source = self.cfg["xbridge_block_source"]
             if "xl_pass" in self.cfg:
                 # Single-route file store: load returns None on any failure
                 # and the file is always kept — re-store over it if needed.
@@ -315,7 +315,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=widgets_strings.tooltip_howtouse,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -324,7 +324,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=widgets_strings.tooltip_howtouse,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -333,7 +333,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=widgets_strings.tooltip_howtouse,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -342,7 +342,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=widgets_strings.tooltip_howtouse,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -351,7 +351,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=widgets_strings.tooltip_bins_title_msg,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -360,7 +360,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=widgets_strings.tooltip_bins_title_msg,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -370,14 +370,14 @@ class BlocknetAioGui(ctk.CTk):
             delay=1.0,
             border_width=2,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
         )
         self.tooltip_manager.register_tooltip(
             self.binary_manager.frame_manager.blocknet_label,
             msg=widgets_strings.tooltip_blocknet_core_label_msg,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -386,7 +386,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=widgets_strings.tooltip_blockdx_label_msg,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -395,7 +395,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=widgets_strings.tooltip_xlite_label_msg,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -405,7 +405,7 @@ class BlocknetAioGui(ctk.CTk):
             delay=1,
             width=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -415,7 +415,7 @@ class BlocknetAioGui(ctk.CTk):
             delay=1,
             width=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -424,7 +424,7 @@ class BlocknetAioGui(ctk.CTk):
             msg=container.xlite_release_url,
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -433,7 +433,7 @@ class BlocknetAioGui(ctk.CTk):
             msg="",
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -442,7 +442,7 @@ class BlocknetAioGui(ctk.CTk):
             msg="",
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -451,7 +451,7 @@ class BlocknetAioGui(ctk.CTk):
             msg="",
             delay=1,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
             border_width=2,
             justify="left",
         )
@@ -461,7 +461,7 @@ class BlocknetAioGui(ctk.CTk):
             delay=1.0,
             border_width=2,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
         )
         self.tooltip_manager.register_tooltip(
             self.blockdx_manager.frame_manager.label,
@@ -469,51 +469,28 @@ class BlocknetAioGui(ctk.CTk):
             delay=1.0,
             border_width=2,
             follow=True,
-            bg_color=tooltip_bg_color,
+            bg_color=TOOLTIP_BG,
         )
 
     def init_grid(self) -> None:
-        """Initialize the grid layout for GUI components."""
-        x: int = 0
-        y: int = 0
-        padx_main_frame: int = 10
-        pady_main_frame: int = 5
-        self.grid_frames(x, y, padx_main_frame, pady_main_frame)
-        self.binary_manager.frame_manager.grid_widgets(x, y)
-        self.blocknet_manager.frame_manager.grid_widgets(x, y)
-        self.blockdx_manager.frame_manager.grid_widgets(x, y)
-        self.xlite_manager.frame_manager.grid_widgets(x, y)
+        """Initialize the grid layout: shell owns root rows, panels own internals."""
+        self.columnconfigure(0, weight=1)
+        self.grid_frames()
+        self.binary_manager.frame_manager.grid_widgets()
+        self.blocknet_manager.frame_manager.grid_widgets()
+        self.blockdx_manager.frame_manager.grid_widgets()
+        self.xlite_manager.frame_manager.grid_widgets()
 
-    def grid_frames(self, x: int, y: int, padx_main_frame: int, pady_main_frame: int) -> None:
-        """Grid layout for frames in the GUI."""
-        self.binary_manager.frame_manager.master_frame.grid(
-            row=x, column=y, padx=padx_main_frame, pady=pady_main_frame, sticky=MAIN_FRAMES_STICKY
-        )
-        # bin panel have 5 buttons per row
-        self.binary_manager.frame_manager.title_frame.grid(
-            row=0, column=0, columnspan=5, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY
-        )
-
-        self.blocknet_manager.frame_manager.master_frame.grid(
-            row=x + 1, column=y, padx=padx_main_frame, pady=pady_main_frame, sticky=MAIN_FRAMES_STICKY
-        )
-        self.blocknet_manager.frame_manager.title_frame.grid(
-            row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY
-        )
-
-        self.blockdx_manager.frame_manager.master_frame.grid(
-            row=x + 2, column=y, padx=padx_main_frame, pady=pady_main_frame, sticky=MAIN_FRAMES_STICKY
-        )
-        self.blockdx_manager.frame_manager.title_frame.grid(
-            row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY
-        )
-
-        self.xlite_manager.frame_manager.master_frame.grid(
-            row=x + 3, column=y, padx=padx_main_frame, pady=pady_main_frame, sticky=MAIN_FRAMES_STICKY
-        )
-        self.xlite_manager.frame_manager.title_frame.grid(
-            row=0, column=0, columnspan=2, padx=5, pady=5, sticky=TITLE_FRAMES_STICKY
-        )
+    def grid_frames(self) -> None:
+        """Grid the four panel frames into the root shell (row per panel)."""
+        managers = {
+            "binary": self.binary_manager.frame_manager,
+            "core": self.blocknet_manager.frame_manager,
+            "blockdx": self.blockdx_manager.frame_manager,
+            "xlite": self.xlite_manager.frame_manager,
+        }
+        for row, name in enumerate(PANEL_ORDER):
+            managers[name].grid_shell(row)
 
     def handle_signal(self, signum: int, frame) -> None:
         """Handle signals like SIGINT and SIGTERM."""

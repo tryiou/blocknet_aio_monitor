@@ -8,8 +8,8 @@ import zipfile
 import psutil
 import requests
 
-from gui.constants import DOWNLOAD_CHUNK_SIZE, RPC_TIMEOUT_S
 from utilities.app_container import AppContainer, get_container
+from utilities.timing import DOWNLOAD_CHUNK_SIZE, RPC_TIMEOUT_S
 
 # from utilities.helper_util import UtilityHelper
 logger = logging.getLogger(__name__)

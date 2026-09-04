@@ -2,60 +2,40 @@ import os
 
 import customtkinter as ctk
 
-import custom_tk_mods.ctkCheckBox as ctkCheckBoxMod
 import widgets_strings
-from gui.constants import (
-    BLOCKDX_FRAME_WIDTH,
-    CHECK_BOXES_STICKY,
-    CORNER_RADIUS,
-    HEADER_FRAMES_STICKY,
-    PANEL_CHECKBOXES_WIDTH,
-)
+from gui.layout import tokens
+from gui.layout.base_frame import BaseFrameManager
+from gui.layout.widgets import make_caption, make_checkbox
 from utilities.app_container import get_container
 
 
-class BlockDxFrameManager:
+class BlockDxFrameManager(BaseFrameManager):
+    panel = "blockdx"
+
     def __init__(self, parent):
-        self.root_gui = parent.root_gui
-        self.parent = parent
+        super().__init__(parent)
 
-        self.master_frame = ctk.CTkFrame(master=self.root_gui)
-        self.title_frame = ctk.CTkFrame(self.master_frame)
-
-        self.label = ctk.CTkLabel(
+        self.label = make_caption(
             self.title_frame,
-            text=widgets_strings.blockdx_frame_title_string,
-            anchor=HEADER_FRAMES_STICKY,
-            width=BLOCKDX_FRAME_WIDTH,
+            widgets_strings.blockdx_frame_title_string,
+            width=tokens.BLOCKDX_LABEL_W,
         )
 
         self.process_status_checkbox_state = ctk.BooleanVar()
         self.process_status_checkbox_string_var = ctk.StringVar(value="")
-        self.process_status_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.process_status_checkbox = make_checkbox(
             self.master_frame,
-            textvariable=self.process_status_checkbox_string_var,
             variable=self.process_status_checkbox_state,
-            corner_radius=CORNER_RADIUS,
-            state="disabled",
-            width=PANEL_CHECKBOXES_WIDTH,
+            textvariable=self.process_status_checkbox_string_var,
         )
 
         self.valid_config_checkbox_state = ctk.BooleanVar()
         self.valid_config_checkbox_string_var = ctk.StringVar(value="")
-        self.valid_config_checkbox = ctkCheckBoxMod.CTkCheckBox(
+        self.valid_config_checkbox = make_checkbox(
             self.master_frame,
-            textvariable=self.valid_config_checkbox_string_var,
             variable=self.valid_config_checkbox_state,
-            corner_radius=CORNER_RADIUS,
-            state="disabled",
-            width=PANEL_CHECKBOXES_WIDTH,
-        )  # , disabledforeground='black')
-
-    def grid_widgets(self, x, y):
-        # block-dx
-        self.label.grid(row=x, column=y, padx=5, pady=5)
-        self.process_status_checkbox.grid(row=x + 1, column=y, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
-        self.valid_config_checkbox.grid(row=x + 1, column=y + 1, padx=5, pady=5, sticky=CHECK_BOXES_STICKY)
+            textvariable=self.valid_config_checkbox_string_var,
+        )
 
     def update_blockdx_process_status_checkbox(self):
         # blockdx_process_status_checkbox_state

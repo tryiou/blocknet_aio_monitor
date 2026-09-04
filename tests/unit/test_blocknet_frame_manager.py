@@ -6,7 +6,6 @@ import customtkinter as ctk
 import pytest
 
 import widgets_strings
-from gui import constants
 from gui.blocknet_frame_manager import BlocknetCoreFrameManager
 
 # ============================================================================
@@ -48,11 +47,12 @@ def mock_parent():
 def manager(mock_parent):
     """Create a BlocknetCoreFrameManager instance with mocked dependencies"""
     with (
-        patch("gui.blocknet_frame_manager.ctk.CTkFrame"),
-        patch("gui.blocknet_frame_manager.ctk.CTkLabel"),
-        patch("gui.blocknet_frame_manager.ctk.CTkEntry"),
-        patch("gui.blocknet_frame_manager.ctk.CTkButton"),
-        patch("gui.blocknet_frame_manager.ctkCheckBoxMod.CTkCheckBox"),
+        patch("gui.layout.widgets.make_frame"),
+        patch("gui.blocknet_frame_manager.make_caption"),
+        patch("gui.blocknet_frame_manager.make_label"),
+        patch("gui.blocknet_frame_manager.make_entry"),
+        patch("gui.blocknet_frame_manager.make_button"),
+        patch("gui.blocknet_frame_manager.make_checkbox"),
         patch("gui.blocknet_frame_manager.ctk.StringVar") as mock_string_var,
         patch("gui.blocknet_frame_manager.ctk.BooleanVar") as mock_boolean_var,
     ):
@@ -103,11 +103,12 @@ class TestBlocknetCoreFrameManager:
     def test_init(self, mock_parent):
         """Test initialization of BlocknetCoreFrameManager"""
         with (
-            patch("gui.blocknet_frame_manager.ctk.CTkFrame"),
-            patch("gui.blocknet_frame_manager.ctk.CTkLabel"),
-            patch("gui.blocknet_frame_manager.ctk.CTkEntry"),
-            patch("gui.blocknet_frame_manager.ctk.CTkButton"),
-            patch("gui.blocknet_frame_manager.ctkCheckBoxMod.CTkCheckBox"),
+            patch("gui.layout.widgets.make_frame"),
+            patch("gui.blocknet_frame_manager.make_caption"),
+            patch("gui.blocknet_frame_manager.make_label"),
+            patch("gui.blocknet_frame_manager.make_entry"),
+            patch("gui.blocknet_frame_manager.make_button"),
+            patch("gui.blocknet_frame_manager.make_checkbox"),
             patch("gui.blocknet_frame_manager.ctk.StringVar") as mock_string_var,
             patch("gui.blocknet_frame_manager.ctk.BooleanVar") as mock_boolean_var,
         ):
@@ -125,7 +126,7 @@ class TestBlocknetCoreFrameManager:
 
     def test_grid_widgets(self, manager):
         """Test grid_widgets method"""
-        manager.grid_widgets(0, 0)
+        manager.grid_widgets()
 
         # Verify all widgets were gridded
         manager.label.grid.assert_called_once()

@@ -9,8 +9,8 @@ from pathlib import Path
 
 import requests
 
-from gui.constants import DOWNLOAD_CHUNK_SIZE, GIT_COMMAND_TIMEOUT_S, RPC_TIMEOUT_S
 from utilities.app_container import get_container
+from utilities.timing import DOWNLOAD_CHUNK_SIZE, GIT_COMMAND_TIMEOUT_S, RPC_TIMEOUT_S
 
 try:
     import utilities.miniforge_portable as miniforge_portable

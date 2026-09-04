@@ -116,6 +116,7 @@ class XliteManager:
                 getattr(self.utility, "downloading_bin", None),
                 tuple(sorted(daemon_confs.keys())) if isinstance(daemon_confs, dict) else None,
                 getattr(getattr(self, "root_gui", None), "stored_password", None),
+                getattr(getattr(self, "root_gui", None), "xbridge_block_source", None),
             )
         except Exception:
             return (None,)
@@ -136,6 +137,7 @@ class XliteManager:
         self.frame_manager.update_xlite_daemon_process_status()
         self.frame_manager.update_xlite_valid_config_checkbox()
         self.frame_manager.update_xlite_daemon_valid_config_checkbox()
+        self.frame_manager.update_xbridge_block_source_widget()
         # TEMP DISABLE xlite-reverse-proxy polling — keep for restore:
         # self.reverse_proxy_running = self.reverse_proxy.port_occupied() or self.reverse_proxy.running_locally
         self.reverse_proxy_running = False

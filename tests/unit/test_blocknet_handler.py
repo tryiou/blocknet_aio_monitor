@@ -1129,5 +1129,145 @@ class TestGetRemoteFileSizeExtended(unittest.TestCase):
             get_remote_file_size("http://example.com/missing.zip")
 
 
+class TestXbridgeBlockSource(unittest.TestCase):
+    """XBridge BLOCK source resolution: auto/explicit pref with fallback, never silently dropping BLOCK."""
+
+    DAEMON_WITH_BLOCK = {
+        "BLOCK": {"rpcUsername": "xuser", "rpcPassword": "xpass", "rpcPort": "41414"},
+        "BTC": {"rpcUsername": "btcuser", "rpcPassword": "btcpass", "rpcPort": "18332"},
+    }
+    DAEMON_WITHOUT_BLOCK = {
+        "BTC": {"rpcUsername": "btcuser", "rpcPassword": "btcpass", "rpcPort": "18332"},
+    }
+    PARSED_CONFS = {
+        "BLOCK": {"BLOCK": {"Username": "old", "Password": "old", "Port": "0"}},
+        "BTC": {"BTC": {"Username": "old", "Password": "old", "Port": "0"}},
+    }
+    CORE_CONF = {"global": {"rpcuser": "coreuser", "rpcpassword": "corepass", "rpcport": "41412"}}
+    REMOTE = {"BLOCK": {"Username": "t", "Password": "t", "Port": "1"}}
+
+    def setUp(self):
+        """Mirror TestBlocknetHandlerCoreMethods fixture with a deterministic base conf."""
+        self.mock_container = MagicMock()
+        self.mock_container.aio_folder = "/aio/path"
+        self.mock_container.conf_data.extra_option_blocknet_core_conf = []
+        self.mock_container.conf_data.base_xbridge_conf = {
+            "ExchangeWallets": "",
+            "FullLog": "true",
+            "ShowAllOrders": "true",
+        }
+        with (
+            patch("utilities.bin_handlers.blocknet_handler.retrieve_xb_manifest"),
+            patch("utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_conf"),
+            patch("utilities.bin_handlers.blocknet_handler.retrieve_remote_blocknet_xbridge_conf"),
+            patch("utilities.bin_handlers.blocknet_handler.threading.Thread"),
+            patch("utilities.bin_handlers.blocknet_handler.parse_conf_file"),
+            patch("utilities.bin_handlers.blocknet_handler.save_conf_to_file"),
+            patch("utilities.bin_handlers.blocknet_handler.get_container", return_value=self.mock_container),
+            patch.object(self.mock_container, "get_blocknet_executable_path", return_value="/aio/path/blocknetd"),
+        ):
+            self.handler = BlocknetHandler(custom_path="/test/path")
+        self.handler.running = False
+
+    def _run_check(self, pref, xlite_conf, blocknet_conf):
+        with (
+            patch("utilities.utils.load_cfg_json", return_value=pref),
+            patch.object(self.handler, "parse_xbridge_conf"),
+            patch.object(self.handler, "retrieve_coin_conf"),
+            patch.object(self.handler, "save_xbridge_conf"),
+        ):
+            self.handler.xbridge_conf_local = {}
+            self.handler.blocknet_xbridge_conf_remote = dict(self.REMOTE)
+            self.handler.blocknet_conf_local = blocknet_conf
+            self.handler.parsed_xbridge_confs = {k: dict(v) for k, v in self.PARSED_CONFS.items()}
+            result = self.handler.check_xbridge_conf(xlite_conf)
+        return result
+
+    def test_auto_resolves_xlite_when_daemon_has_block(self):
+        """Unset pref + daemon BLOCK settings: daemon RPC feeds the BLOCK section (status quo)."""
+        result = self._run_check({}, dict(self.DAEMON_WITH_BLOCK), dict(self.CORE_CONF))
+
+        self.assertTrue(result)
+        block = self.handler.xbridge_conf_local["BLOCK"]
+        self.assertEqual(block["Username"], "xuser")
+        self.assertEqual(block["Password"], "xpass")
+        self.assertEqual(block["Port"], "41414")
+        self.assertEqual(self.handler.xbridge_block_effective, "xlite")
+        self.assertFalse(self.handler.xbridge_block_fallback)
+
+    def test_auto_falls_back_to_core_without_daemon_block(self):
+        """Unset pref + no daemon BLOCK: Core RPC feeds the BLOCK section."""
+        result = self._run_check({}, dict(self.DAEMON_WITHOUT_BLOCK), dict(self.CORE_CONF))
+
+        self.assertTrue(result)
+        block = self.handler.xbridge_conf_local["BLOCK"]
+        self.assertEqual(block["Username"], "coreuser")
+        self.assertEqual(block["Password"], "corepass")
+        self.assertEqual(block["Port"], "41412")
+        self.assertEqual(self.handler.xbridge_block_effective, "core")
+
+    def test_explicit_core_skips_daemon_block_but_merges_other_coins(self):
+        """Stored 'core' wins even when the daemon holds BLOCK; other daemon coins still merge."""
+        result = self._run_check({"xbridge_block_source": "core"}, dict(self.DAEMON_WITH_BLOCK), dict(self.CORE_CONF))
+
+        self.assertTrue(result)
+        self.assertEqual(self.handler.xbridge_conf_local["BLOCK"]["Username"], "coreuser")
+        self.assertEqual(self.handler.xbridge_conf_local["BTC"]["Username"], "btcuser")
+        self.assertEqual(self.handler.xbridge_block_effective, "core")
+        self.assertFalse(self.handler.xbridge_block_fallback)
+
+    def test_explicit_xlite_without_daemon_block_falls_back_to_core(self):
+        """Stored 'xlite' + daemon without BLOCK: Core feeds BLOCK with a warning, never dropped."""
+        with self.assertLogs("utilities.bin_handlers.blocknet_handler", level="WARNING") as logs:
+            result = self._run_check(
+                {"xbridge_block_source": "xlite"}, dict(self.DAEMON_WITHOUT_BLOCK), dict(self.CORE_CONF)
+            )
+
+        self.assertTrue(result)
+        self.assertEqual(self.handler.xbridge_conf_local["BLOCK"]["Username"], "coreuser")
+        self.assertEqual(self.handler.xbridge_block_effective, "core")
+        self.assertTrue(self.handler.xbridge_block_fallback)
+        self.assertTrue(any("falling back to Core" in m for m in logs.output))
+
+    def test_explicit_core_without_core_rpc_falls_back_to_xlite(self):
+        """Stored 'core' + blocknet.conf without RPC creds: daemon feeds BLOCK with a warning."""
+        with self.assertLogs("utilities.bin_handlers.blocknet_handler", level="WARNING") as logs:
+            result = self._run_check({"xbridge_block_source": "core"}, dict(self.DAEMON_WITH_BLOCK), {"global": {}})
+
+        self.assertTrue(result)
+        self.assertEqual(self.handler.xbridge_conf_local["BLOCK"]["Username"], "xuser")
+        self.assertEqual(self.handler.xbridge_block_effective, "xlite")
+        self.assertTrue(self.handler.xbridge_block_fallback)
+        self.assertTrue(any("falling back to XLite" in m for m in logs.output))
+
+    def test_invalid_pref_treated_as_auto(self):
+        """Unrecognized stored value never breaks resolution: falls back to auto semantics."""
+        result = self._run_check({"xbridge_block_source": "banana"}, dict(self.DAEMON_WITH_BLOCK), dict(self.CORE_CONF))
+
+        self.assertTrue(result)
+        self.assertEqual(self.handler.xbridge_conf_local["BLOCK"]["Username"], "xuser")
+        self.assertEqual(self.handler.xbridge_block_effective, "xlite")
+        self.assertFalse(self.handler.xbridge_block_fallback)
+
+    def test_both_sources_unavailable_writes_no_block_without_crashing(self):
+        """Explicit xlite + incomplete daemon entry + no core RPC: skips the coin, effective None."""
+        daemon_conf = {"BLOCK": {"rpcUsername": "", "rpcPassword": None}, "BTC": "ERROR PARSING"}
+        with self.assertLogs("utilities.bin_handlers.blocknet_handler", level="WARNING") as logs:
+            result = self._run_check({"xbridge_block_source": "xlite"}, daemon_conf, {"global": {}})
+
+        self.assertNotIn("BLOCK", self.handler.xbridge_conf_local)
+        self.assertIsNone(self.handler.xbridge_block_effective)
+        self.assertFalse(self.handler.xbridge_block_fallback)
+        self.assertTrue(any("incomplete daemon settings" in m for m in logs.output))
+
+    def test_explicit_core_both_sources_missing_reports_no_effective_source(self):
+        """Explicit core + empty core conf + incomplete daemon: credential-less BLOCK, effective None."""
+        daemon_conf = {"BTC": {"rpcUsername": "", "rpcPassword": None, "rpcPort": None}}
+        result = self._run_check({"xbridge_block_source": "core"}, daemon_conf, {"global": {}})
+
+        self.assertIsNone(self.handler.xbridge_block_effective)
+        self.assertFalse(self.handler.xbridge_block_fallback)
+
+
 if __name__ == "__main__":
     unittest.main()

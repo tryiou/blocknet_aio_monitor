@@ -54,11 +54,11 @@ class TestBlockDxFrameManager(unittest.TestCase):
         # Patch tkinter components and get_container
         self.patches = [
             patch("gui.blockdx_frame_manager.ctk", self.mock_ctk),
-            patch("gui.blockdx_frame_manager.ctk.CTkFrame", self.mock_ctk_frame),
-            patch("gui.blockdx_frame_manager.ctk.CTkLabel", self.mock_ctk_label),
+            patch("gui.layout.widgets.make_frame"),
+            patch("gui.blockdx_frame_manager.make_caption"),
+            patch("gui.blockdx_frame_manager.make_checkbox", self.mock_ctk_checkbox),
             patch("gui.blockdx_frame_manager.ctk.BooleanVar", self.mock_ctk_boolean_var),
             patch("gui.blockdx_frame_manager.ctk.StringVar", self.mock_ctk_string_var),
-            patch("gui.blockdx_frame_manager.ctkCheckBoxMod.CTkCheckBox", self.mock_ctk_checkbox),
             patch("gui.blockdx_frame_manager.get_container", return_value=self.mock_container),
         ]
 
@@ -87,7 +87,7 @@ class TestBlockDxFrameManager(unittest.TestCase):
 
     def test_grid_widgets(self):
         """Test grid_widgets method."""
-        self.manager.grid_widgets(0, 0)
+        self.manager.grid_widgets()
 
         # Verify that all widgets were gridded
         self.assertEqual(self.mock_ctk_checkbox.call_count, 2)  # 2 checkboxes
@@ -157,11 +157,11 @@ class TestBlockDxFrameManagerConfigValidation(unittest.TestCase):
         # Patch tkinter components and get_container
         self.patches = [
             patch("gui.blockdx_frame_manager.ctk", self.mock_ctk),
-            patch("gui.blockdx_frame_manager.ctk.CTkFrame", self.mock_ctk_frame),
-            patch("gui.blockdx_frame_manager.ctk.CTkLabel", self.mock_ctk_label),
+            patch("gui.layout.widgets.make_frame"),
+            patch("gui.blockdx_frame_manager.make_caption"),
+            patch("gui.blockdx_frame_manager.make_checkbox", self.mock_ctk_checkbox),
             patch("gui.blockdx_frame_manager.ctk.BooleanVar", self.mock_ctk_boolean_var),
             patch("gui.blockdx_frame_manager.ctk.StringVar", self.mock_ctk_string_var),
-            patch("gui.blockdx_frame_manager.ctkCheckBoxMod.CTkCheckBox", self.mock_ctk_checkbox),
             patch("gui.blockdx_frame_manager.get_container", return_value=self.mock_container),
         ]
 
