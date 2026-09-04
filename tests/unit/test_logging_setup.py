@@ -60,6 +60,9 @@ class TestLoggingSetup(unittest.TestCase):
                 handler.flush()
             with open(path, encoding="utf-8") as f:
                 self.assertIn("hello-cold-check", f.read())
+            # Windows: release the log file before TemporaryDirectory teardown
+            # (rmtree on an open file raises WinError 32).
+            self._close_handlers()
 
     def test_idempotent_second_call_attaches_nothing(self):
         """Calling twice for the same folder adds exactly one handler."""
@@ -70,6 +73,8 @@ class TestLoggingSetup(unittest.TestCase):
             second = setup_file_logging(tmpdir, root_logger=self.log)
             self.assertEqual(first, second)
             self.assertEqual(len(self.log.handlers), 1)
+            # Windows: release the log file before TemporaryDirectory teardown.
+            self._close_handlers()
 
     def test_rotation_caps_at_three_files(self):
         """Forced tiny rotation keeps live + 2 backups, never a .3 file."""
@@ -86,6 +91,8 @@ class TestLoggingSetup(unittest.TestCase):
             self.assertTrue(os.path.exists(base + ".1"))
             self.assertTrue(os.path.exists(base + ".2"))
             self.assertFalse(os.path.exists(base + ".3"))
+            # Windows: release the log files before TemporaryDirectory teardown.
+            self._close_handlers()
 
     def test_unwritable_folder_returns_none(self):
         """os.makedirs failure is swallowed, returns None."""
