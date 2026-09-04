@@ -104,8 +104,11 @@ from gui.constants import (
     tooltip_bg_color,
 )
 from gui.ui_sync_controller import UiSyncController
+from utilities.logging_setup import setup_file_logging
 
 container = get_container()
+# Rotating file log (5MB x 3 files) for cold checks; never blocks startup.
+setup_file_logging(container.aio_folder)
 theme_path = container.theme_path
 if theme_path:
     ctk.set_default_color_theme(theme_path)

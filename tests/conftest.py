@@ -32,6 +32,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Create a temporary directory for test isolation
 _temp_test_dir = tempfile.mkdtemp(prefix="aio_test_isolation_")
 
+# Disable app file logging for the whole test session: importing the entry
+# point (blocknet_aio_monitor) would otherwise attach a real
+# RotatingFileHandler to the root logger, whose per-record os.path.exists
+# checks consume globally-patched os.path.exists side_effects in unrelated
+# tests. Must be set before any app module is imported.
+os.environ.setdefault("AIO_NO_FILE_LOG", "1")
+
 # Patch modules at import time to prevent production folder access
 # These patches must be applied BEFORE any test files import the modules
 
