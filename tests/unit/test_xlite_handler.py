@@ -57,6 +57,11 @@ class TestXliteHandler(unittest.TestCase):
             "Windows": "/home/user/AppData/Xlite-daemon",
             "Darwin": "/home/user/Library/Application Support/Xlite-daemon",
         }
+        self.mock_conf_data.xlite_daemon_legacy_paths = {
+            "Linux": "/home/user/.CloudChains",
+            "Windows": "/home/user/AppData/CloudChains",
+            "Darwin": "/home/user/Library/Application Support/CloudChains",
+        }
         self.mock_conf_data.xlite_releases_urls = {
             (
                 "Linux",
@@ -430,6 +435,98 @@ class TestXliteHandler(unittest.TestCase):
         mock_rpc_fail.send_rpc_request.assert_called_once_with("ping")
         mock_rpc_ok.send_rpc_request.assert_called_once_with("ping")
         self.assertTrue(handler.valid_coins_rpc)
+
+    def _exists_for_dirs(self, *present: str):
+        """Build os.path.exists side_effect matching only given dirs' settings folders."""
+
+        def _side_effect(path: object) -> bool:
+            s = str(path)
+            return any(s == os.path.join(d, "settings") for d in present)
+
+        return _side_effect
+
+    def test_detect_generation_new_wins_when_both(self):
+        """Both settings dirs exist -> new generation wins."""
+        new_dir = "/home/user/.xlite-daemon"
+        leg_dir = "/home/user/.CloudChains"
+        with (
+            patch(
+                "utilities.bin_handlers.xlite_handler.os.path.exists",
+                side_effect=self._exists_for_dirs(new_dir, leg_dir),
+            ),
+            patch("utilities.bin_handlers.xlite_handler.os.listdir", return_value=[]),
+        ):
+            handler = self._create_handler_with_os("Linux")
+            self.assertEqual(handler._detect_daemon_generation(), "new")
+            self.assertEqual(handler.xlite_daemon_confs_local, {})
+
+    def test_detect_generation_old_uses_legacy_dir(self):
+        """Only legacy settings exists -> old generation, legacy dir parsed."""
+        leg_dir = "/home/user/.CloudChains"
+        mock_data = {"rpcPort": 12345, "rpcUsername": "user", "rpcPassword": "pass"}
+        with (
+            patch(
+                "utilities.bin_handlers.xlite_handler.os.path.exists",
+                side_effect=self._exists_for_dirs(leg_dir),
+            ),
+            patch("utilities.bin_handlers.xlite_handler.os.listdir", return_value=["coin-test.json"]),
+            patch("builtins.open", mock_open(read_data=json.dumps(mock_data))),
+            patch("utilities.bin_handlers.xlite_handler.json.load", return_value=mock_data),
+        ):
+            handler = self._create_handler_with_os("Linux")
+            self.assertEqual(handler._detect_daemon_generation(), "old")
+            self.assertIn("test", handler.xlite_daemon_confs_local)
+
+    def test_detect_generation_none(self):
+        """Neither settings dir exists -> none, empty confs, valid False, no probe."""
+        mock_rpc_server = MagicMock()
+        with patch("utilities.bin_handlers.xlite_handler.os.path.exists", return_value=False):
+            handler = self._create_handler_with_os("Linux")
+            self.assertEqual(handler._detect_daemon_generation(), "none")
+            self.assertEqual(handler.xlite_daemon_confs_local, {})
+            handler.coins_rpc = {"test": mock_rpc_server}
+            handler.xlite_daemon_confs_local = {"test": {"rpcEnabled": True}}
+            handler.running = True
+            handler.check_valid_xlite_coins_rpc(runonce=True)
+            mock_rpc_server.send_rpc_request.assert_not_called()
+            self.assertFalse(handler.valid_coins_rpc)
+
+    def test_valid_rpc_old_uses_getinfo(self):
+        """Old generation probes getinfo: dict result is valid, None is not."""
+        leg_dir = "/home/user/.CloudChains"
+        mock_rpc_server = MagicMock()
+        mock_rpc_server.send_rpc_request.return_value = {"blocks": 100}
+        with patch(
+            "utilities.bin_handlers.xlite_handler.os.path.exists",
+            side_effect=self._exists_for_dirs(leg_dir),
+        ):
+            handler = self._create_handler_with_os("Linux")
+            handler.coins_rpc = {"test": mock_rpc_server}
+            handler.xlite_daemon_confs_local = {"test": {"rpcEnabled": True}}
+            handler.running = True
+            handler.check_valid_xlite_coins_rpc(runonce=True)
+            mock_rpc_server.send_rpc_request.assert_called_once_with("getinfo")
+            self.assertTrue(handler.valid_coins_rpc)
+
+    def test_valid_rpc_old_continues_to_next_coin(self):
+        """Old generation keeps fixed iteration: first getinfo fail falls through."""
+        leg_dir = "/home/user/.CloudChains"
+        mock_rpc_fail = MagicMock()
+        mock_rpc_fail.send_rpc_request.return_value = None
+        mock_rpc_ok = MagicMock()
+        mock_rpc_ok.send_rpc_request.return_value = {"blocks": 100}
+        with patch(
+            "utilities.bin_handlers.xlite_handler.os.path.exists",
+            side_effect=self._exists_for_dirs(leg_dir),
+        ):
+            handler = self._create_handler_with_os("Linux")
+            handler.coins_rpc = {"coinA": mock_rpc_fail, "coinB": mock_rpc_ok}
+            handler.xlite_daemon_confs_local = {"coinA": {"rpcEnabled": True}, "coinB": {"rpcEnabled": True}}
+            handler.running = True
+            handler.check_valid_xlite_coins_rpc(runonce=True)
+            mock_rpc_fail.send_rpc_request.assert_called_once_with("getinfo")
+            mock_rpc_ok.send_rpc_request.assert_called_once_with("getinfo")
+            self.assertTrue(handler.valid_coins_rpc)
 
     # ============================================================================
     # Start/Stop Tests

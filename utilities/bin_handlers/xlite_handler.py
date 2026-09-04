@@ -96,9 +96,45 @@ class XliteHandler(BaseBinUtil):
         self._xlite_threads: list[threading.Thread] = []
         self.xlite_pids = []
         self.xlite_daemon_pids = []
+        self._last_daemon_generation: str | None = None
         self.parse_xlite_conf()
         self.parse_xlite_daemon_conf()
         self.start_threads()
+
+    def _daemon_candidate_dirs(self) -> tuple[str | None, str | None]:
+        """Return (new_dir, legacy_dir) expanded, None-safe and MagicMock-safe."""
+
+        def _expand(d: object) -> str | None:
+            if not d or not isinstance(d, str) or "MagicMock" in d:
+                return None
+            return os.path.expandvars(os.path.expanduser(d))
+
+        conf = self.container.conf_data
+        new_map = getattr(conf, "xlite_daemon_default_paths", None)
+        new_raw = new_map.get(self.container.system) if isinstance(new_map, dict) else None
+        leg_map = getattr(conf, "xlite_daemon_legacy_paths", None)
+        leg_raw = leg_map.get(self.container.system) if isinstance(leg_map, dict) else None
+        return _expand(new_raw), _expand(leg_raw)
+
+    def _detect_daemon_generation(self) -> str:
+        """Detect daemon generation by settings folder presence: 'new', 'old' or 'none'.
+
+        New wins when both exist (daemon migrates legacy folder, dual case
+        should not persist). Signal is the settings/ subdir, not the bare parent.
+        """
+        new_dir, leg_dir = self._daemon_candidate_dirs()
+        if new_dir and os.path.exists(os.path.join(new_dir, "settings")):
+            return "new"
+        if leg_dir and os.path.exists(os.path.join(leg_dir, "settings")):
+            return "old"
+        return "none"
+
+    def _log_generation_change(self, gen: str) -> None:
+        if gen != self._last_daemon_generation:
+            logger.info(f"XLITE-DAEMON: detected generation '{gen}'")
+            self._last_daemon_generation = gen
+        # No steady-state logging: this runs in 1s poll loops, any per-tick
+        # line (even debug) spams the console when DEBUG is enabled.
 
     @property
     def running(self) -> bool:
@@ -160,6 +196,28 @@ class XliteHandler(BaseBinUtil):
             with self._lock:
                 coins = dict(self.coins_rpc)
                 confs = dict(self.xlite_daemon_confs_local)
+            gen = self._detect_daemon_generation()
+            self._log_generation_change(gen)
+            if gen == "new":
+                method = "ping"
+
+                def _accept(res: object) -> bool:
+                    return res == 1
+
+            elif gen == "old":
+
+                def _accept(res: object) -> bool:
+                    return res is not None
+
+                method = "getinfo"
+            else:
+                with self._lock:
+                    self.valid_coins_rpc = False
+                if runonce:
+                    return
+                if self._stop.wait(1):
+                    break
+                continue
             valid = False
             if coins:
                 for coin, rpc_server in coins.items():
@@ -168,8 +226,8 @@ class XliteHandler(BaseBinUtil):
                         if not isinstance(conf, dict):
                             continue
                         if conf.get("rpcEnabled") is True:
-                            res = rpc_server.send_rpc_request("ping")
-                            if res == 1:
+                            res = rpc_server.send_rpc_request(method)
+                            if _accept(res):
                                 valid = True
                                 break
                             # continue to next enabled coin on failure
@@ -217,13 +275,18 @@ class XliteHandler(BaseBinUtil):
             self.xlite_conf_local = meta_data
 
     def parse_xlite_daemon_conf(self, silent=False):
-        daemon_data_path = self.container.conf_data.xlite_daemon_default_paths.get(self.container.system, None)
-        if daemon_data_path is None:
+        gen = self._detect_daemon_generation()
+        self._log_generation_change(gen)
+        new_dir, leg_dir = self._daemon_candidate_dirs()
+        if gen == "new":
+            daemon_data_path = new_dir
+        elif gen == "old":
+            daemon_data_path = leg_dir
+        else:
             with self._lock:
                 self.xlite_daemon_confs_local = {}
             return
 
-        daemon_data_path = os.path.expandvars(os.path.expanduser(daemon_data_path))
         confs_folder = os.path.join(daemon_data_path, "settings")
 
         if not os.path.exists(confs_folder):
