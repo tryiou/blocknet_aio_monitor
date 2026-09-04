@@ -112,6 +112,12 @@ class TestOSHandling(ConfigManagerTestCase):
         for key in SYSTEM_SPECIFIC_KEYS:
             self.assertIsNotNone(cfg._get_system_value(key), f"System key {key} failed validation")
 
+    def test_xlite_daemon_paths_new_and_legacy(self):
+        """New xlite-daemon dir is default; CloudChains kept as legacy for 1.0.7."""
+        cfg = self._create_config_for_platform("Linux", "x86_64")
+        self.assertEqual(cfg._get_system_value("xlite_daemon_default_paths"), "~/.config/xlite-daemon")
+        self.assertEqual(cfg._get_system_value("xlite_daemon_legacy_paths"), "~/.config/CloudChains")
+
 
 class TestPersistence(ConfigManagerTestCase):
     """Test configuration saving and loading"""
@@ -270,6 +276,86 @@ class TestEdgeCases(ConfigManagerTestCase):
         self.assertIsNotNone(cfg._get_system_value("blocknet_releases_urls"))
         backups = list(self.test_dir_path.glob("aio_config.yaml.corrupt.*"))
         self.assertEqual(len(backups), 1)
+
+
+class TestMigrations(ConfigManagerTestCase):
+    """Template-version migrations: stale defaults roll out, customs survive."""
+
+    def _load_with_seed(self, system: str, machine: str, seed: dict) -> ConfigManager:
+        """Write seed yaml to a fresh subdir and load a ConfigManager for that platform."""
+        subdir = self.test_dir_path / f"mig_{system}_{machine}"
+        subdir.mkdir(parents=True, exist_ok=True)
+        with open(subdir / "aio_config.yaml", "w") as f:
+            yaml.dump(seed, f)
+        with (
+            patch.multiple(platform, system=lambda: system, machine=lambda: machine),
+            patch.object(ConfigManager, "_get_aio_path", return_value=subdir),
+        ):
+            return ConfigManager()
+
+    def test_migration_v2_refreshes_stale_daemon_path(self):
+        """Stale CloudChains default is replaced and stamped, per OS."""
+        cases = [
+            ("Linux", "x86_64", "~/.config/CloudChains", "~/.config/xlite-daemon"),
+            ("Windows", "AMD64", "%appdata%\\CloudChains", "%appdata%\\xlite-daemon"),
+            (
+                "Darwin",
+                "x86_64",
+                "~/Library/Application Support/CloudChains",
+                "~/Library/Application Support/xlite-daemon",
+            ),
+        ]
+        for system, machine, stale, fresh in cases:
+            with self.subTest(system=system):
+                cfg = self._load_with_seed(system, machine, {"xlite_daemon_default_paths": stale})
+                self.assertEqual(cfg._get_system_value("xlite_daemon_default_paths"), fresh)
+                self.assertEqual(cfg.config["config_version"], 2)
+                with open(cfg.aio_folder / "aio_config.yaml") as f:
+                    saved = yaml.safe_load(f)
+                self.assertEqual(saved["xlite_daemon_default_paths"], fresh)
+                self.assertEqual(saved["config_version"], 2)
+
+    def test_migration_preserves_unrecognized_custom_value(self):
+        """A value we never shipped as a default is a user customization: keep it."""
+        cfg = self._load_with_seed("Linux", "x86_64", {"xlite_daemon_default_paths": "/custom/daemon-dir"})
+        self.assertEqual(cfg._get_system_value("xlite_daemon_default_paths"), "/custom/daemon-dir")
+        self.assertEqual(cfg.config["config_version"], 2)
+
+    def test_current_version_noop(self):
+        """Already-migrated file: one-shot semantics, stale values left alone."""
+        cfg = self._load_with_seed(
+            "Linux", "x86_64", {"config_version": 2, "xlite_daemon_default_paths": "~/.config/CloudChains"}
+        )
+        self.assertEqual(cfg._get_system_value("xlite_daemon_default_paths"), "~/.config/CloudChains")
+
+    def test_downgrade_untouched(self):
+        """Saved version newer than supported: warn, change nothing."""
+        with self.assertLogs("utilities.config_manager", level="WARNING"):
+            cfg = self._load_with_seed(
+                "Linux", "x86_64", {"config_version": 99, "xlite_daemon_default_paths": "~/.config/CloudChains"}
+            )
+        self.assertEqual(cfg._get_system_value("xlite_daemon_default_paths"), "~/.config/CloudChains")
+
+    def test_corrupt_yaml_fresh_at_current_version(self):
+        """Corrupt file heals to the template at the current version, no migration needed."""
+        subdir = self.test_dir_path / "mig_corrupt"
+        subdir.mkdir(parents=True, exist_ok=True)
+        (subdir / "aio_config.yaml").write_text("{invalid: yaml: : [", encoding="utf-8")
+        with (
+            patch.multiple(platform, system=lambda: "Linux", machine=lambda: "x86_64"),
+            patch.object(ConfigManager, "_get_aio_path", return_value=subdir),
+        ):
+            cfg = ConfigManager()
+        self.assertEqual(cfg.config["config_version"], 2)
+        self.assertEqual(cfg._get_system_value("xlite_daemon_default_paths"), "~/.config/xlite-daemon")
+
+    def test_template_isolated_from_config_mutations(self):
+        """config nested dicts must not alias the template (migration prerequisite)."""
+        cfg = self._create_config_for_platform("Linux", "x86_64")
+        self.assertIsNot(cfg.config["xlite_daemon_default_paths"], cfg.config_template["xlite_daemon_default_paths"])
+        cfg._set_system_value("xlite_daemon_default_paths", "MUTATED")
+        self.assertEqual(cfg._get_template_system_value("xlite_daemon_default_paths"), "~/.config/xlite-daemon")
+        self.assertEqual(cfg.config_template["xlite_daemon_default_paths"]["Linux"], "~/.config/xlite-daemon")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import logging
 import os
 import platform
@@ -10,6 +11,25 @@ from utilities.atomic_write import atomic_write_yaml, backup_corrupt_file, ensur
 
 logger = logging.getLogger(__name__)
 
+# Template versioning: bump on any template-default change that must roll out
+# to existing installs (saved system-specific values otherwise override the
+# template forever). 1 = everything shipped without a version.
+CONFIG_TEMPLATE_VERSION = 2
+
+# Known-stale values a migration may overwrite: verbatim pre-change template
+# defaults per OS. A match unambiguously means "stale default", never a user
+# customization — anything else is preserved with a warning.
+STALE_XLITE_DAEMON_PATHS = {
+    "Windows": "%appdata%\\CloudChains",
+    "Linux": "~/.config/CloudChains",
+    "Darwin": "~/Library/Application Support/CloudChains",
+}
+
+# version -> [(key, stale_values_by_os)]
+MIGRATIONS: dict[int, list[tuple[str, dict[str, str]]]] = {
+    2: [("xlite_daemon_default_paths", STALE_XLITE_DAEMON_PATHS)],
+}
+
 SYSTEM_SPECIFIC_KEYS = [
     "blocknet_releases_urls",
     "blockdx_releases_urls",
@@ -20,6 +40,7 @@ SYSTEM_SPECIFIC_KEYS = [
     "blockdx_default_paths",
     "xlite_default_paths",
     "xlite_daemon_default_paths",
+    "xlite_daemon_legacy_paths",
     "blocknet_bin_name",
     "blockdx_bin_name",
     "xlite_bin_name",
@@ -37,6 +58,7 @@ class ConfigManager:
         self.machine = platform.machine()
         self.aio_folder = aio_folder
         self.config_template = {
+            "config_version": CONFIG_TEMPLATE_VERSION,
             "blocknet_bootstrap_url": "https://utils.blocknet.org/Blocknet.zip",
             "extra_option_blocknet_core_conf": [
                 {"addnode": "130.185.119.91:41412"},
@@ -125,6 +147,11 @@ class ConfigManager:
                 "Windows": "%appdata%\\xlite-daemon",
                 "Linux": "~/.config/xlite-daemon",
                 "Darwin": "~/Library/Application Support/xlite-daemon",
+            },
+            "xlite_daemon_legacy_paths": {
+                "Windows": "%appdata%\\CloudChains",
+                "Linux": "~/.config/CloudChains",
+                "Darwin": "~/Library/Application Support/CloudChains",
             },
             "blocknet_bin_name": {"Windows": "blocknet-qt.exe", "Linux": "blocknet-qt", "Darwin": "blocknet-qt"},
             "blockdx_bin_name": {
@@ -247,10 +274,13 @@ class ConfigManager:
                 ensure_dir_secure(self.aio_folder, 0o700)
         config_file = Path(self.aio_folder) / "aio_config.yaml"
 
-        # Start with template as base config
-        self.config = self.config_template.copy()
+        # Start with an isolated copy of the template: nested dicts must not be
+        # shared, _set_system_value mutates them in place (cross-instance bleed).
+        self.config = copy.deepcopy(self.config_template)
 
-        if config_file.exists():
+        config_existed = config_file.exists()
+        config_was_corrupt = False
+        if config_existed:
             try:
                 with open(config_file) as f:
                     loaded_config = yaml.safe_load(f) or {}
@@ -258,10 +288,12 @@ class ConfigManager:
                 logger.error(f"Corrupted YAML in {config_file}: {e}, backing up and self-healing")
                 backup_corrupt_file(config_file)
                 loaded_config = {}
+                config_was_corrupt = True
             except Exception as e:
                 logger.error(f"Failed to load config {config_file}: {e}, self-healing", exc_info=True)
                 backup_corrupt_file(config_file)
                 loaded_config = {}
+                config_was_corrupt = True
             logger.info(f"Loaded existing config from {config_file}")
 
             # FOR SYSTEM-SPECIFIC KEYS: Ensure current OS/Arch value is set
@@ -279,11 +311,51 @@ class ConfigManager:
             for key, value in loaded_config.items():
                 if key not in SYSTEM_SPECIFIC_KEYS:
                     self.config[key] = value
+
+            if not config_was_corrupt:
+                self._apply_migrations(loaded_config)
         else:
             logger.info(f"Created new config from template at {config_file}")
 
             # Save to ensure missing keys are persisted
         self._save_config()
+
+    def _get_template_system_value(self, key):
+        """Get system-specific value from the pristine template (never mutated).
+
+        Shares _get_system_value's lookup (arch fallbacks included) so future
+        arch-specific (system, machine) migrations resolve identically.
+        """
+        return self._get_system_value(key, mapping=self.config_template)
+
+    def _apply_migrations(self, loaded_config: dict) -> None:
+        """Roll template-default changes out to existing installs.
+
+        Only refreshes keys whose saved value matches a known-stale default;
+        unrecognized (user-customized) values are preserved with a warning.
+        Idempotent: re-running on an already-migrated file is a no-op.
+        """
+        saved_version = loaded_config.get("config_version", 1)
+        if saved_version > CONFIG_TEMPLATE_VERSION:
+            logger.warning(
+                f"Config version {saved_version} is newer than supported {CONFIG_TEMPLATE_VERSION}, skipping migrations"
+            )
+            return
+        if saved_version >= CONFIG_TEMPLATE_VERSION:
+            return
+        for version in range(saved_version + 1, CONFIG_TEMPLATE_VERSION + 1):
+            for key, stale_map in MIGRATIONS.get(version, []):
+                saved = self._get_system_value(key)
+                if saved == stale_map.get(self.system):
+                    new = self._get_template_system_value(key)
+                    if new:
+                        self._set_system_value(key, new)
+                        logger.info(f"Config migration v{version}: {key} refreshed {saved} -> {new}")
+                    else:
+                        logger.warning(f"Config migration v{version}: no template default for {key}, keeping {saved}")
+                else:
+                    logger.debug(f"Config migration v{version}: {key} kept custom value {saved}")
+        self.config["config_version"] = CONFIG_TEMPLATE_VERSION
 
     def _deep_merge(self, base: dict, update: dict) -> dict:
         for key, value in update.items():
@@ -293,10 +365,11 @@ class ConfigManager:
                 base[key] = value
         return base
 
-    def _get_system_value(self, key):
-        """Get system-specific value from in-memory config"""
+    def _get_system_value(self, key, mapping=None):
+        """Get system-specific value from a config mapping (defaults to in-memory config)"""
         current_system_key = (self.system, self.machine)
-        value = self.config[key]
+        source = self.config if mapping is None else mapping
+        value = source[key]
         if isinstance(value, dict):
             if current_system_key in value:
                 v = value[current_system_key]
