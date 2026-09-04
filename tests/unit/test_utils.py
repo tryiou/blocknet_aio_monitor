@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 import tempfile
 from unittest.mock import MagicMock, Mock, patch
 
@@ -388,62 +389,111 @@ class TestSaveCfgJson:
             assert saved_data == {"test_key": "test_value"}
 
 
-class TestEncryptDecryptPassword:
-    """Test encrypt_password and decrypt_password functions"""
+class TestPasswordStore:
+    """Single-route file credential store: salt+xl_pass committed atomically."""
 
-    def test_generate_key(self):
-        """Test that generate_key returns a valid key"""
-        key = utils.generate_key()
-        assert key is not None
-        assert isinstance(key, bytes)
-        assert len(key) > 0
+    def _container(self, tmp_path):
+        container = MagicMock()
+        container.aio_folder = str(tmp_path)
+        container.conf_data.aio_blocknet_data_path = {"Linux": str(tmp_path)}
+        container.system = "Linux"
+        return container
 
-    def test_encrypt_password(self):
-        """Test encrypt_password function"""
-        password = "test_password"
-        key = utils.generate_key()
+    def _stored(self, tmp_path):
+        with open(tmp_path / "aio_settings.json", encoding="utf-8") as f:
+            return json.load(f)
 
-        encrypted = utils.encrypt_password(password, key)
+    def test_store_load_roundtrip(self, tmp_path):
+        """Store then load returns the password."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            assert utils.store_password("s3cret!") is True
+            assert utils.load_stored_password() == "s3cret!"
 
-        assert encrypted != password
-        assert isinstance(encrypted, str)
-        assert len(encrypted) > 0
+    def test_store_writes_salt_and_ciphertext_not_plaintext(self, tmp_path):
+        """File holds key + ciphertext, never the password."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            assert utils.store_password("s3cret!") is True
+            data = self._stored(tmp_path)
+            assert len(data["salt"]) == 44
+            assert data["xl_pass"] != "s3cret!"
+            assert "s3cret!" not in json.dumps(data)
 
-    def test_decrypt_password(self):
-        """Test decrypt_password function"""
-        password = "test_password"
-        key = utils.generate_key()
-        encrypted = utils.encrypt_password(password, key)
+    def test_store_rotates_atomically(self, tmp_path):
+        """Second store overwrites both values; load returns the latest."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            assert utils.store_password("first") is True
+            assert utils.store_password("second") is True
+            data = self._stored(tmp_path)
+            assert set(data) >= {"salt", "xl_pass"}
+            assert utils.load_stored_password() == "second"
 
-        decrypted = utils.decrypt_password(encrypted, key)
+    def test_load_missing_file_returns_none(self, tmp_path):
+        """No file, no password."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            assert utils.load_stored_password() is None
 
-        assert decrypted == password
+    def test_load_missing_keys_returns_none(self, tmp_path):
+        """File without credentials is not a password."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            utils.save_cfg_json("theme", "Dark")
+            assert utils.load_stored_password() is None
 
-    def test_encrypt_decrypt_roundtrip(self):
-        """Test that encryption and decryption work correctly"""
-        password = "test_password_123"
+    def test_tampered_ciphertext_keeps_file(self, tmp_path):
+        """Undecryptable file returns None but is kept for re-store."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            assert utils.store_password("s3cret!") is True
+            data = self._stored(tmp_path)
+            data["xl_pass"] = data["xl_pass"][:-1] + ("A" if data["xl_pass"][-1] != "A" else "B")
+            (tmp_path / "aio_settings.json").write_text(json.dumps(data), encoding="utf-8")
+            assert utils.load_stored_password() is None
+            assert "xl_pass" in self._stored(tmp_path)
 
-        key = utils.generate_key()
-        assert key is not None
+    def test_wipe_removes_both_preserves_others(self, tmp_path):
+        """Wipe deletes credentials, keeps unrelated keys."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            utils.save_cfg_json("theme", "Dark")
+            assert utils.store_password("s3cret!") is True
+            assert utils.wipe_stored_password() is True
+            data = self._stored(tmp_path)
+            assert "salt" not in data
+            assert "xl_pass" not in data
+            assert data["theme"] == "Dark"
+            assert utils.load_stored_password() is None
 
-        encrypted = utils.encrypt_password(password, key)
-        assert encrypted != password
-        assert isinstance(encrypted, str)
+    def test_wipe_missing_file_returns_true(self, tmp_path):
+        """Wiping nothing is success."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            assert utils.wipe_stored_password() is True
 
-        decrypted = utils.decrypt_password(encrypted, key)
-        assert decrypted == password
+    def test_store_permissions_0600(self, tmp_path):
+        """Credential file is owner-only on POSIX."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            assert utils.store_password("s3cret!") is True
+            if os.name != "nt":
+                mode = (tmp_path / "aio_settings.json").stat().st_mode & 0o777
+                assert mode == 0o600
 
-    def test_encrypt_password_different_each_time(self):
-        """Test that same password encrypts differently each time"""
-        password = "test_password"
+    def test_no_keyring_dependency(self, tmp_path):
+        """The password path never imports keyring (works with it uninstalled)."""
+        assert not hasattr(utils, "KeyringManager")
+        with (
+            patch.dict(sys.modules, {"keyring": None}),
+            patch("utilities.utils.get_container", return_value=self._container(tmp_path)),
+        ):
+            assert utils.store_password("s3cret!") is True
+            assert utils.load_stored_password() == "s3cret!"
+            assert utils.wipe_stored_password() is True
+        assert "keyring" not in sys.modules or sys.modules["keyring"] is None
 
-        key1 = utils.generate_key()
-        encrypted1 = utils.encrypt_password(password, key1)
-
-        key2 = utils.generate_key()
-        encrypted2 = utils.encrypt_password(password, key2)
-
-        assert encrypted1 != encrypted2
+    def test_remove_xl_pass_keeps_salt_no_cascade(self, tmp_path):
+        """Generic key removal has no password cascade; wipe is the only remover."""
+        with patch("utilities.utils.get_container", return_value=self._container(tmp_path)):
+            assert utils.store_password("s3cret!") is True
+            utils.remove_cfg_json_key("xl_pass")
+            data = self._stored(tmp_path)
+            assert "xl_pass" not in data
+            assert "salt" in data
+            assert utils.load_stored_password() is None
 
 
 class TestEnableDisableButton:
@@ -618,365 +668,14 @@ class TestHandleProcess:
         result = utils.handle_process(100, "other_process", "running", "blocknet")
         assert result is None
 
-
-class TestKeyringBasedFunctions:
-    """Test keyring-based encryption key functions"""
-
-    @patch("utilities.utils.KeyringManager")
-    def test_save_encryption_key_success(self, mock_keyring_manager_class):
-        """Test saving encryption key to keyring"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager.store_key.return_value = (True, "Key stored in OS keyring")
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            result = utils.save_encryption_key("test_key")
-
-            assert result is True
-            mock_keyring_manager.store_key.assert_called_once_with("test_key")
-
-    @patch("utilities.utils.KeyringManager")
-    def test_save_encryption_key_failure(self, mock_keyring_manager_class):
-        """Test saving encryption key when keyring fails"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager.store_key.return_value = (False, "Failed to store key")
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            result = utils.save_encryption_key("test_key")
-
-            assert result is False
-            mock_keyring_manager.store_key.assert_called_once_with("test_key")
-
-    @patch("utilities.utils.KeyringManager")
-    def test_load_encryption_key_success(self, mock_keyring_manager_class):
-        """Test loading encryption key from keyring"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager.retrieve_key.return_value = ("test_key", "Key retrieved from OS keyring")
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            result = utils.load_encryption_key()
-
-            assert result == b"test_key"
-            mock_keyring_manager.retrieve_key.assert_called_once()
-
-    @patch("utilities.utils.KeyringManager")
-    def test_load_encryption_key_failure(self, mock_keyring_manager_class):
-        """Test loading encryption key when not found"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager.retrieve_key.return_value = (None, "No encryption key found")
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            result = utils.load_encryption_key()
-
-            assert result is None
-            mock_keyring_manager.retrieve_key.assert_called_once()
-
-    @patch("utilities.utils.KeyringManager")
-    def test_delete_encryption_key_success(self, mock_keyring_manager_class):
-        """Test deleting encryption key from keyring"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager.delete_key.return_value = (True, "Deleted from OS keyring")
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            result = utils.delete_encryption_key()
-
-            assert result is True
-            mock_keyring_manager.delete_key.assert_called_once()
-
-    @patch("utilities.utils.KeyringManager")
-    def test_generate_key_with_keyring(self, mock_keyring_manager_class):
-        """Test generating key and storing in keyring"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager.store_key.return_value = (True, "Key stored in OS keyring")
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with (
-            patch("utilities.utils.get_container", return_value=mock_container),
-            patch("utilities.utils.Fernet.generate_key") as mock_generate,
-        ):
-            mock_generate.return_value = b"test_key_123"
-            result = utils.generate_key()
-
-            assert result == b"test_key_123"
-            mock_keyring_manager.store_key.assert_called_once_with("test_key_123")
-
-    @patch("utilities.utils.KeyringManager")
-    def test_generate_key_keyring_failure(self, mock_keyring_manager_class):
-        """Test generating key when keyring storage fails"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager.store_key.return_value = (False, "Failed to store key")
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with (
-            patch("utilities.utils.get_container", return_value=mock_container),
-            patch("utilities.utils.Fernet.generate_key") as mock_generate,
-        ):
-            mock_generate.return_value = b"test_key_123"
-            result = utils.generate_key()
-
-            assert result is None
-            mock_keyring_manager.store_key.assert_called_once_with("test_key_123")
-
-    @patch("utilities.utils.load_encryption_key")
-    def test_encrypt_password_with_keyring(self, mock_load_key):
-        """Test encrypting password using key from keyring"""
-        # Generate a valid Fernet key
-        from cryptography.fernet import Fernet
-
-        valid_key = Fernet.generate_key()
-        mock_load_key.return_value = valid_key
-
-        password = "test_password"
-        encrypted = utils.encrypt_password(password)
-
-        assert encrypted is not None
-        assert isinstance(encrypted, str)
-        assert encrypted != password
-        mock_load_key.assert_called_once()
-
-    @patch("utilities.utils.load_encryption_key")
-    def test_encrypt_password_with_provided_key(self, mock_load_key):
-        """Test encrypting password with provided key"""
-        # Generate a valid Fernet key
-        from cryptography.fernet import Fernet
-
-        valid_key = Fernet.generate_key()
-
-        password = "test_password"
-        encrypted = utils.encrypt_password(password, valid_key)
-
-        assert encrypted is not None
-        assert isinstance(encrypted, str)
-        assert encrypted != password
-        mock_load_key.assert_not_called()
-
-    @patch("utilities.utils.load_encryption_key")
-    def test_encrypt_password_no_key_available(self, mock_load_key):
-        """Test encrypting password when no key is available"""
-        mock_load_key.return_value = None
-
-        password = "test_password"
-        encrypted = utils.encrypt_password(password)
-
-        assert encrypted is None
-        mock_load_key.assert_called_once()
-
-    @patch("utilities.utils.load_encryption_key")
-    def test_decrypt_password_with_keyring(self, mock_load_key):
-        """Test decrypting password using key from keyring"""
-        password = "test_password"
-
-        # Generate a valid Fernet key
-        from cryptography.fernet import Fernet
-
-        valid_key = Fernet.generate_key()
-
-        # First encrypt
-        cipher = Fernet(valid_key)
-        encrypted = cipher.encrypt(password.encode()).decode()
-
-        mock_load_key.return_value = valid_key
-
-        # Now decrypt
-        decrypted = utils.decrypt_password(encrypted)
-
-        assert decrypted == password
-        mock_load_key.assert_called_once()
-
-    @patch("utilities.utils.load_encryption_key")
-    def test_decrypt_password_with_provided_key(self, mock_load_key):
-        """Test decrypting password with provided key"""
-        password = "test_password"
-
-        # Generate a valid Fernet key
-        from cryptography.fernet import Fernet
-
-        valid_key = Fernet.generate_key()
-
-        # First encrypt
-        cipher = Fernet(valid_key)
-        encrypted = cipher.encrypt(password.encode()).decode()
-
-        # Now decrypt
-        decrypted = utils.decrypt_password(encrypted, valid_key)
-
-        assert decrypted == password
-        mock_load_key.assert_not_called()
-
-    @patch("utilities.utils.load_encryption_key")
-    def test_decrypt_password_no_key_available(self, mock_load_key):
-        """Test decrypting password when no key is available"""
-        mock_load_key.return_value = None
-
-        encrypted = "encrypted_password"
-        decrypted = utils.decrypt_password(encrypted)
-
-        assert decrypted is None
-        mock_load_key.assert_called_once()
-
-    def test_decrypt_password_invalid_token_raises(self):
-        """Decrypt with mismatched key raises InvalidToken and logs — ensures InvalidSignature not silenced."""
-        from cryptography.fernet import Fernet, InvalidToken
-
-        key1 = Fernet.generate_key()
-        key2 = Fernet.generate_key()
-        password = "secret123"
-        cipher1 = Fernet(key1)
-        encrypted = cipher1.encrypt(password.encode()).decode()
-
-        # Decrypt with wrong key must raise InvalidToken
-        with pytest.raises(InvalidToken):
-            utils.decrypt_password(encrypted, key2)
-
-    def test_encrypt_decrypt_key_rotation_invalidates_old_cipher(self):
-        """New key invalidates old xl_pass — reproduces intermittent InvalidToken after Store Password rotation."""
-        from cryptography.fernet import Fernet, InvalidToken
-
-        old_key = Fernet.generate_key()
-        new_key = Fernet.generate_key()
-        password = "rotate_me"
-        old_cipher = Fernet(old_key).encrypt(password.encode()).decode()
-
-        # Old cipher must not decrypt with new key
-        with pytest.raises(InvalidToken):
-            utils.decrypt_password(old_cipher, new_key)
-        # Old cipher still decrypts with old key
-        assert utils.decrypt_password(old_cipher, old_key) == password
-
-    @patch("utilities.utils.KeyringManager")
-    @patch("utilities.utils.delete_encryption_key")
-    def test_remove_cfg_json_key_with_password(self, mock_delete_key, mock_keyring_manager_class):
-        """Test removing password-related keys also deletes encryption key"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            config_data = {"xl_pass": "encrypted_password", "theme": "Dark"}
-
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-                json.dump(config_data, f)
-                temp_file = f.name
-
-            try:
-                with (
-                    patch("builtins.open", mock_open=create_real_file_mock(temp_file)),
-                    patch("json.load", return_value=config_data),
-                    patch("json.dump") as mock_dump,
-                ):
-                    utils.remove_cfg_json_key("xl_pass")
-
-                # Verify encryption key was deleted
-                mock_delete_key.assert_called_once()
-            finally:
-                os.unlink(temp_file)
-
-    @patch("utilities.utils.KeyringManager")
-    @patch("utilities.utils.delete_encryption_key")
-    def test_remove_cfg_json_key_non_password(self, mock_delete_key, mock_keyring_manager_class):
-        """Test removing non-password keys doesn't delete encryption key"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_container = MagicMock()
-        mock_container.conf_data.aio_blocknet_data_path = {"Linux": "/test/data"}
-        mock_container.system = "Linux"
-
-        with patch("utilities.utils.get_container", return_value=mock_container):
-            config_data = {"theme": "Dark", "custom_path": "/path"}
-
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-                json.dump(config_data, f)
-                temp_file = f.name
-
-            try:
-                with (
-                    patch("builtins.open", mock_open=create_real_file_mock(temp_file)),
-                    patch("json.load", return_value=config_data),
-                    patch("json.dump") as mock_dump,
-                ):
-                    utils.remove_cfg_json_key("theme")
-
-                # Verify encryption key was NOT deleted
-                mock_delete_key.assert_not_called()
-            finally:
-                os.unlink(temp_file)
-
-    @patch("utilities.utils.KeyringManager")
-    @patch("utilities.utils.KeyringMigration")
-    def test_load_cfg_json_with_migration(self, mock_migration_class, mock_keyring_manager_class):
-        """Test loading config with migration from old format"""
-        mock_keyring_manager = Mock()
-        mock_keyring_manager_class.return_value = mock_keyring_manager
-
-        mock_migration = Mock()
-        old_config = {"theme": "Dark", "salt": "old_key", "xl_pass": "encrypted_password"}
-        new_config = {"theme": "Dark", "xl_pass": "encrypted_password"}
-        mock_migration.migrate_from_old_format.return_value = (True, new_config, "Migration successful", "old_key")
-        mock_migration_class.return_value = mock_migration
-
-        mock_container = MagicMock()
-        mock_container.aio_folder = "/test/aio"
-
-        with (
-            patch("utilities.utils.get_container", return_value=mock_container),
-            patch("os.path.exists") as mock_exists,
-            patch("os.path.expandvars") as mock_expandvars,
-            patch("os.path.expanduser") as mock_expanduser,
-            patch("os.rename") as mock_rename,
-        ):
-            mock_expanduser.return_value = "/test/aio"
-            mock_expandvars.return_value = "/test/aio"
-            mock_exists.return_value = True
-
-            with patch("builtins.open") as mock_open:
-                mock_file = Mock()
-                mock_file.read.return_value = json.dumps(old_config)
-                mock_file.__enter__ = Mock(return_value=mock_file)
-                mock_file.__exit__ = Mock(return_value=False)
-                mock_open.return_value = mock_file
-
-                with patch("json.load", return_value=old_config), patch("json.dump") as mock_dump:
-                    result = utils.load_cfg_json()
-
-                    assert result == new_config
-                    mock_migration.migrate_from_old_format.assert_called_once_with(old_config)
-                    mock_dump.assert_called_once()
+    def test_handle_process_alias_for_dev_binary(self):
+        """Dev binary xlite-daemon must be detected even when target is xlite-daemon-linux64."""
+        # Dev name matches target with suffix
+        assert utils.handle_process(100, "xlite-daemon", "running", "xlite-daemon-linux64") == 100
+        # Exact match still works
+        assert utils.handle_process(101, "xlite-daemon-linux64", "running", "xlite-daemon-linux64") == 101
+        # Other mismatches remain None
+        assert utils.handle_process(102, "other", "running", "xlite-daemon-linux64") is None
 
 
 class TestAtomicAndSelfHeal:

@@ -213,10 +213,11 @@ class TestXliteFrameManager(unittest.TestCase):
         )
         self.manager.reverse_proxy_process_status_checkbox_state.set.assert_called_with(False)
 
-    @patch("gui.xlite_frame_manager.utils.remove_cfg_json_key")
+    @patch("gui.xlite_frame_manager.utils.wipe_stored_password")
     @patch("gui.xlite_frame_manager.os.environ")
-    def test_xlite_store_password_button_mouse_click_right_click(self, mock_environ, mock_remove_cfg_json_key):
+    def test_xlite_store_password_button_mouse_click_right_click(self, mock_environ, mock_wipe):
         """Test xlite_store_password_button_mouse_click with right click (wipe password)"""
+        mock_wipe.return_value = True
         # Set up stored password
         self.mock_root_gui.stored_password = "test_password"
 
@@ -230,19 +231,18 @@ class TestXliteFrameManager(unittest.TestCase):
         # Call the method
         result = self.manager.xlite_store_password_button_mouse_click(mock_event)
 
-        # Verify that password was wiped (remove_cfg_json_key will also delete encryption key)
-        mock_remove_cfg_json_key.assert_called_once_with("xl_pass")
+        # Verify that password was wiped
+        mock_wipe.assert_called_once_with()
         self.assertEqual(self.mock_root_gui.stored_password, None)
         mock_environ.pop.assert_any_call("CC_WALLET_PASS")
         mock_environ.pop.assert_any_call("CC_WALLET_AUTOLOGIN")
         self.assertEqual(result, "break")
 
-    @patch("gui.xlite_frame_manager.utils.remove_cfg_json_key")
+    @patch("gui.xlite_frame_manager.utils.wipe_stored_password")
     @patch("gui.xlite_frame_manager.os.environ")
-    def test_xlite_store_password_button_mouse_click_right_click_no_env_vars(
-        self, mock_environ, mock_remove_cfg_json_key
-    ):
+    def test_xlite_store_password_button_mouse_click_right_click_no_env_vars(self, mock_environ, mock_wipe):
         """Test xlite_store_password_button_mouse_click with right click when env vars don't exist"""
+        mock_wipe.return_value = True
         # Set up stored password
         self.mock_root_gui.stored_password = "test_password"
 
@@ -256,20 +256,36 @@ class TestXliteFrameManager(unittest.TestCase):
         # Call the method
         result = self.manager.xlite_store_password_button_mouse_click(mock_event)
 
-        # Verify that password was wiped (remove_cfg_json_key will also delete encryption key)
-        mock_remove_cfg_json_key.assert_called_once_with("xl_pass")
+        # Verify that password was wiped
+        mock_wipe.assert_called_once_with()
         self.assertEqual(self.mock_root_gui.stored_password, None)
         mock_environ.pop.assert_not_called()
         self.assertEqual(result, "break")
 
+    @patch("gui.xlite_frame_manager.utils.wipe_stored_password")
+    @patch("gui.xlite_frame_manager.os.environ")
+    def test_xlite_store_password_button_mouse_click_right_click_failure_keeps_password(self, mock_environ, mock_wipe):
+        """Failed wipe keeps the in-memory password (truthful UI)."""
+        mock_wipe.return_value = False
+        self.mock_root_gui.stored_password = "test_password"
+
+        mock_event = MagicMock()
+        mock_event.num = 3
+        mock_environ.__contains__.return_value = True
+
+        result = self.manager.xlite_store_password_button_mouse_click(mock_event)
+
+        mock_wipe.assert_called_once_with()
+        self.assertEqual(self.mock_root_gui.stored_password, "test_password")
+        self.assertEqual(result, "break")
+
     @patch("gui.xlite_frame_manager.ctkInputDialogMod.CTkInputDialog")
-    @patch("gui.xlite_frame_manager.utils.save_cfg_json")
-    @patch("gui.xlite_frame_manager.utils.encrypt_password")
-    @patch("gui.xlite_frame_manager.utils.generate_key")
+    @patch("gui.xlite_frame_manager.utils.store_password")
     def test_xlite_store_password_button_mouse_click_left_click_with_password(
-        self, mock_generate_key, mock_encrypt_password, mock_save_cfg_json, mock_ctk_input_dialog
+        self, mock_store_password, mock_ctk_input_dialog
     ):
         """Test xlite_store_password_button_mouse_click with left click (store password)"""
+        mock_store_password.return_value = True
         # Mock event with left click (button 1)
         mock_event = MagicMock()
         mock_event.num = 1
@@ -279,19 +295,33 @@ class TestXliteFrameManager(unittest.TestCase):
         mock_dialog_instance.get_input.return_value = "test_password"
         mock_ctk_input_dialog.return_value = mock_dialog_instance
 
-        # Mock encryption
-        mock_generate_key.return_value = b"test_key"
-        mock_encrypt_password.return_value = "encrypted_password"
-
         # Call the method
         result = self.manager.xlite_store_password_button_mouse_click(mock_event)
 
-        # Verify that password was stored (key is in keyring, only encrypted password in JSON)
+        # Verify that password was stored via the single-route file store
         mock_ctk_input_dialog.assert_called_once()
-        mock_generate_key.assert_called_once()
-        mock_encrypt_password.assert_called_once_with("test_password", b"test_key")
-        mock_save_cfg_json.assert_called_once_with(key="xl_pass", data="encrypted_password")
+        mock_store_password.assert_called_once_with("test_password")
         self.assertEqual(self.mock_root_gui.stored_password, "test_password")
+        self.assertEqual(result, "break")
+
+    @patch("gui.xlite_frame_manager.ctkInputDialogMod.CTkInputDialog")
+    @patch("gui.xlite_frame_manager.utils.store_password")
+    def test_xlite_store_password_button_mouse_click_left_click_store_failure(
+        self, mock_store_password, mock_ctk_input_dialog
+    ):
+        """Failed store keeps the previous in-memory state."""
+        mock_store_password.return_value = False
+        mock_event = MagicMock()
+        mock_event.num = 1
+
+        mock_dialog_instance = MagicMock()
+        mock_dialog_instance.get_input.return_value = "test_password"
+        mock_ctk_input_dialog.return_value = mock_dialog_instance
+
+        result = self.manager.xlite_store_password_button_mouse_click(mock_event)
+
+        mock_store_password.assert_called_once_with("test_password")
+        self.assertEqual(self.mock_root_gui.stored_password, None)
         self.assertEqual(result, "break")
 
     @patch("gui.xlite_frame_manager.ctkInputDialogMod.CTkInputDialog")

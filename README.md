@@ -20,7 +20,8 @@ For more information about Blocknet projects, visit:
 - **Control Panel:** Easily start or close any of the applications from the control panel and monitor their status.
 - **Configuration Management:** Check and update configurations for Blocknet Core and Block-DX, ensuring they work
   together seamlessly at first launch.
-- **Password Storage:** Securely store existing XLite wallet passwords using encryption and OS keyring.
+- **Password Storage:** Securely store existing XLite wallet passwords using encryption and a file-only
+  credential store (`salt` + `xl_pass` in `aio_settings.json`, never deleted automatically).
   On the next XLite startup, the password will be pre-filled and ready to use.
   Right-clicking on this button will clear any stored password.
 

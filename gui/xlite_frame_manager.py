@@ -103,21 +103,20 @@ class XliteFrameManager:
         self.store_password_button.configure(command=self.xlite_store_password_button_mouse_click)
 
     def xlite_store_password_button_mouse_click(self, event=None):
-        # Function to handle storing password
+        # Single-route file store: millisecond I/O, runs synchronously on the GUI thread.
         # Check if the right mouse button was clicked
         if event and event.num == 3:
             # wipe_stored_password
             logger.info("Right click detected")
             # Prevent the right-click event from propagating further
-            utils.remove_cfg_json_key("xl_pass")
-            # Note: remove_cfg_json_key will also delete encryption key from keyring
-            self.root_gui.stored_password = None
-            # Delete CC_WALLET_PASS variable
-            if "CC_WALLET_PASS" in os.environ:
-                os.environ.pop("CC_WALLET_PASS")
-            # Delete CC_WALLET_AUTOLOGIN variable
-            if "CC_WALLET_AUTOLOGIN" in os.environ:
-                os.environ.pop("CC_WALLET_AUTOLOGIN")
+            if utils.wipe_stored_password():
+                self.root_gui.stored_password = None
+                # Delete CC_WALLET_PASS variable
+                if "CC_WALLET_PASS" in os.environ:
+                    os.environ.pop("CC_WALLET_PASS")
+                # Delete CC_WALLET_AUTOLOGIN variable
+                if "CC_WALLET_AUTOLOGIN" in os.environ:
+                    os.environ.pop("CC_WALLET_AUTOLOGIN")
             # Eager UI refresh — instant feedback, not waiting for poll
             try:
                 self.update_xlite_store_password_button()
@@ -128,30 +127,17 @@ class XliteFrameManager:
         # For left-click event
         if event and event.num == 1:
             # ask_user_pass
-            # store_salted_pass
             logger.info("Left click detected")
             fg_color = self.master_frame.cget("fg_color")
             password = ctkInputDialogMod.CTkInputDialog(
                 title="Store XLite Password", text="Enter XLite password:", show="*", fg_color=fg_color
             ).get_input()
             if password:
-                # Generate key and store in keyring — use same key object for encrypt to avoid
-                # split-brain where store_key goes to fallback but load_encryption_key reads keyring
-                encryption_key = utils.generate_key()
-                if encryption_key is None:
-                    logger.error("Failed to generate encryption key")
-                    return "break"
-
-                # Encrypt password using the freshly generated key directly (atomic, no reload race)
-                salted_pass = utils.encrypt_password(password, encryption_key)
-                if salted_pass is None:
-                    logger.error("Failed to encrypt password")
-                    return "break"
-
-                # Store only encrypted password in JSON (key is in keyring)
-                utils.save_cfg_json(key="xl_pass", data=salted_pass)
-                # Store the password in a variable
-                self.root_gui.stored_password = password
+                if utils.store_password(password):
+                    # Store the password in a variable
+                    self.root_gui.stored_password = password
+                else:
+                    logger.error("Failed to store password")
                 # Eager UI refresh — instant feedback
                 try:
                     self.update_xlite_store_password_button()

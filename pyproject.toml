@@ -15,7 +15,6 @@ dependencies = [
     "pygit2~=1.20.0",
     "watchdog~=6.0.0",
     "PyYAML~=6.0.1",
-    "keyring~=25.5.0",
 ]
 
 [project.optional-dependencies]
@@ -82,7 +81,6 @@ known-first-party = ["gui", "utilities", "custom_tk_mods"]
 # Atomic write helpers use intentional bare try/except for fallback (S110/SIM105)
 "utilities/atomic_write.py" = ["S110", "SIM105"]
 "utilities/utils.py" = ["S110", "SIM105"]
-"utilities/keyring_manager.py" = ["S110", "SIM105"]
 "utilities/config_manager.py" = ["S110", "SIM105"]
 "utilities/app_container.py" = ["S110", "SIM105"]
 

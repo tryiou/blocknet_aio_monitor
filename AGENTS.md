@@ -94,7 +94,7 @@ except SpecificException as e:
 ```
 blocknet_aio_monitor.py          # Entry point
 gui/                             # GUI components (managers)
-utilities/                       # Utils, config, keyring
+utilities/                       # Utils, config, logging
 tests/unit/                      # Unit tests
 tests/integration/               # Integration tests
 tests/conftest.py                # Shared fixtures

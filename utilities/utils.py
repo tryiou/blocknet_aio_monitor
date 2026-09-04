@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from threading import current_thread, enumerate
+from threading import Lock, current_thread, enumerate
 from typing import Any
 
 import customtkinter as ctk
@@ -12,16 +12,50 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from utilities.app_container import get_container
 from utilities.atomic_write import atomic_write_json, backup_corrupt_file, ensure_dir_secure
-from utilities.keyring_manager import KeyringManager, KeyringMigration, expand_config_path
 
 logger = logging.getLogger(__name__)
+
+
+def expand_config_path(path: str | None) -> str:
+    """Expand user/env vars and normalize path.
+
+    Prevents creation of literal '~' directory in CWD when a template
+    path like '~/.AIO_Blocknet' is passed without expansion.
+    Handles HOME unset fallback via Path.home() and normalizes with normpath.
+    Idempotent — safe to call twice.
+    """
+    if not path or not str(path).strip():
+        return os.getcwd()
+    expanded = os.path.expandvars(os.path.expanduser(str(path)))
+    # If expanduser failed (e.g. HOME unset), it still starts with ~ — resolve via Path.home()
+    # Only handle "~" and "~/" — leave "~user" forms untouched to avoid mis-join
+    if expanded == "~" or expanded.startswith("~/"):
+        try:
+            home = str(Path.home())
+            # strip leading ~/ or ~ and join
+            suffix = expanded[1:].lstrip("/\\")
+            expanded = os.path.join(home, suffix) if suffix else home
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+        # Re-expand in case home contained vars (unlikely)
+        expanded = os.path.expandvars(expanded)
+    elif expanded.startswith("~"):
+        # "~user" that failed to expand — avoid creating literal "~user" in CWD
+        logger.warning(f"Unresolvable user path '{expanded}', falling back to HOME")
+        try:
+            expanded = os.path.join(str(Path.home()), expanded.lstrip("~/"))
+            expanded = os.path.expandvars(expanded)
+        except Exception as e:  # debug logged
+            logger.debug("Suppressed Exception: %s", e, exc_info=True)
+            return os.path.join(os.getcwd(), expanded.lstrip("~/").lstrip("/\\"))
+    # Normalize to avoid trailing slash issues
+    return os.path.normpath(expanded)
 
 
 def _resolve_aio_folder(container: Any) -> str:
     """Return expanded absolute AIO folder, never a raw '~' template.
 
-    Delegates to keyring_manager.expand_config_path for consistent
-    handling of ~, env vars, HOME unset fallback, and normpath.
+    Expands ~, env vars, HOME unset fallback, and normpath.
     Prefers container.aio_folder but falls back to conf_data template if
     aio_folder looks polluted (e.g. '/aio' from stale test singleton).
     """
@@ -110,29 +144,6 @@ def load_cfg_json():
             logger.info(f"Configuration file not found (race): [{full_new_path}]")
             return None
 
-        # Check if migration from old format (with salt) is needed
-        if cfg_data and "salt" in cfg_data:
-            logger.info("Detected old format with salt key. Starting migration to keyring...")
-            keyring_manager = KeyringManager(local_conf_path)
-            migration = KeyringMigration(local_conf_path, keyring_manager)
-
-            success, new_cfg_data, message, old_key = migration.migrate_from_old_format(cfg_data)
-            if success:
-                # Save the migrated config atomically with 0o600
-                try:
-                    atomic_write_json(full_new_path, new_cfg_data, indent=2)
-                except Exception as e:
-                    logger.error(f"Failed to save migrated config: {e}", exc_info=True)
-                    try:
-                        with open(full_new_path, "w") as file:
-                            json.dump(new_cfg_data, file, indent=2)
-                    except Exception:  # noqa: S110, SIM105
-                        pass  # noqa: S110, SIM105
-                logger.info(f"Migration successful: {message}")
-                cfg_data = new_cfg_data
-            else:
-                logger.error(f"Migration failed: {message}")
-
         logger.info(f"Configuration file loaded ok: [{full_new_path}]")
         return cfg_data
     else:
@@ -202,10 +213,6 @@ def remove_cfg_json_key(key):
                 logger.error(f"Failed to remove key {key}: {e2}", exc_info=True)
                 return
         logger.info(f"Key '{key}' was removed from configuration file: [{filename}]")
-
-        # If removing password-related keys, also delete encryption key from keyring
-        if key in ["salt", "xl_pass"]:
-            delete_encryption_key()
     else:
         logger.warning(f"Key '{key}' not found in configuration file: [{filename}]")
 
@@ -244,88 +251,126 @@ def save_cfg_json(key, data):
         except Exception as e2:
             logger.error(f"Failed to save {key}: {e2}", exc_info=True)
             return
-    logger.info(f"{key} {data} was saved to configuration file: [{filename}]")
+    logger.info(f"Key '{key}' was saved to configuration file: [{filename}]")
 
 
-def save_encryption_key(key):
-    """Save encryption key to keyring (or fallback storage)."""
+# Single-route credential store.
+#
+# The encryption key ("salt") and the ciphertext ("xl_pass") live together
+# in aio_settings.json and are committed in ONE atomic rewrite, so key and
+# ciphertext can never disagree. Security boundary is OS file permissions
+# (0o600 file in 0o700 dir on POSIX; per-user %APPDATA% profile on Windows).
+# There is no OS keyring, no fallback store, no second path — by design.
+_CREDENTIALS_LOCK = Lock()
+CREDENTIALS_FILENAME = "aio_settings.json"
+CREDENTIALS_KEY_NAME = "salt"
+CREDENTIALS_PASS_NAME = "xl_pass"  # noqa: S105 # config key name, not a password
+
+
+def store_password(password: str) -> bool:
+    """Store wallet password: fresh key + ciphertext committed atomically.
+
+    Returns True on success, False on any failure (nothing half-written:
+    the atomic rewrite either lands with both values or not at all).
+    """
     container = get_container()
-    local_conf_path = _resolve_aio_folder(container)
-    keyring_manager = KeyringManager(local_conf_path)
-    success, message = keyring_manager.store_key(key)
-    if success:
-        logger.info(f"Encryption key saved: {message}")
-    else:
-        logger.error(f"Failed to save encryption key: {message}")
-    return success
-
-
-def load_encryption_key():
-    """Load encryption key from keyring (or fallback storage)."""
-    container = get_container()
-    local_conf_path = _resolve_aio_folder(container)
-    keyring_manager = KeyringManager(local_conf_path)
-    key, message = keyring_manager.retrieve_key()
-    if key:
-        logger.info(f"Encryption key loaded: {message}")
-        return key.encode("utf-8") if isinstance(key, str) else key
-    else:
-        logger.error(f"Failed to load encryption key: {message}")
-        return None
-
-
-def delete_encryption_key():
-    """Delete encryption key from keyring and fallback storage."""
-    container = get_container()
-    local_conf_path = _resolve_aio_folder(container)
-    keyring_manager = KeyringManager(local_conf_path)
-    success, message = keyring_manager.delete_key()
-    if success:
-        logger.info(f"Encryption key deleted: {message}")
-    else:
-        logger.error(f"Failed to delete encryption key: {message}")
-    return success
-
-
-def generate_key():
-    """Generate a new encryption key and store it in keyring."""
-    key = Fernet.generate_key()
-    # Store the key in keyring
-    if save_encryption_key(key.decode("utf-8")):
-        return key
-    else:
-        logger.error("Failed to store encryption key in keyring")
-        return None
-
-
-def encrypt_password(password, key=None):
-    """Encrypt the password using the provided key or from keyring."""
-    if key is None:
-        key = load_encryption_key()
-        if key is None:
-            logger.error("No encryption key available for password encryption")
-            return None
-
-    cipher_suite = Fernet(key)
-    encrypted_password = cipher_suite.encrypt(password.encode())
-    return encrypted_password.decode()
-
-
-def decrypt_password(encrypted_password, key=None):
-    """Decrypt the encrypted password using the provided key or from keyring."""
-    if key is None:
-        key = load_encryption_key()
-        if key is None:
-            logger.error("No encryption key available for password decryption")
-            return None
-
+    filename = os.path.join(_resolve_aio_folder(container), CREDENTIALS_FILENAME)
     try:
-        cipher_suite = Fernet(key)
-        decrypted_password = cipher_suite.decrypt(encrypted_password.encode())
-        return decrypted_password.decode()
+        key = Fernet.generate_key()
+        ciphertext = Fernet(key).encrypt(password.encode()).decode()
+    except Exception as e:
+        logger.error(f"Failed to encrypt password: {e}", exc_info=True)
+        return False
+    with _CREDENTIALS_LOCK:
+        try:
+            try:
+                with open(filename) as file:
+                    cfg_data = json.load(file)
+                if not isinstance(cfg_data, dict):
+                    cfg_data = {}
+            except FileNotFoundError:
+                cfg_data = {}
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted JSON in {filename}: {e}, backing up and self-healing")
+                backup_corrupt_file(filename)
+                cfg_data = {}
+            cfg_data[CREDENTIALS_KEY_NAME] = key.decode("utf-8")
+            cfg_data[CREDENTIALS_PASS_NAME] = ciphertext
+            atomic_write_json(filename, cfg_data, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to store password: {e}", exc_info=True)
+            return False
+    logger.info("XLite password stored")
+    return True
+
+
+def load_stored_password() -> str | None:
+    """Load and decrypt the wallet password.
+
+    Returns the password, or None when absent/unreadable. Never deletes
+    anything: an undecryptable file is kept on disk for the user to
+    re-store over.
+    """
+    container = get_container()
+    filename = os.path.join(_resolve_aio_folder(container), CREDENTIALS_FILENAME)
+    try:
+        with open(filename) as file:
+            cfg_data = json.load(file)
+    except FileNotFoundError:
+        return None
+    except json.JSONDecodeError as e:
+        logger.error(f"Corrupted JSON in {filename}: {e}, backing up and self-healing")
+        backup_corrupt_file(filename)
+        return None
+    except Exception as e:
+        logger.error(f"Failed to load stored password: {e}", exc_info=True)
+        return None
+    if not isinstance(cfg_data, dict):
+        return None
+    key = cfg_data.get(CREDENTIALS_KEY_NAME)
+    ciphertext = cfg_data.get(CREDENTIALS_PASS_NAME)
+    if not key or not ciphertext:
+        return None
+    try:
+        raw_key = key.encode("utf-8") if isinstance(key, str) else key
+        return Fernet(raw_key).decrypt(ciphertext.encode()).decode()
     except InvalidToken as e:
-        logger.error(f"Failed to decrypt password: {e} ({type(e).__name__})", exc_info=True)
-        raise
+        logger.error(
+            f"Stored password cannot be decrypted with stored key ({type(e).__name__}): "
+            "data kept, please Store Password again",
+            exc_info=True,
+        )
+        return None
+    except Exception as e:
+        logger.error(f"Failed to decrypt stored password: {e}", exc_info=True)
+        return None
+
+
+def wipe_stored_password() -> bool:
+    """Remove key and ciphertext. True when neither remains afterwards."""
+    container = get_container()
+    filename = os.path.join(_resolve_aio_folder(container), CREDENTIALS_FILENAME)
+    with _CREDENTIALS_LOCK:
+        try:
+            try:
+                with open(filename) as file:
+                    cfg_data = json.load(file)
+            except FileNotFoundError:
+                return True
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted JSON in {filename}: {e}, backing up")
+                backup_corrupt_file(filename)
+                return False
+            if not isinstance(cfg_data, dict):
+                return False
+            cfg_data.pop(CREDENTIALS_KEY_NAME, None)
+            cfg_data.pop(CREDENTIALS_PASS_NAME, None)
+            atomic_write_json(filename, cfg_data, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to wipe stored password: {e}", exc_info=True)
+            return False
+    logger.info("Stored XLite password wiped")
+    return True
 
 
 def enable_button(button, img=None):

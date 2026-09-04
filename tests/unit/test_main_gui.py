@@ -69,7 +69,7 @@ class TestBlocknetAioGui(unittest.TestCase):
 
         # Utils mocks
         cls.mocks["utils"].load_cfg_json.return_value = {}
-        cls.mocks["utils"].decrypt_password.return_value = "decrypted_pass"
+        cls.mocks["utils"].load_stored_password.return_value = None
         cls.mocks["utils"].processes_check.return_value = ([], [], [], [])
 
         # Container mocks
@@ -126,8 +126,9 @@ class TestBlocknetAioGui(unittest.TestCase):
         self.mocks["ctk"].set_appearance_mode.assert_not_called()
 
     def test_init_with_custom_path_and_password(self):
-        """Test initialization with custom path and encrypted password."""
+        """Test initialization with custom path and stored password."""
         self.mocks["utils"].load_cfg_json.return_value = {"custom_path": "/test/path", "xl_pass": "encrypted_pass"}
+        self.mocks["utils"].load_stored_password.return_value = "decrypted_pass"
         with (
             patch("blocknet_aio_monitor.BinaryManager", return_value=self.mock_binary_manager),
             patch("blocknet_aio_monitor.BlockDXManager", return_value=self.mock_blockdx_manager),
@@ -138,12 +139,12 @@ class TestBlocknetAioGui(unittest.TestCase):
             app = BlocknetAioGui()
             self.assertEqual(app.custom_path, "/test/path")
             self.assertEqual(app.stored_password, "decrypted_pass")
-            self.mocks["utils"].decrypt_password.assert_called_once_with("encrypted_pass")
+            self.mocks["utils"].load_stored_password.assert_called_once_with()
 
-    def test_init_with_password_decryption_error(self):
-        """Test initialization handles password decryption errors gracefully."""
+    def test_init_with_password_unavailable(self):
+        """Test initialization keeps stored file when password cannot be loaded."""
         self.mocks["utils"].load_cfg_json.return_value = {"salt": "mock_salt", "xl_pass": "invalid_encrypted_pass"}
-        self.mocks["utils"].decrypt_password.side_effect = Exception("Decryption failed")
+        self.mocks["utils"].load_stored_password.return_value = None
         try:
             with (
                 patch("blocknet_aio_monitor.BinaryManager", return_value=self.mock_binary_manager),
